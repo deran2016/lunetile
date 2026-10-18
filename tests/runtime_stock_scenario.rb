@@ -76,8 +76,8 @@ module ScenarioDriver
         File.open('scenario-states.txt','a') { |file| file.puts("#{@tick}:#{@phase}:#{$scene.class}") }
       end
       @scene_tick += 1
-      raise "Scenario timed out in #{@phase}, #{$scene.class}" if @tick > (@tick_limit || 2200)
-      return if @scene_tick < 12
+      raise "Scenario timed out in #{@phase}, #{$scene.class}" if @tick > ((@tick_limit || 2200) * RGSSXP::Timing.scale)
+      return if @scene_tick < 12 * RGSSXP::Timing.scale
       case @phase
       when :title
         select(0);@phase = :map
@@ -123,7 +123,7 @@ module ScenarioDriver
       end
     end
     def story_step
-      confirm if @tick % 8 == 0
+      confirm if @tick % (8 * RGSSXP::Timing.scale) == 0
       if $scene.is_a?(Scene_Title)
         raise 'Choice branch or battle/ending failed' unless [3,4,5].all? { |id| $game_switches[id] }
         raise 'Battle scene never ran' unless @scenes.include?('Scene_Battle')

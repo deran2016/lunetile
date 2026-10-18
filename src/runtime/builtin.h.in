@@ -14,6 +14,7 @@ static const char integer_map_support[] = R"RGSSXP(# encoding: UTF-8
 static const char text_support[] = R"RGSSXP(# encoding: UTF-8
 @text_support@)RGSSXP";
 static const char graphics_support[] = R"RGSSXP(# encoding: UTF-8
+@timing_support@
 @graphics_support@)RGSSXP";
 static const char rpg_graphics_support[] = R"RGSSXP(# encoding: UTF-8
 @rpg_graphics_support@

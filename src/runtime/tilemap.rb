@@ -17,7 +17,7 @@ class Tilemap < RGSSXP::DisplayObject
   end
   def update
     super
-    @updates += 1
+    @updates += 1 if RGSSXP::Timing.legacy_tick?
   end
   def layers
     return [] unless @map_data && @map_data.xsize > 0 && @map_data.ysize > 0 && visible
@@ -108,15 +108,17 @@ class RPG::Weather
     @sprites.each_with_index do |sprite,index|
       sprite.visible = @type != 0 && index < @max.to_i
       next unless sprite.visible
-      case @type
-      when 1 then sprite.x -= 2; sprite.y += 16; sprite.opacity -= 8
-      when 2 then sprite.x -= 8; sprite.y += 16; sprite.opacity -= 12
-      when 3 then sprite.x -= 2; sprite.y += 8; sprite.opacity -= 8
-      end
+      position = sprite.instance_variable_get(:@weather_position) || [sprite.x.to_f, sprite.y.to_f, sprite.opacity.to_f]
+      dx,dy,fade = {1=>[-2,16,8],2=>[-8,16,12],3=>[-2,8,8]}.fetch(@type,[0,0,0])
+      scale = RGSSXP::Timing.scale.to_f
+      position[0] += dx / scale; position[1] += dy / scale; position[2] -= fade / scale
+      sprite.x, sprite.y, sprite.opacity = position.map(&:round)
       sprite.ox, sprite.oy = @ox, @oy
       if sprite.opacity < 64 || sprite.x - @ox < -50 || sprite.x - @ox > (Graphics.width + 110) || sprite.y - @oy < -200 || sprite.y - @oy > (Graphics.height + 120)
         sprite.x, sprite.y, sprite.opacity = rand(Graphics.width + 160)-50+@ox,rand(Graphics.height + 320)-200+@oy,rand(64)+160
+        position = [sprite.x.to_f,sprite.y.to_f,sprite.opacity.to_f]
       end
+      sprite.instance_variable_set(:@weather_position,position)
     end
   end
   def dispose

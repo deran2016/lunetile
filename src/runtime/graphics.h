@@ -24,3 +24,5 @@ bool input_take_reset();
 void init_input();
 void input_attach(HWND window);
 void input_message(UINT message, WPARAM keycode);
+
+int graphics_time_scale();

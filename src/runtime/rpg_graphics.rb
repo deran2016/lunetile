@@ -150,6 +150,7 @@ class RPG::Sprite < ::Sprite
   end
   def update
     super
+    return unless RGSSXP::Timing.legacy_tick?
     if @effect_left > 0
       @effect_left -= 1
       case @effect
@@ -169,7 +170,7 @@ class RPG::Sprite < ::Sprite
       @damage_sprite.opacity = 256 - (12 - @damage_left) * 32
       dispose_damage if @damage_left == 0
     end
-    if @animation_data && Graphics.frame_count.even?
+    if @animation_data && (Graphics.frame_count / RGSSXP::Timing.scale).even?
       @animation_tick += 2
       if @animation_tick >= @animation_data.frame_max * 2
         @animation_cells.each(&:dispose)
@@ -179,7 +180,7 @@ class RPG::Sprite < ::Sprite
         update_animation(@animation_data, @animation_cells, @animation_tick / 2, @animation_hit)
       end
     end
-    if @loop_data && Graphics.frame_count.even?
+    if @loop_data && (Graphics.frame_count / RGSSXP::Timing.scale).even?
       @loop_tick = (@loop_tick + 2) % (@loop_data.frame_max * 2)
       update_animation(@loop_data, @loop_cells, (@loop_tick / 2 - 1) % @loop_data.frame_max, true) if @loop_tick.even?
     end

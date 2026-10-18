@@ -21,7 +21,7 @@ def string(data):return b'"'+integer(len(data))[1:]+data
 def scripts(source):
  return b'\x04\x08['+integer(1)[1:]+b'['+integer(3)[1:]+integer(1)+string(b'Runtime smoke')+string(zlib.compress(source))
 
-def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None):
+def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None,timing_profile=None,render_rate=60):
  if data_encoding not in (None,'UTF-8','CP949','CP932'):raise ValueError('Unsupported test data encoding')
  if data_encoding:source=("raise 'Configured project encoding was not read' unless RGSSXP::DATA_ENCODING == "+repr(data_encoding)+"\n").encode()+source
  out.mkdir(parents=True,exist_ok=False)
@@ -35,10 +35,15 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
  if script_path is None:script_path='Data/Scripts.rxdata' if archive else 'Scripts.rxdata'
  if archive:(out/'Game.rgssad').write_bytes(archive)
  ini=f'[Game]\nLibrary=RGSS104E.dll\nScripts={script_path}\nTitle=RGSSXP Runtime Test\nRTP1=\nRTP2=\nRTP3=\n'
- if screen_size:ini+='[Lunetile]\nWidth='+str(screen_size[0])+'\nHeight='+str(screen_size[1])+'\n'
+ if screen_size or timing_profile:
+  ini+='[Lunetile]\n'
+  if screen_size:ini+='Width='+str(screen_size[0])+'\nHeight='+str(screen_size[1])+'\n'
+  if timing_profile:ini+='TimingProfile='+timing_profile+'\nRenderRate='+str(render_rate)+'\n'
  if data_encoding:ini+='[RGSSXP]\nDataEncoding='+data_encoding+'\n'
  (out/'Game.ini').write_text(ini)
- p=subprocess.Popen([str(out/'Game.exe')]+([mode] if mode else []),cwd=out)
+ import os
+ environment=os.environ.copy();environment['LUNETILE_TEST_BACKGROUND']='1'
+ p=subprocess.Popen([str(out/'Game.exe')]+([mode] if mode else []),cwd=out,env=environment)
  if timeout>20:print(f'Foreground rendering case PID={p.pid} path={out}',flush=True)
  modules={};all_modules={}
  try:
@@ -93,6 +98,16 @@ def main():
  else:reports.append(run(exe,dll,out/'한글-경로','',(ROOT/'tests/runtime_saves.rb').read_bytes()+source))
  reports.append(run(exe,dll,out/'wide-config','',b"raise 'INI resolution ignored' unless [Graphics.width,Graphics.height]==[1280,720]\nGraphics.update\nFile.write('runtime-complete.txt','config,false,false')",screen_size=(1280,720),timeout=40))
  reports.append(run(exe,dll,out/'resolution','',(ROOT/'tests/runtime_resolution.rb').read_bytes(),timeout=40))
+ reports.append(run(exe,dll,out/'refresh','',(ROOT/'tests/runtime_refresh.rb').read_bytes(),timeout=60,timing_profile='stock120'))
+ from migrate_project import transform
+ from rxdata import read
+ entries=read((ROOT/'template/Data/Scripts.rxdata').read_bytes())
+ for high in (False,True):
+  replacements,_=transform(entries,high_refresh=high)
+  definitions=b'\n'.join(replacements.get(i,e.source()) for i,e in enumerate(entries) if e.name!=b'Main')
+  helper=(ROOT/'src/runtime/stock_timing.rb').read_bytes() if high else b''
+  timing_source=definitions+b'\n'+helper+b'\n'+(ROOT/'tests/runtime_timing_compare.rb').read_bytes()
+  reports.append(run(exe,dll,out/('timing-120' if high else 'timing-40'),'',timing_source,data=ROOT/'template/Data',timeout=40,timing_profile='stock120' if high else None))
  reports.append(run(exe,dll,out/'input-errors','',(ROOT/'tests/runtime_input_errors.rb').read_bytes()))
  for encoding in ('UTF-8','CP949','CP932'):
   reports.append(run(exe,dll,out/('text-'+encoding),'',(ROOT/'tests/runtime_text.rb').read_bytes()+source,data_encoding=encoding))

@@ -71,8 +71,10 @@ def main():
  ap.add_argument('--endurance-seconds',type=int,help='After the short scenario, keep moving/transferring in the actual map scene; requires --scenario')
  ap.add_argument('--roundtrips',type=int,default=100)
  ap.add_argument('--rtp',type=Path,help='Copy missing local RTP assets into this private test copy; existing project files win')
+ ap.add_argument('--render-rate',type=int,choices=[40,60,120],help='Exercise the stock120 settings scene; requires --scenario')
  ap.add_argument('--widescreen-checks',action='store_true',help='Check wide stock window bounds and list layout; requires --scenario')
  a=ap.parse_args();out=a.output.resolve()
+ if a.render_rate and not a.scenario:ap.error('--render-rate requires --scenario')
  if a.widescreen_checks and not a.scenario:ap.error('--widescreen-checks requires --scenario')
  if a.manual and not a.scenario:ap.error('--manual requires --scenario')
  if a.full_combat and (not a.scenario or a.endurance_seconds is not None):ap.error('--full-combat requires --scenario and no endurance')
@@ -84,6 +86,9 @@ def main():
  path=out/'Data/Scripts.rxdata';entries=read(path.read_bytes())
  # Preserve the migrated entries; prepend one visible, separately owned test entry.
  source=(ROOT/'tests'/('runtime_stock_scenario.rb' if a.scenario else 'runtime_stock_boot.rb')).read_bytes()
+ if a.render_rate:
+  source+=b'\n'+(ROOT/'tests/runtime_refresh_scenario.rb').read_bytes()
+  (out/'refresh-test-rate.txt').write_text(str(a.render_rate))
  if a.widescreen_checks:source+=b'\n'+(ROOT/'tests/runtime_widescreen_ui.rb').read_bytes()
  if a.full_combat:source+=b'\n'+(ROOT/'tests/runtime_full_combat.rb').read_bytes()
  if a.endurance_seconds is not None:
@@ -99,7 +104,11 @@ def main():
   index=len(entries)-1;combined=entries[:index]+[probe]+entries[index:]
  else:index=0;combined=[probe,*entries]
  path.write_bytes(write(combined,{index:source}))
- p=subprocess.Popen([str(out/'Game.exe')],cwd=out)
+ import os
+ environment=os.environ.copy()
+ if a.manual:environment.pop('LUNETILE_TEST_BACKGROUND',None)
+ else:environment['LUNETILE_TEST_BACKGROUND']='1'
+ p=subprocess.Popen([str(out/'Game.exe')],cwd=out,env=environment)
  print(f'PID={p.pid} output={out}',flush=True)
  try:
   if a.endurance_seconds is not None:samples,images=endurance_monitor(p,out,a.endurance_seconds)
@@ -110,8 +119,21 @@ def main():
  states=state_path.read_text() if state_path.exists() else ''
  required=('Scene_Title','Scene_Map','Scene_Menu','Scene_Save','Scene_Load','Scene_Battle') if a.scenario else ('Scene_Title','Scene_Map','Scene_Menu')
  passed=p.returncode==0 and ((out/'manual-ending-reached.txt').exists() if a.manual else all(scene in states for scene in required) and (out/'runtime-complete.txt').exists())
+ if a.render_rate:passed=passed and (out/'refresh-settings-selected.txt').is_file()
  if a.widescreen_checks:passed=passed and (out/'wide-ui-checked.txt').is_file()
+ restarted=None
+ if passed and a.render_rate:
+  original=path.read_bytes()
+  probe_source=("RGSSXP::Timing.load_settings\nraise 'FPS did not survive restart' unless Graphics.render_rate == "+str(a.render_rate)+"\nFile.write('refresh-settings-restarted.txt',Graphics.render_rate.to_s)\nexit\n").encode()
+  startup=Entry(0,b'Lunetile restart settings test',zlib.compress(probe_source),b'')
+  try:
+   path.write_bytes(write([startup,*read(original)],{0:probe_source}))
+   restarted=subprocess.run([str(out/'Game.exe')],cwd=out,env=environment,timeout=15).returncode==0 and (out/'refresh-settings-restarted.txt').read_text()==str(a.render_rate)
+  finally:path.write_bytes(original)
+  passed &= restarted
  report={'passed':passed,'exit_code':p.returncode,'states':states,'dll_sha256':sha(out/'RGSS104E.dll'),'scope':('Manual UI input' if a.manual else 'Injected logical input')+'; one-hit fixture encounter; no original-gameplay comparison'}
+ if restarted is not None:report['settings_restart_passed']=restarted
+ if a.render_rate:report['render_rate']=a.render_rate;report['logic_rate']=120
  if a.full_combat:
   combat=progress(out/'full-combat-result.txt')
   report['combat']=combat

@@ -61,14 +61,15 @@ module WideUIProbe
     end
     return unless File.exist?('wide-capture-enabled.txt')
     name = $scene.class.name
-    return if @captured[name] || !%w[Scene_Title Scene_Map Scene_Menu Scene_Save Scene_Load Scene_Battle].include?(name)
+    return if @captured[name] || !%w[Scene_Title Scene_Map Scene_Menu Scene_Save Scene_Load Scene_Battle Scene_LunetileDisplay].include?(name)
     return unless Graphics.frame_count % 12 == 0
     @captured[name] = true
     File.write('wide-capture-request.txt',name)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 15
     until File.exist?("wide-capture-#{name}.done")
       raise 'screenshot observer timed out' if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
-      sleep 0.02
+      Graphics.__present(RGSSXP.scene_commands,-1.0,nil,0.0) if Graphics.__should_render
+      Graphics.__tick
     end
   end
 end

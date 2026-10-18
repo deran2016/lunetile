@@ -1,6 +1,7 @@
 # Widescreen display
 
-Converted template releases use a 1280×720 logical canvas at the original 40 Hz.
+Converted template releases use a 1280×720 logical canvas, 120 Hz logic and
+selectable 40/60/120 FPS output (default 60). See [high refresh](HIGH_REFRESH.md).
 Character sprites, icons and fonts retain their original pixel sizes. The renderer
 fits that canvas into the window or monitor without changing its aspect ratio;
 unused output space is black. FHD and 4K fit 720p at 1.5× and 3× respectively.

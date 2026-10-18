@@ -188,7 +188,7 @@ class RGSSXP::DisplayObject
   end
   def flash(color, duration)
     check_live
-    @flash_color, @flash_left, @flash_total = color && color.clone, duration.to_int, duration.to_int
+    @flash_color, @flash_left, @flash_total = color && color.clone, RGSSXP::Timing.frames(duration.to_int), RGSSXP::Timing.frames(duration.to_int)
     nil
   end
   def update
@@ -288,7 +288,7 @@ class Window < RGSSXP::DisplayObject
   end
   def update
     super
-    @updates += 1
+    @updates += 1 if RGSSXP::Timing.legacy_tick?
   end
   def skin_quad(commands, sx, sy, sw, sh, x, y, w, h, opacity)
     return if w <= 0 || h <= 0
@@ -349,19 +349,24 @@ end
 module Graphics
   def self.update
     __begin
-    __present(RGSSXP.scene_commands, -1.0, nil, 0.0)
+    __present(RGSSXP.scene_commands, -1.0, nil, 0.0) if __should_render
     __tick
   end
+  def self.freeze
+    __present(RGSSXP.scene_commands, -1.0, nil, 0.0) if __stock120
+    __freeze
+  end
   def self.transition(duration = 8, filename = '', vague = 40)
+    frame_reset if __stock120
     mask = filename.empty? ? nil : Bitmap.new(filename)
-    duration = [duration.to_int, 0].max
+    duration = RGSSXP::Timing.frames([duration.to_int, 0].max)
     if duration.zero?
       __begin
       __present(RGSSXP.scene_commands, 1.0, mask, vague / 255.0)
     else
       duration.times do |i|
         __begin
-        __present(RGSSXP.scene_commands, (i + 1).to_f / duration, mask, vague / 255.0)
+        __present(RGSSXP.scene_commands, (i + 1).to_f / duration, mask, vague / 255.0) if __should_render || i == duration - 1
         __tick
       end
     end

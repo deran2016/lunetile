@@ -14,6 +14,7 @@
 #include "output_color.h"
 #include "render_shader.h"
 #include "display_geometry.h"
+#include "refresh_clock.h"
 
 namespace {
 using Microsoft::WRL::ComPtr;
@@ -58,7 +59,7 @@ struct Renderer {
     double gpu_ms=-1;
     UINT64 gpu_valid=0,gpu_invalid=0;
     UINT64 sequence=0,gpu_sequence=0,cpu_begin=0,last_cpu=0;
-    bool frozen_valid=false,close=false,ready=false;
+    bool frozen_valid=false,close=false,ready=false,test_background=false;
     LARGE_INTEGER frequency{},deadline{},last_end{};
     int rate=40,frame=0;
     int remainder=0;
@@ -66,6 +67,8 @@ struct Renderer {
     double script_cpu_ms=0,render_cpu_ms=0,wait_cpu_ms=0;
     double focus_pause_ms=0;
     HANDLE timer=nullptr;
+    HANDLE frame_latency=nullptr;
+    rgss_refresh::Clock refresh;
     void surface(Surface& out) {
         D3D11_TEXTURE2D_DESC desc{};
         desc.Width=width;desc.Height=height;desc.MipLevels=desc.ArraySize=1;
@@ -86,8 +89,14 @@ struct Renderer {
         desc.SampleDesc.Count=1;desc.BufferCount=2;
         desc.BufferUsage=DXGI_USAGE_RENDER_TARGET_OUTPUT;desc.OutputWindow=window;
         desc.Windowed=TRUE;desc.SwapEffect=DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        if(refresh.high())desc.Flags=DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
         D3D_FEATURE_LEVEL level=D3D_FEATURE_LEVEL_11_0;
         checked(D3D11CreateDeviceAndSwapChain(nullptr,D3D_DRIVER_TYPE_HARDWARE,nullptr,0,&level,1,D3D11_SDK_VERSION,&desc,&swap,&device,nullptr,&context),"D3D11 hardware device");
+        if(refresh.high()){
+            ComPtr<IDXGISwapChain2> paced;checked(swap.As(&paced),"Frame latency interface");
+            checked(paced->SetMaximumFrameLatency(1),"Set frame latency");frame_latency=paced->GetFrameLatencyWaitableObject();
+            if(!frame_latency)throw std::runtime_error("Frame latency wait handle unavailable");
+        }
         ComPtr<IDXGISwapChain3> color_swap;checked(swap.As(&color_swap),"Swap-chain color interface");
         UINT color_support=0;checked(color_swap->CheckColorSpaceSupport(DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709,&color_support),"Linear output support query");
         if(!(color_support&DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))throw std::runtime_error("Linear output color space unavailable");
@@ -163,7 +172,7 @@ struct Renderer {
         UINT output_width=std::max<LONG>(client.right,1),output_height=std::max<LONG>(client.bottom,1);
         if(output_width==back_width&&output_height==back_height)return;
         context->OMSetRenderTargets(0,nullptr,nullptr);back.Reset();
-        checked(swap->ResizeBuffers(0,output_width,output_height,DXGI_FORMAT_UNKNOWN,0),"Resize window buffers");
+        checked(swap->ResizeBuffers(0,output_width,output_height,DXGI_FORMAT_UNKNOWN,refresh.high()?DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT:0),"Resize window buffers");
         ComPtr<ID3D11Texture2D> buffer;checked(swap->GetBuffer(0,IID_PPV_ARGS(&buffer)),"Get resized buffer");
         checked(device->CreateRenderTargetView(buffer.Get(),nullptr,&back),"Resized window target");
         back_width=output_width;back_height=output_height;
@@ -291,7 +300,10 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
             r.draw(r.scene.view.Get(),copy,clip,0,true);
             if(queried){r.context->End(q.end.Get());r.context->End(q.disjoint.Get());q.pending=true;}
             r.query_index=(r.query_index+1)%r.queries.size();
-            checked(r.swap->Present(0,0),"Present");LARGE_INTEGER end{};QueryPerformanceCounter(&end);
+            HRESULT displayed=r.swap->Present(0,r.refresh.high()?DXGI_PRESENT_DO_NOT_WAIT:0);
+            if(displayed==DXGI_ERROR_WAS_STILL_DRAWING||displayed==DXGI_STATUS_OCCLUDED)++r.refresh.dropped;
+            else{checked(displayed,"Present");++r.refresh.presented;}
+            LARGE_INTEGER end{};QueryPerformanceCounter(&end);
             r.render_ms=1000.0*(end.QuadPart-start.QuadPart)/r.frequency.QuadPart;
             r.render_cpu_ms=r.cpu_begin?(thread_cpu()-r.cpu_begin)/10000.0:0;
             ++r.sequence;
@@ -315,17 +327,18 @@ VALUE tick(VALUE){
     if(GetCurrentThreadId()!=r.owner)rb_raise(rb_eThreadError,"Graphics requires the game thread");
     if(!pump())rb_exit(0);
     r.focus_pause_ms=0;
-    if(GetForegroundWindow()!=r.window){
+    if(!r.test_background&&GetForegroundWindow()!=r.window){
         LARGE_INTEGER paused{},resumed{};QueryPerformanceCounter(&paused);
         do{MsgWaitForMultipleObjectsEx(0,nullptr,100,QS_ALLINPUT,MWMO_INPUTAVAILABLE);if(!pump())rb_exit(0);}while(GetForegroundWindow()!=r.window);
         QueryPerformanceCounter(&resumed);
         if(r.frequency.QuadPart)r.focus_pause_ms=1000.0*(resumed.QuadPart-paused.QuadPart)/r.frequency.QuadPart;
-        r.deadline=resumed;r.remainder=0;
+        r.deadline=resumed;r.remainder=0;r.refresh.reset();
     }
     UINT64 cpu=thread_cpu();LARGE_INTEGER start{},now{};QueryPerformanceCounter(&start);
     if(!r.frequency.QuadPart){QueryPerformanceFrequency(&r.frequency);r.deadline=start;}
     LONGLONG interval=r.frequency.QuadPart/r.rate;
-    if(start.QuadPart-r.deadline.QuadPart>r.frequency.QuadPart/4)r.deadline=start;
+    if(start.QuadPart>r.deadline.QuadPart+interval)++r.refresh.late;
+    if(start.QuadPart-r.deadline.QuadPart>r.frequency.QuadPart/4){r.deadline=start;r.refresh.reset();}
     r.deadline.QuadPart+=interval;
     r.remainder+=static_cast<int>(r.frequency.QuadPart%r.rate);
     if(r.remainder>=r.rate){++r.deadline.QuadPart;r.remainder-=r.rate;}
@@ -385,9 +398,29 @@ VALUE resize_screen(VALUE,VALUE width,VALUE height){
 }
 VALUE frame_count(VALUE){return INT2NUM(renderer.frame);}
 VALUE set_frame_count(VALUE,VALUE count){renderer.frame=NUM2INT(count);return count;}
+VALUE stock120(VALUE){return renderer.refresh.high()?Qtrue:Qfalse;}
+VALUE logic_rate(VALUE){return INT2NUM(renderer.refresh.high()?120:renderer.rate);}
+VALUE render_rate(VALUE){return INT2NUM(renderer.refresh.high()?renderer.refresh.output:renderer.rate);}
+VALUE set_render_rate(VALUE,VALUE value){
+    if(GetCurrentThreadId()!=renderer.owner)rb_raise(rb_eThreadError,"Graphics requires the game thread");
+    int rate=NUM2INT(value);
+    if(!renderer.refresh.high()||!rgss_refresh::Clock::valid(rate))rb_raise(rb_eArgError,"Render rate requires stock120 and must be 40, 60 or 120");
+    renderer.refresh.output=rate;renderer.refresh.reset();return value;
+}
+VALUE should_render(VALUE){
+    if(GetCurrentThreadId()!=renderer.owner)rb_raise(rb_eThreadError,"Graphics requires the game thread");
+    auto& r=renderer;if(!r.refresh.high())return Qtrue;
+    if(!r.refresh.next())return Qfalse;
+    char failure[256]{};bool ready=false;
+    {try{r.initialize();ready=WaitForSingleObject(r.frame_latency,0)==WAIT_OBJECT_0;}catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}}
+    if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);
+    if(!ready)++r.refresh.dropped;
+    return ready?Qtrue:Qfalse;
+}
+VALUE refresh_stats(VALUE){auto& c=renderer.refresh;return rb_ary_new_from_args(4,ULL2NUM(c.due),ULL2NUM(c.presented),ULL2NUM(c.dropped),ULL2NUM(c.late));}
 VALUE frame_rate(VALUE){return INT2NUM(renderer.rate);}
-VALUE set_frame_rate(VALUE,VALUE rate){int value=NUM2INT(rate);if(value<10||value>120)rb_raise(rb_eArgError,"Frame rate must be 10..120");renderer.rate=value;renderer.remainder=0;QueryPerformanceCounter(&renderer.deadline);return rate;}
-VALUE reset_deadline(VALUE){QueryPerformanceCounter(&renderer.deadline);renderer.remainder=0;return Qnil;}
+VALUE set_frame_rate(VALUE,VALUE rate){int value=NUM2INT(rate);if(renderer.refresh.high()&&value!=120)rb_raise(rb_eArgError,"stock120 logic rate is fixed at 120");if(value<10||value>120)rb_raise(rb_eArgError,"Frame rate must be 10..120");renderer.rate=value;renderer.remainder=0;QueryPerformanceCounter(&renderer.deadline);return rate;}
+VALUE reset_deadline(VALUE){QueryPerformanceCounter(&renderer.deadline);renderer.remainder=0;renderer.refresh.reset();return Qnil;}
 VALUE begin_frame(VALUE){renderer.cpu_begin=thread_cpu();renderer.script_cpu_ms=renderer.last_cpu?(renderer.cpu_begin-renderer.last_cpu)/10000.0:0;return Qnil;}
 VALUE stats(VALUE){return rb_ary_new_from_args(11,DBL2NUM(renderer.render_ms),DBL2NUM(renderer.wait_ms),renderer.gpu_ms>=0?DBL2NUM(renderer.gpu_ms):Qnil,ULL2NUM(renderer.gpu_valid),ULL2NUM(renderer.gpu_invalid),DBL2NUM(renderer.script_cpu_ms),DBL2NUM(renderer.render_cpu_ms),DBL2NUM(renderer.wait_cpu_ms),ULL2NUM(renderer.sequence),renderer.gpu_valid?ULL2NUM(renderer.gpu_sequence):Qnil,DBL2NUM(renderer.focus_pause_ms));}
 VALUE scene_pixel(VALUE,VALUE vx,VALUE vy){
@@ -418,19 +451,28 @@ void graphics_prepare(){
 }
 void graphics_attach(HWND window){
     renderer.window=window;renderer.owner=GetCurrentThreadId();
+    // Background pacing is test-only; normal games retain inactive-window pausing.
+    wchar_t background[2]{};renderer.test_background=GetEnvironmentVariableW(L"LUNETILE_TEST_BACKGROUND",background,2)==1&&background[0]==L'1';
     using SetDpi=HANDLE(WINAPI*)(HANDLE);
     auto dpi=reinterpret_cast<SetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetThreadDpiAwarenessContext"));
     if(dpi)renderer.previous_dpi=dpi(reinterpret_cast<HANDLE>(-4));
     wchar_t path[MAX_PATH]{};GetFullPathNameW(L"Game.ini",MAX_PATH,path,nullptr);
     int width=GetPrivateProfileIntW(L"Lunetile",L"Width",640,path),height=GetPrivateProfileIntW(L"Lunetile",L"Height",480,path);
     if(!rgss_display::valid(width,height))throw std::runtime_error("Invalid Lunetile screen dimensions in Game.ini");
-    renderer.width=width;renderer.height=height;fit_window();input_attach(window);renderer.previous_proc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(window_proc)));SetForegroundWindow(window);}
-void graphics_shutdown(){if(renderer.window&&IsWindow(renderer.window)&&renderer.previous_proc)SetWindowLongPtrW(renderer.window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(renderer.previous_proc));if(renderer.timer){CloseHandle(renderer.timer);renderer.timer=nullptr;}renderer.context.Reset();
+    wchar_t profile[32]{};GetPrivateProfileStringW(L"Lunetile",L"TimingProfile",L"legacy",profile,32,path);
+    if(_wcsicmp(profile,L"legacy")&&_wcsicmp(profile,L"stock120"))throw std::runtime_error("Unknown Lunetile timing profile");
+    if(!_wcsicmp(profile,L"stock120")){
+        int output=GetPrivateProfileIntW(L"Lunetile",L"RenderRate",60,path);
+        if(!rgss_refresh::Clock::valid(output))throw std::runtime_error("Invalid Lunetile RenderRate");
+        renderer.refresh.logic=renderer.rate=120;renderer.refresh.output=output;
+    }
+    renderer.width=width;renderer.height=height;fit_window();input_attach(window);renderer.previous_proc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(window_proc)));if(!renderer.test_background)SetForegroundWindow(window);}
+void graphics_shutdown(){if(renderer.window&&IsWindow(renderer.window)&&renderer.previous_proc)SetWindowLongPtrW(renderer.window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(renderer.previous_proc));if(renderer.timer){CloseHandle(renderer.timer);renderer.timer=nullptr;}if(renderer.frame_latency){CloseHandle(renderer.frame_latency);renderer.frame_latency=nullptr;}renderer.context.Reset();
     using SetDpi=HANDLE(WINAPI*)(HANDLE);auto dpi=reinterpret_cast<SetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetThreadDpiAwarenessContext"));
     if(dpi&&renderer.previous_dpi)dpi(renderer.previous_dpi);
     renderer=Renderer{};}
 void graphics_reset(){
-    auto& r=renderer;r.rate=40;r.remainder=0;r.frozen_valid=false;QueryPerformanceCounter(&r.deadline);
+    auto& r=renderer;r.rate=r.refresh.high()?120:40;r.remainder=0;r.refresh.reset();r.frozen_valid=false;QueryPerformanceCounter(&r.deadline);
     if(r.context){float black[4]={0,0,0,1};if(r.scene.target)r.context->ClearRenderTargetView(r.scene.target.Get(),black);if(r.frozen.target)r.context->ClearRenderTargetView(r.frozen.target.Get(),black);}
     input_reset();
 }
@@ -442,12 +484,20 @@ void init_graphics(){
     rb_define_singleton_method(graphics,"width",RUBY_METHOD_FUNC(screen_width),0);
     rb_define_singleton_method(graphics,"height",RUBY_METHOD_FUNC(screen_height),0);
     rb_define_singleton_method(graphics,"resize_screen",RUBY_METHOD_FUNC(resize_screen),2);
-    rb_define_singleton_method(graphics,"freeze",RUBY_METHOD_FUNC(freeze_frame),0);
+    rb_define_singleton_method(graphics,"__freeze",RUBY_METHOD_FUNC(freeze_frame),0);
     rb_define_singleton_method(graphics,"frame_count",RUBY_METHOD_FUNC(frame_count),0);
     rb_define_singleton_method(graphics,"frame_count=",RUBY_METHOD_FUNC(set_frame_count),1);
+    rb_define_singleton_method(graphics,"__stock120",RUBY_METHOD_FUNC(stock120),0);
+    rb_define_singleton_method(graphics,"logic_rate",RUBY_METHOD_FUNC(logic_rate),0);
+    rb_define_singleton_method(graphics,"render_rate",RUBY_METHOD_FUNC(render_rate),0);
+    rb_define_singleton_method(graphics,"render_rate=",RUBY_METHOD_FUNC(set_render_rate),1);
+    rb_define_singleton_method(graphics,"__should_render",RUBY_METHOD_FUNC(should_render),0);
+    rb_define_singleton_method(graphics,"__refresh_stats",RUBY_METHOD_FUNC(refresh_stats),0);
     rb_define_singleton_method(graphics,"frame_rate",RUBY_METHOD_FUNC(frame_rate),0);
     rb_define_singleton_method(graphics,"frame_rate=",RUBY_METHOD_FUNC(set_frame_rate),1);
     rb_define_singleton_method(graphics,"frame_reset",RUBY_METHOD_FUNC(reset_deadline),0);
     rb_define_singleton_method(graphics,"__timings",RUBY_METHOD_FUNC(stats),0);
     rb_define_singleton_method(graphics,"__scene_pixel",RUBY_METHOD_FUNC(scene_pixel),2);
 }
+
+int graphics_time_scale(){return renderer.refresh.high()?3:1;}

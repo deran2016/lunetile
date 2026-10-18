@@ -19,6 +19,7 @@ class TemplatePackageTests(unittest.TestCase):
 
  def migrate(self,source,out,dll,ruby,**kwargs):
   self.assertTrue(kwargs.get('widescreen'))
+  self.assertTrue(kwargs.get('high_refresh'))
   self.assertFalse((source/'Save1.rxdata').exists())
   self.assertFalse((source/'RGSS104E.dll').exists())
   shutil.copytree(source,out);shutil.copy2(dll,out/'RGSS104E.dll')

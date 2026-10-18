@@ -64,6 +64,10 @@ jobs:
             build/ci-verification/launcher-smoke/resolution/*.json
             build/ci-verification/launcher-smoke/resolution/window-checks.txt
             build/ci-verification/launcher-smoke/wide-config/*.json
+            build/ci-verification/launcher-smoke/refresh/*.txt
+            build/ci-verification/launcher-smoke/refresh/*.json
+            build/ci-verification/launcher-smoke/timing-*/*.txt
+            build/ci-verification/launcher-smoke/timing-*/*.json
           if-no-files-found: ignore
 
   publish:
@@ -96,9 +100,11 @@ jobs:
           Extract the ZIP and run Game.exe. No Python or manual migration is required.
           Uses a 1280x720 widescreen canvas with adapted stock maps, menus, dialogue and battle UI.
           Resize/maximize the window or use Alt+Enter for aspect-preserving full screen.
+          Runs stock game logic at 120Hz with default 60FPS output. Choose 40/60/120FPS in the in-game display settings.
+          Gameplay timing is adapted from the reviewed 40Hz stock scripts. New saves use version 2; older saves can be imported, but older runtimes cannot read new saves.
           Requires Windows 11 x64, the Microsoft Visual C++ x86 runtime, and RPG Maker XP Standard RTP.
 
-          CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, 640x480/1280x720 rendering and window geometry, FHD/QHD/4K fit calculations, and template conversion.
+          CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, 640x480/1280x720 rendering and window geometry, FHD/QHD/4K fit calculations, 120Hz output scheduling, 40/120Hz timing comparisons, settings/save checks, and template conversion.
           Korean project paths are checked only when supported by the system ANSI code page; skips are recorded in verification.json.
           Extract to an ASCII path on English Windows. Full gameplay, rendering, audio, and endurance acceptance were not run for this build.
           The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.

@@ -1,8 +1,10 @@
 module RGSSXP::Saves
   class ReadStream < StringIO
+    attr_accessor :timing_rate
     def initialize(bytes, modified)
       super(bytes, 'rb')
       @modified = modified
+      @timing_rate = 40
     end
     def mtime
       raise IOError, 'closed stream' if closed?
@@ -10,6 +12,7 @@ module RGSSXP::Saves
     end
   end
   MAGIC = "RGSSXP\0SAVE\0".b + [1].pack('V')
+  HIGH_MAGIC = "RGSSXP\0SAVE\0".b + [2].pack('V')
   ROOT = File.expand_path('Saves/RGSSXP').freeze
   IMPORT = File.expand_path('Saves/Import').freeze
 
@@ -45,7 +48,13 @@ module RGSSXP::Saves
     file = ReadStream.new(bytes, modified)
     begin
       if File.dirname(path) == ROOT
-        raise IOError, 'Unsupported RGSSXP save header or version' unless file.read(MAGIC.bytesize) == MAGIC
+        header = file.read(MAGIC.bytesize)
+        if header == HIGH_MAGIC
+          raise IOError, 'This save requires a stock120 converted project' unless RGSSXP::Timing.scale == 3
+          file.timing_rate = 120
+        elsif header != MAGIC
+          raise IOError, 'Unsupported RGSSXP save header or version'
+        end
       else
         raise IOError, 'Import requires an original RGSS save' if file.read(7) == "RGSSXP\0".b
         file.rewind
@@ -64,7 +73,7 @@ module RGSSXP::Saves
     temporary = path + ".tmp-#{Process.pid}"
     begin
       File.open(temporary, 'wbx') do |file|
-        file.write(MAGIC)
+        file.write(RGSSXP::Timing.scale == 3 ? HIGH_MAGIC : MAGIC)
         yield file
         file.flush
         file.fsync

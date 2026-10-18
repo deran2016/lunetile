@@ -25,7 +25,7 @@ def package(source,runtime,output):
   for p in selected:
    target=clean/p.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
   converted=staging/'converted'
-  migrate(clean,converted,runtime/'RGSS104E.dll',runtime/'rgssxp-ruby.exe',data_encoding='UTF-8',widescreen=True)
+  migrate(clean,converted,runtime/'RGSS104E.dll',runtime/'rgssxp-ruby.exe',data_encoding='UTF-8',widescreen=True,high_refresh=True)
   game=staging/'game';game.mkdir()
   for name in ('Game.exe','Game.ini','Game.rxproj','RGSS104E.dll'):
    shutil.copy2(converted/name,game/name)
@@ -44,6 +44,8 @@ def package(source,runtime,output):
    '원본 template은 RTP 리소스를 사용합니다. RTP는 이 ZIP에 포함하지 않습니다.\n'
    '영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지 밖의 경로를 지원하지 않습니다.\n'
    '화면: 1280x720 와이드. 창 크기 조절/최대화, Alt+Enter 전체 화면.\n'
+   '출력: 기본 60FPS. 게임 메뉴 끝의 화면 설정에서 40/60/120FPS를 선택하고 저장할 수 있습니다. 로직은 120Hz입니다.\n'
+   '고주기 저장은 버전 2입니다. 기존 저장은 읽을 수 있지만 새 저장은 이전 런타임에서 읽을 수 없습니다.\n'
    '새 저장: Saves/RGSSXP. 원본 프로젝트나 기존 세이브를 덮어쓰지 마세요.\n'
    'Game.rxproj와 Data는 변환된 프로젝트이며 기본 XP 스크립트를 덮어쓰면 호환 처리가 사라질 수 있습니다.\n\n'
    'Experimental build. See verification.json for this DLL\'s CI checks.\n'

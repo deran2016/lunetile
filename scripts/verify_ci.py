@@ -1,5 +1,5 @@
 """Verify build outputs and the supplied template launcher."""
-import argparse,json,subprocess,sys
+import argparse,ast,json,subprocess,sys
 from pathlib import Path
 from inspect_runtime import inspect
 
@@ -26,6 +26,7 @@ def verify(output):
    report['steps'].append({'name':name,'exit_code':result.returncode})
    if result.returncode:raise RuntimeError(name+' failed; see '+str(output/(name+'.log')))
   report['launcher_skipped']=json.loads((output/'launcher-smoke/skipped.json').read_text(encoding='utf-8'))
+  report['refresh_validation']={'logic_rate':120,'scope':'Automated background rendering; successful DXGI submissions, not physical monitor scanout','samples':ast.literal_eval((output/'launcher-smoke/refresh/refresh-results.txt').read_text()),'timing_40':ast.literal_eval((output/'launcher-smoke/timing-40/timing-comparison.txt').read_text()),'timing_120':ast.literal_eval((output/'launcher-smoke/timing-120/timing-comparison.txt').read_text())}
   (output/'artifact.json').write_text(json.dumps(artifact,indent=2)+'\n',encoding='utf-8')
   report['passed']=True
  finally:

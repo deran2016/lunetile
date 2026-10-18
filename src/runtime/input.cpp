@@ -1,4 +1,6 @@
 #include <windows.h>
+#include "graphics.h"
+#include "refresh_clock.h"
 #include <Xinput.h>
 #include <array>
 #include <ruby.h>
@@ -31,7 +33,7 @@ VALUE update(VALUE){
     state[18]=any({'W',VK_NEXT})||(flags&XINPUT_GAMEPAD_RIGHT_SHOULDER);
     state[21]=any({VK_SHIFT});state[22]=any({VK_CONTROL});state[23]=any({VK_MENU});
     for(int i=25;i<=29;++i)state[i]=any({VK_F5+i-25});
-    for(int i=0;i<30;++i){auto& b=buttons[i];b.trigger=state[i]&&!b.held;b.held=state[i];b.duration=state[i]?b.duration+1:0;b.repeat=b.trigger||(b.duration>=17&&(b.duration-17)%4==0);}
+    for(int i=0;i<30;++i){auto& b=buttons[i];b.trigger=state[i]&&!b.held;b.held=state[i];b.duration=state[i]?b.duration+1:0;b.repeat=b.trigger||(rgss_refresh::repeat_due(b.duration,graphics_time_scale()));}
     for(auto& value:pressed)value=false;
     return Qnil;
 }
