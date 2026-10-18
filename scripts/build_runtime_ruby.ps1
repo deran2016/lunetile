@@ -66,6 +66,8 @@ try {
         $report.stage = 'build-miniruby'
         $includes = "-I$out -I$configInclude -I$out/.ext/include -I$source/include -I$source -I$source/prism -I$source/enc/unicode/17.0.0"
         foreach ($subdir in @('prism','prism/util','enc','enc/trans','missing','win32','coroutine/win32')) { New-Item -ItemType Directory -Force (Join-Path $out $subdir) | Out-Null }
+        # Reassemble cached coroutine objects with x86 SafeSEH metadata for the DLL linker.
+        Invoke-Logged 'ml.exe' @('/nologo','/safeseh','/coff',"/Fo$out/coroutine/win32/Context.obj",'/c',"$source/coroutine/win32/Context.asm") 'coroutine-build.log'
         $vpath = "$out;$configInclude/ruby;$source/include/ruby;$source;$source/missing;$source/win32"
         $compilerWrapper = (Join-Path $out 'compile.cmd').Replace('/','\')
         @('@echo off', 'cd /d "%~dp0"', ('"' + $report.compiler + '" -nologo -source-charset:utf-8 %*'), 'exit /b %ERRORLEVEL%') | Set-Content $compilerWrapper -Encoding ascii
@@ -73,7 +75,7 @@ try {
         $resourceWrapper = (Join-Path $out 'resource.cmd').Replace('/','\')
         $resourceCompiler = (Get-Command rc.exe).Source
         @('@echo off', 'cd /d "%~dp0"', ('"' + $resourceCompiler + '" %*'), 'exit /b %ERRORLEVEL%') | Set-Content $resourceWrapper -Encoding ascii
-        $makeOptions = @('YJIT_SUPPORT=no','ZJIT_SUPPORT=no','DEBUGFLAGS=-Z7',"CC=$compilerWrapper","RC=$resourceWrapper","INCFLAGS=$includes","COUTFLAG=-Fo$out/","EXTOUT=$out/.ext","VPATH=$vpath")
+        $makeOptions = @('YJIT_SUPPORT=no','ZJIT_SUPPORT=no','DEBUGFLAGS=-Z7','ASFLAGS=-safeseh',"CC=$compilerWrapper","RC=$resourceWrapper","INCFLAGS=$includes","COUTFLAG=-Fo$out/","EXTOUT=$out/.ext","VPATH=$vpath")
         Invoke-Logged 'nmake.exe' (@('/nologo','miniruby.exe') + $makeOptions) 'build.log'
         $report.stage = 'verify-miniruby'
         Invoke-Logged './miniruby.exe' @("$repo/tests/runtime_ruby.rb") 'smoke.log'
