@@ -6,7 +6,7 @@
 ![Platform: Windows x86](https://img.shields.io/badge/Platform-Windows%20x86-0078D4)
 ![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange)
 
-**Lunetile(루네타일)**은 고전 타일 기반 RPG를 위한 독립 런타임 프로젝트입니다. 이름은 달을 뜻하는 *lune*과 *tile*을 합쳤습니다.
+**Lunetile**(루네타일)은 고전 타일 기반 RPG를 위한 독립 런타임 프로젝트입니다. 이름은 달을 뜻하는 *lune*과 *tile*을 합쳤습니다.
 
 [시작하기](#빌드) · [프로젝트 변환](#프로젝트-변환과-실행) · [검증 범위](#검증-기록과-한계) · [기여하기](#기여하기)
 
