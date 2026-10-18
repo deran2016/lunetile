@@ -44,6 +44,27 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 
 `python`, `cmake.exe`, `tar.exe`를 PATH에서 실행할 수 있어야 합니다. 최초 빌드에는 고정된 의존 소스를 다운로드할 네트워크 연결이 필요합니다. 부트스트랩 Ruby는 빌드 도구로만 사용하며 게임 실행에 별도로 필요하지 않습니다.
 
+## 바이너리 다운로드와 자동 릴리스
+
+[GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP에는 DLL, Ruby 변환 도우미, 프로젝트 변환 도구, 라이선스, 검사 결과와 파일별 해시가 들어 있습니다. 원본 게임과 VC++ 런타임은 포함하지 않습니다.
+
+압축을 풀고 `lunetile-windows-x86` 폴더에서 Python 3.12로 `python scripts/migrate_project.py "ORIGINAL_PROJECT" "NEW_PROJECT"`를 실행합니다. 원본 인코딩 옵션과 저장 보존 규칙은 아래 변환 절을 따릅니다. 다운로드 해시는 PowerShell의 `Get-FileHash lunetile-windows-x86.zip -Algorithm SHA256`으로 비교할 수 있습니다.
+
+[Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml) 동작:
+
+- `main` 푸시 또는 **Run workflow**: Windows Server 2022 / VS2022에서 x86 빌드·검사 후 Actions 아티팩트 보관.
+- `v*` 태그 푸시: 같은 검사를 통과한 ZIP과 SHA-256을 GitHub 사전 릴리스로 자동 게시.
+- 실패한 빌드는 게시하지 않습니다. 현재 릴리스는 모두 실험적 빌드이며, CI에서 실제 게임·렌더링·오디오·완주 검증은 수행하지 않습니다. 해당 빌드의 범위는 ZIP의 `verification.json`을 확인하세요.
+
+관리자는 배포할 커밋에서 새 버전 태그를 만듭니다. 이미 게시된 태그를 덮어쓰지 않습니다.
+
+```powershell
+git tag v0.1.0-alpha.1
+git push origin v0.1.0-alpha.1
+```
+
+별도 PAT는 필요하지 않습니다. 게시 작업만 GitHub의 자동 `GITHUB_TOKEN`에 `contents: write`를 부여합니다. 수동 실행은 태그를 선택해도 릴리스를 게시하지 않습니다.
+
 ## 빌드
 
 저장소 루트에서 실행합니다. `BOOTSTRAP_RUBY_EXE`는 설치한 Ruby 실행 파일의 실제 경로로 바꿉니다.
