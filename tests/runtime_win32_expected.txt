@@ -1,0 +1,6 @@
+pid	true
+string	3
+counter	[true, true]
+void	[0, true]
+null	true
+signed	-1

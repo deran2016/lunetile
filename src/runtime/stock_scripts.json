@@ -1,0 +1,365 @@
+{
+  "reference_archive_sha256": "af503820428e97276b98223ea2b8a0450001404f64d4c32019d5712944aee8a6",
+  "scripts": [
+    {
+      "name": "Game_Temp",
+      "source_sha256": "a22cfc47f0eab0e1379c90b6c64a04cf6ab1ed403b54c65a327c49738ad204ba"
+    },
+    {
+      "name": "Game_System",
+      "source_sha256": "2e5768b1496fcb1164b3aa3c11c02ab42284e5ad43c3048c8596f9dc45bb2903"
+    },
+    {
+      "name": "Game_Switches",
+      "source_sha256": "89afcfb2d109f1fcd6b693240ddb009cb98d3abb21d8b0608da8f8f234ebd37e"
+    },
+    {
+      "name": "Game_Variables",
+      "source_sha256": "4f81fb30609b677c6b206cf0eb117a94b12679527884fb3391c1dcacb1cb64ec"
+    },
+    {
+      "name": "Game_SelfSwitches",
+      "source_sha256": "d49b06d781c8b07ba1c50e9a982fb092eb0a5858ce5430066227881abe817a0a"
+    },
+    {
+      "name": "Game_Screen",
+      "source_sha256": "b01731a1335b1adb653480d3705ef485786cc10555ffd0ef267647e3e8d29732"
+    },
+    {
+      "name": "Game_Picture",
+      "source_sha256": "8918f3593582ad252b77d61be002a97ab8becbc7a71cb106ec8223d1302e1965"
+    },
+    {
+      "name": "Game_Battler 1",
+      "source_sha256": "c4a7b23721ff608b78956e99996b793ca73a030d786450b6e975aec21efbae66"
+    },
+    {
+      "name": "Game_Battler 2",
+      "source_sha256": "d46685880c54d22cbdb1fcdb12346ac20596ae9fa0653dab6f91aabd7464e312"
+    },
+    {
+      "name": "Game_Battler 3",
+      "source_sha256": "6bd8b7a0a2ad85d08b3df6bebfe2b9a87a2096128b857f2018009594c8e13013"
+    },
+    {
+      "name": "Game_BattleAction",
+      "source_sha256": "330b26d79904fbbfcfd85ca7b80f560c1385f286f14bdac3669da3dd8e607dc6"
+    },
+    {
+      "name": "Game_Actor",
+      "source_sha256": "4912a43c1b232993a8d7848b0ca34f4aee03323b3a8aff7ecab8811ec1e4450c"
+    },
+    {
+      "name": "Game_Enemy",
+      "source_sha256": "75861b6808242f47c7829bf87d4d08269b61e503ffa0e9e87e8ae0c665807eaa"
+    },
+    {
+      "name": "Game_Actors",
+      "source_sha256": "d4f2ad5c5b792c7c5cbfe302f8917c260f294d7178c62cf2cb0232c2b3c8ac27"
+    },
+    {
+      "name": "Game_Party",
+      "source_sha256": "a46df101d114720c0bbb923a6e5ad614958f3e2babd39e728775dadea9847e77"
+    },
+    {
+      "name": "Game_Troop",
+      "source_sha256": "39f05c9507858c020c9c58a02bcdce6baf7306552768e6d46c39adfb3198303e"
+    },
+    {
+      "name": "Game_Map",
+      "source_sha256": "6c499266803786b2f675ce3908540d5309252cf68e645b4477df1d6e5b6a77e8"
+    },
+    {
+      "name": "Game_CommonEvent",
+      "source_sha256": "bf02481e4402a2e7f5782da92aad44c31626b3c79a2862c7df98ba5b5f858c57"
+    },
+    {
+      "name": "Game_Character 1",
+      "source_sha256": "d7cdfbcf63bde78129ac6371283e995ac79febaf207ee0ae0ebf9c75b3151c36"
+    },
+    {
+      "name": "Game_Character 2",
+      "source_sha256": "8bd14700b3aba559b36a92cd417ca38e769f938e7c1559cd6470cf7102ac5262"
+    },
+    {
+      "name": "Game_Character 3",
+      "source_sha256": "6f7db4587b2a5fce0da47be97a7d9272f0dcbe0af15744b34acb5b158056e764"
+    },
+    {
+      "name": "Game_Event",
+      "source_sha256": "43a5d9776ef76f2d9ae78b79c993d17a4ef7b20932cc9c93758102d7f57be694"
+    },
+    {
+      "name": "Game_Player",
+      "source_sha256": "9ca8b64c3de92a69cf4ca8280ca717f890f9a1839c4162d819fe115c2e2735eb"
+    },
+    {
+      "name": "Sprite_Character",
+      "source_sha256": "70296c1ace23a659dc65f579eea825e0f8571c3e770b6ae0f9624525a1321cd7"
+    },
+    {
+      "name": "Sprite_Battler",
+      "source_sha256": "df7b1cc87668ccdd4d4b6d77eb1ca706b9318624a1864400a68c7ae7019b2e41"
+    },
+    {
+      "name": "Sprite_Picture",
+      "source_sha256": "5eee5759475df7fd87cc97588877677557703b02d45137d925628ee737a6f7c8"
+    },
+    {
+      "name": "Sprite_Timer",
+      "source_sha256": "e7fdf2e77f66cf70180026509e8782b2a43dc4b96e45a23b27168effab23e1e6"
+    },
+    {
+      "name": "Spriteset_Map",
+      "source_sha256": "8a9508ba59052928b1b183ef17b38a29a4fc78952186e6630561956bd9621500"
+    },
+    {
+      "name": "Spriteset_Battle",
+      "source_sha256": "e571e810487ab2ec331453c757e40395319386db6d793fb85bf6833876ebc802"
+    },
+    {
+      "name": "Window_Base",
+      "source_sha256": "716abbfdf5e1a0cd8e60d687bf11c61b3c66b995b54187cedf87fdd3e2c05ba6"
+    },
+    {
+      "name": "Window_Selectable",
+      "source_sha256": "fffd57177f0380b137069905ae49bafccf58ad9abaca8e27e91e61095b82be8b"
+    },
+    {
+      "name": "Window_Command",
+      "source_sha256": "cb77426f9bea2512c8626febe37c76b0e719a67838e1e51fda5ed9f513a01ea3"
+    },
+    {
+      "name": "Window_Help",
+      "source_sha256": "734f9ff53716c2cfecd89c3095fcb1fd7f67178c4bf23bc03b375c1442371022"
+    },
+    {
+      "name": "Window_Gold",
+      "source_sha256": "8c86277f0b1a1bc465ef54342c790f87d4232304e01954bce83cfecd1d819ed8"
+    },
+    {
+      "name": "Window_PlayTime",
+      "source_sha256": "19a72a45511c916c9e21454a91e928508f5697819f20b6efd32aad8aa40343ff"
+    },
+    {
+      "name": "Window_Steps",
+      "source_sha256": "1d1a324a5715f67c20855384661aefac6c7428b3d1c0e4499783627b9816dcee"
+    },
+    {
+      "name": "Window_MenuStatus",
+      "source_sha256": "b80cff94fc03e6e0ed24a2abb21ae11cd6ccb801cf47dab6a3e005e8a9f54c27"
+    },
+    {
+      "name": "Window_Item",
+      "source_sha256": "cc9d0fc9051c0ffa7c7f8dcdbae9680b12e2f77138b27e42c3e68a9a0b56b1f1"
+    },
+    {
+      "name": "Window_Skill",
+      "source_sha256": "ede5edc57b3c7af7d0d9dedf1dab3c2516841b53ca5d8f3785af968539c34641"
+    },
+    {
+      "name": "Window_SkillStatus",
+      "source_sha256": "e24318e7307f61e6d21d64d24a39e2a7fbc9e0b9f0464ed33534191e6cd8d933"
+    },
+    {
+      "name": "Window_Target",
+      "source_sha256": "6c183280719ec8547fc1dfaa3bd6c37c51ee5b0965e4ee6f12d10c81145bb667"
+    },
+    {
+      "name": "Window_EquipLeft",
+      "source_sha256": "454f70cd81ad9446d3ba1ce0fc0fcd5a527ecec3d7eb990e38068cd0701991cc"
+    },
+    {
+      "name": "Window_EquipRight",
+      "source_sha256": "571abf48193ba91e23158faf784c407544f123adea92376910112b35293f23d5"
+    },
+    {
+      "name": "Window_EquipItem",
+      "source_sha256": "35859fb5eafbccdc3f79c80054579af4bcc73545b1ade20b12403add0b8a7cf6"
+    },
+    {
+      "name": "Window_Status",
+      "source_sha256": "fdd75b53a0d30066fdf087351d41cf201b04cb8cb0630d579e7875383f7b1d01"
+    },
+    {
+      "name": "Window_SaveFile",
+      "source_sha256": "f5d3cc3e9b3763f9a39e14fab82e27eac031b13100eedd78e074d4995149e602"
+    },
+    {
+      "name": "Window_ShopCommand",
+      "source_sha256": "689dfe5d3ed2dabe90ecafd1b4992d22bd12bb059505ef12a126b8008effba6e"
+    },
+    {
+      "name": "Window_ShopBuy",
+      "source_sha256": "c3b0c1f03a1c49648ee4f5d050a094d833666d5d4a069ffd848d68eb5b6bd0e3"
+    },
+    {
+      "name": "Window_ShopSell",
+      "source_sha256": "35f22778c00c81b2034b83ed4a8518d0879795cfe90cf10cca0ba82aae8d4ffe"
+    },
+    {
+      "name": "Window_ShopNumber",
+      "source_sha256": "ff626bf406264ba4549b1086947cb22b14aa495d93e6408830bc197dbb5b847e"
+    },
+    {
+      "name": "Window_ShopStatus",
+      "source_sha256": "66590d21bbf1e97bcf4426cae414fed13618b0e2e4fe37d3d0fc4013a209b3d3"
+    },
+    {
+      "name": "Window_NameEdit",
+      "source_sha256": "922b8b900f94804eb19c4fb77a997de7550f173057e7a89d7de76767a65ff826"
+    },
+    {
+      "name": "Window_NameInput",
+      "source_sha256": "08d4998349dfcb79d40edae14e5f25736a33610ee62c7e9606d48236df371953"
+    },
+    {
+      "name": "Window_InputNumber",
+      "source_sha256": "526089c9ff02f0e14d7ef177f78915cab07f5a487dd68aef10a7defef7175371"
+    },
+    {
+      "name": "Window_Message",
+      "source_sha256": "c7fb9ffd45ee12e4ebd94c1538436bc47c695144f2ffa639da92d33cfd05a577"
+    },
+    {
+      "name": "Window_PartyCommand",
+      "source_sha256": "70ad5e1bc72c4ebb7ee7c29483d39682d066f20c380aa72143a04b0b03f33e97"
+    },
+    {
+      "name": "Window_BattleStatus",
+      "source_sha256": "0adacaf615413d09ef9a88c75f00a1da91a0034a2e4319d7c78d77fc46e18efa"
+    },
+    {
+      "name": "Window_BattleResult",
+      "source_sha256": "bcd5712c07fbb420fb4eb71536e39feab45642e2d8387722f5203fac73edc1a4"
+    },
+    {
+      "name": "Window_DebugLeft",
+      "source_sha256": "c2383ac75eec2529e24dcf190cce9ce9fb60bcbe6cef16a68b764acc7a8a6e9e"
+    },
+    {
+      "name": "Window_DebugRight",
+      "source_sha256": "0eddc67174cc942b1fa95001e024689d9e443bfd3b002ec745e9a09ea89385ba"
+    },
+    {
+      "name": "Arrow_Base",
+      "source_sha256": "9bf0bc4f2cec8045af885358d078853d16a14af495877ea90bc8ffdab7689eee"
+    },
+    {
+      "name": "Arrow_Enemy",
+      "source_sha256": "1b2c94679bf83df883443c114456ef7e0b0496bba4b320c40ffb939137c54a76"
+    },
+    {
+      "name": "Arrow_Actor",
+      "source_sha256": "dae540805fa9ba8de507e79440b2653a1695d7d0d3f495b5d94a9625a0bca888"
+    },
+    {
+      "name": "Interpreter 1",
+      "source_sha256": "737b1faca77fd0026528c1eb4fef9acc5637800ef07ac0351a7b68c022c40f1a"
+    },
+    {
+      "name": "Interpreter 2",
+      "source_sha256": "3581d7f925de2e30385afed0562ed1e04a7bea3eef98ec3c2c80802afa383a14"
+    },
+    {
+      "name": "Interpreter 3",
+      "source_sha256": "6dade2a7a369b924d270dc8321c809e112f962aba56cecd2b9648170dd30f13a"
+    },
+    {
+      "name": "Interpreter 4",
+      "source_sha256": "99cea4ba1217ac6db95fbf7c0b4123ce4bd006dc6796557366c13e28c793abb7"
+    },
+    {
+      "name": "Interpreter 5",
+      "source_sha256": "289d197e23038144295cbbdb93041fe4e3500bde2e1990b936be6107052593e1"
+    },
+    {
+      "name": "Interpreter 6",
+      "source_sha256": "0ee92cabb39729e498b0a221b2941617c60eaca6b5b30fc4546c5b46bc5e632f"
+    },
+    {
+      "name": "Interpreter 7",
+      "source_sha256": "cb387ef0335f4eb4013f46e33bd27034186e8a2155176f6205c8ea47e4714b18"
+    },
+    {
+      "name": "Scene_Title",
+      "source_sha256": "7794cad2e1905bdbd36bcfac6683773c4ac172bda5d21b6ade1c662006b8b015"
+    },
+    {
+      "name": "Scene_Map",
+      "source_sha256": "9c6f0b92906fa2723f7c73c6939f666d3aba8bda2aa56edd174bb38d7fcd39e4"
+    },
+    {
+      "name": "Scene_Menu",
+      "source_sha256": "a192b7c808328dac275da0b7cc61f894f3e086361b16ff6a0a84f28050ec4a01"
+    },
+    {
+      "name": "Scene_Item",
+      "source_sha256": "6297f63bbfdfaa73a82b1472fadf6e767a92804140205cd61acfeaff85556317"
+    },
+    {
+      "name": "Scene_Skill",
+      "source_sha256": "6965c16e270fe0ef287e32130b6971e3f31f1ac25588dbd3911b122a990ab55e"
+    },
+    {
+      "name": "Scene_Equip",
+      "source_sha256": "fe1988ed7a57a7e9aee10bad6c892757dcaae6b3cec43ae33ffa259debc692a2"
+    },
+    {
+      "name": "Scene_Status",
+      "source_sha256": "42c247637421090ed7709780e87b4143559378079b66cc8e88fc041d3ceca382"
+    },
+    {
+      "name": "Scene_File",
+      "source_sha256": "5a1739bdc5c7fb40e0bbeae09237f0869f5497dccbe3827473117f74185c5d07"
+    },
+    {
+      "name": "Scene_Save",
+      "source_sha256": "fb53aba41587337f9298a72db3e358e1c1fb9452cb6e0f3b8b0a0cbe4b517904"
+    },
+    {
+      "name": "Scene_Load",
+      "source_sha256": "856596f2081cf9c78793507a9248daa6b6ef141cfa8c85cec97c25e857a2ccd8"
+    },
+    {
+      "name": "Scene_End",
+      "source_sha256": "12339f6cfe7e3b8bced7f9aef0390a313b5ff59e809eda86debf642c104fb765"
+    },
+    {
+      "name": "Scene_Battle 1",
+      "source_sha256": "b767fabf46298f8fb83b8fc9127e7849093385d6a48c7475af5098f8b286700d"
+    },
+    {
+      "name": "Scene_Battle 2",
+      "source_sha256": "011d8d09141b6ea65a727fae2de066c6aafd9f7ae13d7be845d3b315cd98f11e"
+    },
+    {
+      "name": "Scene_Battle 3",
+      "source_sha256": "0b1946e1bd181816333c386524afda207e52cd76af43d7fe9114f0832589131c"
+    },
+    {
+      "name": "Scene_Battle 4",
+      "source_sha256": "9b7d8e16573cc930799d76d4e10784eca914a87d62678f4355cb1ce6be0b4423"
+    },
+    {
+      "name": "Scene_Shop",
+      "source_sha256": "e2c7d51814e6276b12b8c17f4e6d40fd3232fa966f2e7a0e321984b8f8ef424e"
+    },
+    {
+      "name": "Scene_Name",
+      "source_sha256": "a98e2520e12675353e083d7845162859462593bba30b4635827132ab6751c1fe"
+    },
+    {
+      "name": "Scene_Gameover",
+      "source_sha256": "559f10b70a3e862f5b1bcd630b2b9b9e4975239a56d1b72bac71186dfea0d562"
+    },
+    {
+      "name": "Scene_Debug",
+      "source_sha256": "1ffee4d9b223c6157a320fdeffaee595a9e8b37281638b0929adfdf29a6a6207"
+    },
+    {
+      "name": "Main",
+      "source_sha256": "ac1eb6cdb5e44549d23580210c66d57f2ba1ae3c5b9ac4acc036010a34c2d8e7"
+    }
+  ]
+}

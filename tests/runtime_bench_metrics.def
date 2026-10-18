@@ -1,0 +1,10 @@
+LIBRARY RGSSBenchMetrics
+EXPORTS
+BenchReset=_BenchReset@4
+BenchStage=_BenchStage@4
+BenchBegin=_BenchBegin@0
+BenchLogic=_BenchLogic@0
+BenchEnd=_BenchEnd@0
+BenchClock=_BenchClock@0
+BenchWrite=_BenchWrite@4
+BenchWriteTimeline=_BenchWriteTimeline@4

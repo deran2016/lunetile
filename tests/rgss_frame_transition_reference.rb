@@ -1,0 +1,31 @@
+Graphics.frame_rate=40
+bitmap=Bitmap.new(8,8);bitmap.fill_rect(bitmap.rect,Color.new(30,60,90))
+sprite=Sprite.new;sprite.bitmap=bitmap
+clock=Win32API.new('kernel32','GetTickCount',[],'L')
+File.open('types-reference.txt','w') do |file|
+  [0,1,2,3,10,20].each do |duration|
+    Graphics.update
+    Graphics.frame_count=100
+    before=Graphics.frame_count
+    Graphics.freeze
+    frozen=Graphics.frame_count
+    started=clock.call
+    Graphics.transition(duration)
+    elapsed=(clock.call-started)&0xffffffff
+    file.puts('count_'+duration.to_s+"\t"+[before,frozen,Graphics.frame_count].inspect)
+    file.puts('elapsed_'+duration.to_s+"\t"+elapsed.inspect)
+  end
+  Graphics.frame_count=100
+  Graphics.freeze
+  Graphics.transition
+  file.puts('count_default'+"\t"+Graphics.frame_count.inspect)
+  Graphics.frame_count=100
+  before=Graphics.frame_count
+  Graphics.frame_reset
+  reset=Graphics.frame_count
+  Graphics.update
+  first=Graphics.frame_count
+  Graphics.update
+  file.puts('count_reset'+"\t"+[before,reset,first,Graphics.frame_count].inspect)
+end
+sprite.dispose;bitmap.dispose

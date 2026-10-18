@@ -1,0 +1,9 @@
+{
+  "bootstrap_sources": [
+    "module RGSSNativePacing\n Attach=Win32API.new('RGSSFramePacing','Attach','','i')\n Detach=Win32API.new('RGSSFramePacing','Detach','','i')\n def self.start\n  raise 'Unsupported RGSS binary for frame pacing' unless Attach.call==1\n end\nend\n",
+    "# Insert above Main. Call start inside Main's begin and detach in its ensure.\nmodule RGSSNativePacing\n  Attach = Win32API.new('RGSSFramePacing', 'Attach', '', 'i')\n  Detach = Win32API.new('RGSSFramePacing', 'Detach', '', 'i')\n  def self.start\n    raise 'Unsupported RGSS binary for frame pacing' unless Attach.call == 1\n  end\nend\n"
+  ],
+  "start_line": "  RGSSNativePacing.start\n",
+  "detach_block": "ensure\n  RGSSNativePacing::Detach.call\n",
+  "disabled_source": "# Removed exact legacy RGSSFramePacing bootstrap; independent runtime.\n"
+}

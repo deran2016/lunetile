@@ -1,0 +1,23 @@
+#pragma once
+static const char audio_support[] = R"RGSSXP(# encoding: UTF-8
+@audio_support@)RGSSXP";
+static const char value_types[] = R"RGSSXP(# encoding: UTF-8
+@value_types@)RGSSXP";
+static const char data_types[] = R"RGSSXP(# encoding: UTF-8
+@data_types@
+@data_schema@
+@data_constructors@
+@save_support@
+@archive_support@)RGSSXP";
+static const char integer_map_support[] = R"RGSSXP(# encoding: UTF-8
+@integer_map_support@)RGSSXP";
+static const char text_support[] = R"RGSSXP(# encoding: UTF-8
+@text_support@)RGSSXP";
+static const char graphics_support[] = R"RGSSXP(# encoding: UTF-8
+@graphics_support@)RGSSXP";
+static const char rpg_graphics_support[] = R"RGSSXP(# encoding: UTF-8
+@rpg_graphics_support@
+module RGSSXP
+AUTOTILE_QUARTERS = @autotile_quarters@
+end
+@tilemap_support@)RGSSXP";

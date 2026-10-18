@@ -1,0 +1,135 @@
+{
+  "table_shape": [
+    2,
+    3,
+    4,
+    0,
+    null,
+    null
+  ],
+  "table_value_-32769": 32767,
+  "table_value_-32768": -32768,
+  "table_value_32767": 32767,
+  "table_value_32768": -32768,
+  "table_value_65535": -1,
+  "table_value_65536": 0,
+  "table_value_2147483647": -1,
+  "table_value_1.5": 1,
+  "table_resize": [
+    3,
+    2,
+    1,
+    11,
+    12,
+    0,
+    21,
+    22,
+    0,
+    "02000000030000000200000001000000060000000b000c000000150016000000"
+  ],
+  "table_dimension_one": [
+    2,
+    1,
+    1,
+    "010000000200000001000000010000000200000000000000"
+  ],
+  "table_zero": [
+    0,
+    1,
+    1,
+    null
+  ],
+  "color_clamp": [
+    "-20.0",
+    "255.0",
+    "1.5",
+    "0.0"
+  ],
+  "color_dump": "000000000000f03f000000000000004000000000000008400000000000001040",
+  "color_default": [
+    "1.0",
+    "2.0",
+    "3.0",
+    "255.0"
+  ],
+  "color_set": [
+    "Color",
+    "4.0",
+    "5.0",
+    "6.0",
+    "7.0"
+  ],
+  "tone_clamp": [
+    "-255.0",
+    "255.0",
+    "1.5",
+    "255.0"
+  ],
+  "tone_dump": "000000000000f0bf000000000000004000000000000008400000000000001040",
+  "rect_default": [
+    "error",
+    "ArgumentError"
+  ],
+  "rect_values": [
+    1,
+    -2,
+    -3,
+    4
+  ],
+  "rect_empty": [
+    "Rect",
+    0,
+    0,
+    0,
+    0
+  ],
+  "rect_dump": "01000000020000000300000004000000",
+  "table_arity": [
+    "error",
+    "ArgumentError"
+  ],
+  "table_bad_write": null,
+  "table_resize_return": "Table",
+  "table_clone": [
+    3,
+    8
+  ],
+  "color_low": [
+    "-255.0",
+    "-255.0",
+    "-255.0",
+    "0.0"
+  ],
+  "color_setters": [
+    "-255.0",
+    "-255.0",
+    "-255.0",
+    "0.0"
+  ],
+  "color_copy": [
+    "error",
+    "ArgumentError"
+  ],
+  "color_set_copy": [
+    "error",
+    "ArgumentError"
+  ],
+  "tone_default": [
+    "1.0",
+    "2.0",
+    "3.0",
+    "0.0"
+  ],
+  "rect_set_copy": [
+    "error",
+    "ArgumentError"
+  ],
+  "rect_copy": [
+    "error",
+    "ArgumentError"
+  ],
+  "color_equality": [
+    true,
+    true
+  ]
+}

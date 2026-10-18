@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Graphics metadata only. Win32k input events and stack sampling are not enabled. -->
+<WindowsPerformanceRecorder Version="1.0" Author="RGSSXP">
+  <Profiles>
+    <EventCollector Id="RGSSXPGraphicsCollector" Name="RGSSXP Graphics Timing">
+      <BufferSize Value="256" />
+      <Buffers Value="128" />
+    </EventCollector>
+    <EventProvider Id="RGSSXPDxg" Name="802ec45a-1e99-4b83-9920-87c98277ba9d" Level="5" NonPagedMemory="true" Strict="true">
+      <Keywords><Keyword Value="0x04b0ffff" /></Keywords>
+      <CaptureStateOnStart><Keyword Value="0x04b0ffff" /></CaptureStateOnStart>
+      <CaptureStateOnSave><Keyword Value="0x04b0ffff" /></CaptureStateOnSave>
+    </EventProvider>
+    <EventProvider Id="RGSSXPD3D9" Name="783aca0a-790e-4d7f-8451-aa850511c6b9" Level="6" Strict="true">
+      <Keywords><Keyword Value="0xf" /></Keywords>
+    </EventProvider>
+    <EventProvider Id="RGSSXPDXGI" Name="ca11c036-0102-4a2d-a6ad-f03cfed5d3c9" Level="6" Strict="true">
+      <Keywords><Keyword Value="0xf" /></Keywords>
+    </EventProvider>
+    <EventProvider Id="RGSSXPWin32k" Name="8c416c79-d49b-4f01-a467-e56d3aa8234c" Level="4" NonPagedMemory="true" Strict="true">
+      <Keywords><Keyword Value="0x8000000400001000" /></Keywords>
+      <EventFilters FilterIn="true"><EventId Value="201" /><EventId Value="301" /></EventFilters>
+    </EventProvider>
+    <EventProvider Id="RGSSXPDwm" Name="9e9bba3c-2e38-40cb-99f4-9e8281425164" Level="5" Strict="true">
+      <Keywords><Keyword Value="0x8000000000000081" /></Keywords>
+      <EventFilters FilterIn="true">
+        <EventId Value="15" /><EventId Value="64" /><EventId Value="69" />
+        <EventId Value="70" /><EventId Value="101" /><EventId Value="196" />
+      </EventFilters>
+    </EventProvider>
+    <EventProvider Id="RGSSXPProcess" Name="22fb2cd6-0e7b-422b-a0c7-2fad1fd0e716" Level="5" Strict="true">
+      <Keywords><Keyword Value="0x10" /></Keywords>
+    </EventProvider>
+    <Profile Id="RGSSXPGpuWait.Verbose.File" Name="RGSSXPGpuWait" Description="Owned-game graphics timing; no input events or system setting changes" DetailLevel="Verbose" LoggingMode="File">
+      <Collectors><EventCollectorId Value="RGSSXPGraphicsCollector"><EventProviders>
+        <EventProviderId Value="RGSSXPDxg" /><EventProviderId Value="RGSSXPD3D9" />
+        <EventProviderId Value="RGSSXPDXGI" /><EventProviderId Value="RGSSXPWin32k" />
+        <EventProviderId Value="RGSSXPDwm" /><EventProviderId Value="RGSSXPProcess" />
+      </EventProviders></EventCollectorId></Collectors>
+    </Profile>
+  </Profiles>
+</WindowsPerformanceRecorder>

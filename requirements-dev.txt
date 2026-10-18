@@ -1,0 +1,4 @@
+# Validated with Python 3.12; development/test tools only.
+psutil==7.0.0
+Pillow==11.3.0
+numpy==1.26.4

@@ -1,0 +1,15 @@
+{
+  "launcher_sha256": "0ed9b5139edb0ad0f0f4b5b88dd0265ddbf56d36d6f173d6a22f3b23e8212e22",
+  "architecture": "x86",
+  "calling_convention": "cdecl",
+  "evidence": "REA ev_4bd89c28a5ea0bc1a91eccdcbe4e0f27a2eb1486ffca6f3dfaa5d310aed9543c and ev_390315758141c213a6dc7423a69e36c989942fa55a1ecbe0d8a7a91a4d79355f",
+  "exports": [
+    {"name": "RGSSSetupRTP", "ordinal": 24, "arguments": ["const char* ini", "char* error", "int capacity"], "returns": "int, zero on setup error"},
+    {"name": "RGSSInitialize", "ordinal": 20, "arguments": ["HMODULE runtime"], "returns": "void"},
+    {"name": "RGSSEval", "ordinal": 8, "arguments": ["const char* source"], "returns": "32-bit Ruby VALUE; launcher ignores result"},
+    {"name": "RGSSGameMain", "ordinal": 11, "arguments": ["HWND window", "const char* scripts", "const char* archive"], "returns": "int process result"},
+    {"name": "RGSSFinalize", "ordinal": 9, "arguments": [], "returns": "void"}
+  ],
+  "remaining_original_exports": 61,
+  "scope": "Launcher contract only; editor/regex exports are not implemented or advertised"
+}

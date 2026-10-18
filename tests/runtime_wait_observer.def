@@ -1,0 +1,5 @@
+EXPORTS
+WaitObserveStart=_WaitObserveStart@0
+WaitObserveBegin=_WaitObserveBegin@0
+WaitObserveRead=_WaitObserveRead@4
+WaitObserveStop=_WaitObserveStop@0

@@ -1,0 +1,401 @@
+{
+  "original_sha256": "7b6acb5e2c245b8cfda77fced2cc0e94108384cd1b9ffc8510e7304fcb9feb6c",
+  "exports": [
+    {
+      "name": "EncDefaultCharEncoding",
+      "ordinal": 1,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSAddRTPPath",
+      "ordinal": 2,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSAudioFinalize",
+      "ordinal": 3,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSAudioInitialize",
+      "ordinal": 4,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSClearRTPPath",
+      "ordinal": 5,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSErrorMessage",
+      "ordinal": 6,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSErrorType",
+      "ordinal": 7,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSEval",
+      "ordinal": 8,
+      "launcher_required": true,
+      "support": "implemented launcher entry point"
+    },
+    {
+      "name": "RGSSFinalize",
+      "ordinal": 9,
+      "launcher_required": true,
+      "support": "implemented launcher entry point"
+    },
+    {
+      "name": "RGSSGC",
+      "ordinal": 10,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSGameMain",
+      "ordinal": 11,
+      "launcher_required": true,
+      "support": "implemented launcher entry point"
+    },
+    {
+      "name": "RGSSGetBool",
+      "ordinal": 12,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSGetDouble",
+      "ordinal": 13,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSGetInt",
+      "ordinal": 14,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSGetPathWithRTP",
+      "ordinal": 15,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSGetRTPPath",
+      "ordinal": 16,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSGetStringACP",
+      "ordinal": 17,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSGetStringUTF8",
+      "ordinal": 18,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSGetTable",
+      "ordinal": 19,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSInitialize",
+      "ordinal": 20,
+      "launcher_required": true,
+      "support": "implemented launcher entry point"
+    },
+    {
+      "name": "RGSSSetString",
+      "ordinal": 21,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSSetStringACP",
+      "ordinal": 22,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSSetStringUTF8",
+      "ordinal": 23,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RGSSSetupRTP",
+      "ordinal": 24,
+      "launcher_required": true,
+      "support": "implemented launcher entry point"
+    },
+    {
+      "name": "RegDefaultSyntax",
+      "ordinal": 25,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RegEncodingASCII",
+      "ordinal": 26,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RegEncodingEUC_JP",
+      "ordinal": 27,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RegEncodingSJIS",
+      "ordinal": 28,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RegEncodingUTF8",
+      "ordinal": 29,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "RegSyntaxRuby",
+      "ordinal": 30,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "enc_get_left_adjust_char_head",
+      "ordinal": 31,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "enc_get_prev_char_head",
+      "ordinal": 32,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "enc_get_right_adjust_char_head",
+      "ordinal": 33,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "re_alloc_pattern",
+      "ordinal": 34,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_end",
+      "ordinal": 35,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_error_code_to_str",
+      "ordinal": 36,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_foreach_name",
+      "ordinal": 37,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_free",
+      "ordinal": 38,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_get_encoding",
+      "ordinal": 39,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_get_options",
+      "ordinal": 40,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_get_syntax",
+      "ordinal": 41,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_init",
+      "ordinal": 42,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_match",
+      "ordinal": 43,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_name_to_backref_number",
+      "ordinal": 44,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_name_to_group_numbers",
+      "ordinal": 45,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_new",
+      "ordinal": 46,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_number_of_names",
+      "ordinal": 47,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_recompile",
+      "ordinal": 48,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_region_clear",
+      "ordinal": 49,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_region_copy",
+      "ordinal": 50,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_region_free",
+      "ordinal": 51,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_region_new",
+      "ordinal": 52,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_region_resize",
+      "ordinal": 53,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_search",
+      "ordinal": 54,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_set_verb_warn_func",
+      "ordinal": 55,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_set_warn_func",
+      "ordinal": 56,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "regex_version",
+      "ordinal": 57,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_adjust_startpos",
+      "ordinal": 58,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_compile_pattern",
+      "ordinal": 59,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_free_pattern",
+      "ordinal": 60,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_free_registers",
+      "ordinal": 61,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_match",
+      "ordinal": 62,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_mbcinit",
+      "ordinal": 63,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_recompile_pattern",
+      "ordinal": 64,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_search",
+      "ordinal": 65,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    },
+    {
+      "name": "ruby_re_set_casetable",
+      "ordinal": 66,
+      "launcher_required": false,
+      "support": "unsupported; not exported"
+    }
+  ]
+}

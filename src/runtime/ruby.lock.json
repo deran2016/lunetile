@@ -1,0 +1,25 @@
+{
+  "version": "4.0.7",
+  "source_url": "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.7.tar.gz",
+  "sha256": "911ace20f90d068ca0e4dda6d0e4f0f81e52e52f2dd4f4004c721e253412e82d",
+  "target": "i686-mswin32",
+  "compiler": "MSVC 2022 x86",
+  "jit": false,
+  "license_source": "COPYING and LEGAL inside the verified source archive",
+  "extensions": {
+    "stringio": {
+      "version": "3.2.0",
+      "path": "ext/stringio/stringio.c",
+      "sha256": "1a0706da1353149841d17d916af0221f44680bcc096d5e51c42f3b9fc9c925e2",
+      "source": "Included in the pinned Ruby 4.0.7 archive; Ruby license"
+    }
+  },
+  "patches": [
+    {
+      "id": "msvc32-size-fetch-add",
+      "path": "include/ruby/atomic.h",
+      "original_sha256": "8d107d5c73034f22b8f231582b281ecef887793d720a5ca98689fce93230d861",
+      "patched_sha256": "c197043b93f84838cdb14683628c8acbb9d308c89f973afaa7ad755f3fba644c"
+    }
+  ]
+}

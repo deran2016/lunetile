@@ -1,0 +1,7 @@
+LIBRARY RGSS104E
+EXPORTS
+ RGSSEval @8
+ RGSSFinalize @9
+ RGSSGameMain @11
+ RGSSInitialize @20
+ RGSSSetupRTP @24
