@@ -1,4 +1,4 @@
-"""Verify redistributable build outputs without proprietary game inputs."""
+"""Verify build outputs and the supplied template launcher."""
 import argparse,json,subprocess,sys
 from pathlib import Path
 from inspect_runtime import inspect
@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def verify(output):
  output.mkdir(parents=True,exist_ok=False)
- report={'passed':False,'scope':'CI build checks only; no original launcher, gameplay, rendering or audio acceptance','steps':[]}
+ report={'passed':False,'scope':'CI build and launcher checks; no full gameplay, rendering or audio acceptance','steps':[]}
  try:
   gate=json.loads((ROOT/'build/runtime-ruby-x86/patched-4.0.7/gate.json').read_text(encoding='utf-8-sig'))
   if gate.get('passed') is not True:raise ValueError('Ruby build gate did not pass')
@@ -17,6 +17,7 @@ def verify(output):
   steps=[
    ('unit',[sys.executable,'-X','utf8','-B','-m','unittest','discover','-s','tests','-v']),
    ('interpreter',[str(ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe'),'--disable-gems','tests/runtime_ruby.rb']),
+   ('launcher',[sys.executable,'-X','utf8','-B','scripts/test_runtime.py','template/Game.exe',str(ROOT/'build/runtime-native/bin/Release/RGSS104E.dll'),str(output/'launcher-smoke')]),
   ]
   for name,command in steps:
    with (output/(name+'.log')).open('w',encoding='utf-8') as log:

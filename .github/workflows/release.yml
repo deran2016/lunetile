@@ -39,14 +39,16 @@ jobs:
         run: |
           python -X utf8 -B scripts/package_runtime.py build/ci-verification build/lunetile-windows-x86
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
+          python -X utf8 -B scripts/package_template.py template build/lunetile-windows-x86 build/lunetile-template-windows-x86
+          if ($LASTEXITCODE -ne 0) { throw 'Template packaging failed' }
           New-Item -ItemType Directory dist | Out-Null
-          Compress-Archive -Path build/lunetile-windows-x86 -DestinationPath dist/lunetile-windows-x86.zip
-          $hash = (Get-FileHash dist/lunetile-windows-x86.zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  lunetile-windows-x86.zip" | Set-Content dist/SHA256SUMS.txt -Encoding ascii
+          Compress-Archive -Path build/lunetile-template-windows-x86 -DestinationPath dist/lunetile-template-windows-x86.zip
+          $hash = (Get-FileHash dist/lunetile-template-windows-x86.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  lunetile-template-windows-x86.zip" | Set-Content dist/SHA256SUMS.txt -Encoding ascii
       - name: Upload release assets
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: lunetile-windows-x86
+          name: lunetile-template-windows-x86
           path: dist/*
           if-no-files-found: error
       - name: Upload build diagnostics
@@ -58,6 +60,7 @@ jobs:
             build/runtime-ruby-x86/**/*.log
             build/runtime-ruby-x86/**/gate.json
             build/ci-verification/*
+            build/ci-verification/launcher-smoke/summary.json
           if-no-files-found: ignore
 
   publish:
@@ -70,7 +73,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: lunetile-windows-x86
+          name: lunetile-template-windows-x86
           path: dist
       - name: Publish experimental binaries
         env:
@@ -86,12 +89,13 @@ jobs:
 
           Source commit: $SOURCE_COMMIT
 
-          Includes the runtime DLL, Ruby migration helper, migration tools, license notices, and file hashes.
-          Requires Windows 11 x64 and the Microsoft Visual C++ x86 runtime. Python 3.12 is needed for migration.
+          Includes the converted template project, Game.exe, the newly built runtime DLL, license notices, and file hashes.
+          Extract the ZIP and run Game.exe. No Python or manual migration is required.
+          Requires Windows 11 x64, the Microsoft Visual C++ x86 runtime, and RPG Maker XP Standard RTP.
 
-          CI verifies Python tests, Ruby x86/GC/Marshal checks, and the DLL PE/ABI contract.
-          Original-launcher, gameplay, rendering, audio, and endurance acceptance were not run for this build.
-          Original game executables, assets, and saves are not included. Use a separate project copy.
+          CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, and template conversion.
+          Full gameplay, rendering, audio, and endurance acceptance were not run for this build.
+          The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
           EOF
-          gh release create "$RELEASE_TAG" lunetile-windows-x86.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest=false

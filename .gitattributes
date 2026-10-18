@@ -9,3 +9,6 @@
 
 # Preserve upstream license notices verbatim, including their whitespace.
 licenses/* -text -whitespace
+template/Data/*.rxdata -text
+template/Game.exe -text
+template/Game.rxproj -text

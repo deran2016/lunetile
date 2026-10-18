@@ -27,7 +27,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 - UTF-8·CP949·CP932 프로젝트 데이터 처리와 기존 세이브 가져오기
 - 원본 보존을 전제로 한 프로젝트 변환, ABI 검사 및 회귀 검증 도구
 
-원본 실행기, RGSS DLL, 게임 데이터·에셋·세이브는 저장소에 포함하지 않습니다. 사용 권한이 있는 원본 프로젝트를 별도로 준비해야 합니다. 기존 RGSSFramePacing 보조 DLL 구현, 실행기 시작 패치, 이벤트 인덱스 최적화도 포함하지 않습니다.
+저장소의 `template/`에는 배포용으로 제공된 기본 게임 프로젝트가 있습니다. 원본 RGSS DLL과 개인 세이브는 포함하지 않습니다. 다른 게임을 변환하려면 사용 권한이 있는 원본 프로젝트를 별도로 준비해야 합니다. 기존 RGSSFramePacing 보조 DLL 구현, 실행기 시작 패치, 이벤트 인덱스 최적화도 포함하지 않습니다.
 
 ## 준비 사항
 
@@ -44,26 +44,27 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 
 `python`, `cmake.exe`, `tar.exe`를 PATH에서 실행할 수 있어야 합니다. 최초 빌드에는 고정된 의존 소스를 다운로드할 네트워크 연결이 필요합니다. 부트스트랩 Ruby는 빌드 도구로만 사용하며 게임 실행에 별도로 필요하지 않습니다.
 
-## 바이너리 다운로드와 자동 릴리스
+## 게임 프로젝트 다운로드와 자동 릴리스
 
-[GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP에는 DLL, Ruby 변환 도우미, 프로젝트 변환 도구, 라이선스, 검사 결과와 파일별 해시가 들어 있습니다. 원본 게임과 VC++ 런타임은 포함하지 않습니다.
+[GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-template-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP을 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 `Data`, `Game.ini`, 프로젝트 파일과 새 Lunetile DLL이 들어 있으므로 Python 설치나 수동 변환이 필요하지 않습니다.
 
-압축을 풀고 `lunetile-windows-x86` 폴더에서 Python 3.12로 `python scripts/migrate_project.py "ORIGINAL_PROJECT" "NEW_PROJECT"`를 실행합니다. 원본 인코딩 옵션과 저장 보존 규칙은 아래 변환 절을 따릅니다. 다운로드 해시는 PowerShell의 `Get-FileHash lunetile-windows-x86.zip -Algorithm SHA256`으로 비교할 수 있습니다.
+**필수 설치:** Windows 11 x64, Microsoft Visual C++ x86 런타임, **RPG Maker XP Standard RTP**. 제공된 템플릿의 Graphics·Audio 폴더는 비어 있으며 `RTP1=Standard`를 사용합니다. RTP는 ZIP에 포함하지 않습니다.
 
-[Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml) 동작:
+- 원본 `template/`는 보존하고 별도 복사본만 변환합니다.
+- 개인 세이브·로그·원본 RGSS DLL은 배포하지 않습니다. 새 저장은 `Saves/RGSSXP/`에 생성됩니다.
+- 라이선스·검사 결과·변환 내역·파일별 해시를 포함합니다. 템플릿 파일에 엔진의 MIT 라이선스가 새로 적용되는 것은 아닙니다.
+- `Get-FileHash lunetile-template-windows-x86.zip -Algorithm SHA256`으로 다운로드 해시를 비교할 수 있습니다.
 
-- `main` 푸시 또는 **Run workflow**: Windows Server 2022 / VS2022에서 x86 빌드·검사 후 Actions 아티팩트 보관.
-- `v*` 태그 푸시: 같은 검사를 통과한 ZIP과 SHA-256을 GitHub 사전 릴리스로 자동 게시.
-- 실패한 빌드는 게시하지 않습니다. 현재 릴리스는 모두 실험적 빌드이며, CI에서 실제 게임·렌더링·오디오·완주 검증은 수행하지 않습니다. 해당 빌드의 범위는 ZIP의 `verification.json`을 확인하세요.
-
-관리자는 배포할 커밋에서 새 버전 태그를 만듭니다. 이미 게시된 태그를 덮어쓰지 않습니다.
+[Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.
 
 ```powershell
-git tag v0.1.0-alpha.1
-git push origin v0.1.0-alpha.1
+git tag v0.1.0-alpha.3
+git push origin v0.1.0-alpha.3
 ```
 
-별도 PAT는 필요하지 않습니다. 게시 작업만 GitHub의 자동 `GITHUB_TOKEN`에 `contents: write`를 부여합니다. 수동 실행은 태그를 선택해도 릴리스를 게시하지 않습니다.
+이미 게시된 태그를 덮어쓰지 않습니다. 수동 실행은 릴리스를 게시하지 않습니다. 별도 PAT 없이 게시 작업에서만 자동 `GITHUB_TOKEN`의 `contents: write` 권한을 사용합니다.
+
+CI는 Python 검사, Ruby x86 검사, DLL ABI, 제공된 실행기의 연결 검사와 템플릿 변환을 확인합니다. 전체 게임 완주·렌더링·오디오 인수 검증은 포함하지 않으며 해당 빌드의 범위는 `verification.json`에 기록됩니다.
 
 ## 빌드
 
@@ -177,6 +178,7 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 ## 저장소 구조와 문서
 
 ```text
+template/      배포용 원본 게임 프로젝트 (변환 전)
 src/runtime/   C++·Ruby 엔진, ABI 정의, 의존성 lock 및 패치
 scripts/       빌드·변환·검사·성능 측정 도구
 tests/         Python 테스트, Ruby 검증 시나리오, 네이티브 측정 도구
@@ -200,10 +202,10 @@ licenses/      외부 라이브러리 라이선스 고지
 
 기여 절차와 코드 규칙은 [AGENTS.md](AGENTS.md)를 확인하세요. 버그 제보에는 실행 환경, 재현 순서, 사용한 DLL의 SHA-256과 오류 내용을 포함해 주세요. 렌더링 문제에는 권리상 공유 가능한 화면을 첨부하면 도움이 됩니다.
 
-PR에는 변경 이유, 영향 범위와 수행한 검사를 적어 주세요. 게임 원본·에셋·세이브·비밀 키는 첨부하거나 커밋하지 마세요. 호환성 변경에는 해당 동작을 검증하는 회귀 검사를 포함합니다.
+PR에는 변경 이유, 영향 범위와 수행한 검사를 적어 주세요. 승인된 `template/` 입력 외의 게임 원본·에셋·세이브·비밀 키는 첨부하거나 커밋하지 마세요. 호환성 변경에는 해당 동작을 검증하는 회귀 검사를 포함합니다.
 
 ## 라이선스
 
 자체 코드는 [MIT 라이선스](LICENSE)입니다. Ruby 4.0.7, zlib 1.3.2, libogg 1.3.6, libvorbis 1.3.7은 각각의 라이선스를 따르며, 고지 원문은 `licenses/`에 있습니다. Windows API는 Windows SDK를 통해 사용합니다.
 
-빌드 결과, 실행 파일, 게임 데이터·에셋·세이브, 원시 추적과 덤프는 `.gitignore`로 제외합니다. 게임 실행기와 리소스의 사용·배포 권한은 별도로 확인해야 합니다.
+승인된 `template/` 입력을 제외한 빌드 결과, 실행 파일, 게임 데이터·에셋·세이브, 원시 추적과 덤프는 `.gitignore`로 제외합니다. 게임 실행기와 리소스의 사용·배포 권한은 별도로 확인해야 합니다.

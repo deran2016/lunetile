@@ -35,3 +35,14 @@ __pycache__/
 .env*
 *.pem
 *.key
+
+# User-supplied release template; keep the original RGSS DLL and saves excluded.
+!template/Game.exe
+!template/Game.rxproj
+!template/Data/*.rxdata
+!template/Graphics/**/*.png
+!template/Graphics/**/*.jpg
+!template/Audio/**/*.wav
+!template/Audio/**/*.ogg
+!template/Audio/**/*.mp3
+!template/Audio/**/*.mid
