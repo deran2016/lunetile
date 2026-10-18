@@ -13,6 +13,7 @@
 #include "graphics.h"
 #include "output_color.h"
 #include "render_shader.h"
+#include "display_geometry.h"
 
 namespace {
 using Microsoft::WRL::ComPtr;
@@ -32,9 +33,11 @@ struct Renderer {
     HWND window=nullptr;
     WNDPROC previous_proc=nullptr;
     DWORD window_style=0;
-    RECT window_rect{};
+    WINDOWPLACEMENT window_placement{sizeof(WINDOWPLACEMENT)};
     bool fullscreen=false;
+    UINT width=640,height=480;
     UINT back_width=640,back_height=480;
+    HANDLE previous_dpi=nullptr;
     HMONITOR color_monitor=nullptr;
     ULONGLONG color_checked=0;
     float white_scale=1.0f;
@@ -65,7 +68,7 @@ struct Renderer {
     HANDLE timer=nullptr;
     void surface(Surface& out) {
         D3D11_TEXTURE2D_DESC desc{};
-        desc.Width=640;desc.Height=480;desc.MipLevels=desc.ArraySize=1;
+        desc.Width=width;desc.Height=height;desc.MipLevels=desc.ArraySize=1;
         desc.Format=DXGI_FORMAT_R8G8B8A8_UNORM;desc.SampleDesc.Count=1;
         desc.BindFlags=D3D11_BIND_RENDER_TARGET|D3D11_BIND_SHADER_RESOURCE;
         checked(device->CreateTexture2D(&desc,nullptr,&out.texture),"Create surface");
@@ -77,7 +80,7 @@ struct Renderer {
         if(device) throw std::runtime_error("Renderer initialization previously failed");
         if(!window||!IsWindow(window)) throw std::runtime_error("Game window is unavailable");
         DXGI_SWAP_CHAIN_DESC desc{};
-        desc.BufferDesc.Width=640;desc.BufferDesc.Height=480;
+        desc.BufferDesc.Width=back_width;desc.BufferDesc.Height=back_height;
         // Explicit linear presentation avoids implicit SDR conversion and preserves output precision.
         desc.BufferDesc.Format=DXGI_FORMAT_R16G16B16A16_FLOAT;
         desc.SampleDesc.Count=1;desc.BufferCount=2;
@@ -157,13 +160,13 @@ struct Renderer {
     }
     void resize_back(){
         RECT client{};GetClientRect(window,&client);
-        UINT width=std::max<LONG>(client.right,1),height=std::max<LONG>(client.bottom,1);
-        if(width==back_width&&height==back_height)return;
+        UINT output_width=std::max<LONG>(client.right,1),output_height=std::max<LONG>(client.bottom,1);
+        if(output_width==back_width&&output_height==back_height)return;
         context->OMSetRenderTargets(0,nullptr,nullptr);back.Reset();
-        checked(swap->ResizeBuffers(0,width,height,DXGI_FORMAT_UNKNOWN,0),"Resize window buffers");
+        checked(swap->ResizeBuffers(0,output_width,output_height,DXGI_FORMAT_UNKNOWN,0),"Resize window buffers");
         ComPtr<ID3D11Texture2D> buffer;checked(swap->GetBuffer(0,IID_PPV_ARGS(&buffer)),"Get resized buffer");
         checked(device->CreateRenderTargetView(buffer.Get(),nullptr,&back),"Resized window target");
-        back_width=width;back_height=height;
+        back_width=output_width;back_height=output_height;
     }
     void draw(ID3D11ShaderResourceView* image,Constants& values,const RECT& clip,int blend_mode=0,bool copy=false){
         D3D11_MAPPED_SUBRESOURCE mapped{};
@@ -194,16 +197,22 @@ LRESULT CALLBACK window_proc(HWND window,UINT message,WPARAM wparam,LPARAM lpara
     if(message==WM_SYSKEYDOWN&&wparam==VK_RETURN&&(lparam&(1<<29))&&!(lparam&(1<<30))){
         auto& r=renderer;
         if(!r.fullscreen){
-            r.window_style=static_cast<DWORD>(GetWindowLongPtrW(window,GWL_STYLE));GetWindowRect(window,&r.window_rect);
+            r.window_style=static_cast<DWORD>(GetWindowLongPtrW(window,GWL_STYLE));GetWindowPlacement(window,&r.window_placement);
             MONITORINFO monitor{sizeof(MONITORINFO)};GetMonitorInfoW(MonitorFromWindow(window,MONITOR_DEFAULTTONEAREST),&monitor);
             if(!monitor.rcMonitor.right&&!monitor.rcMonitor.bottom)return 0;
-            SetWindowLongPtrW(window,GWL_STYLE,(r.window_style&~WS_OVERLAPPEDWINDOW)|WS_POPUP);
+            SetWindowLongPtrW(window,GWL_STYLE,(r.window_style&~(WS_OVERLAPPEDWINDOW|WS_MAXIMIZE|WS_MINIMIZE))|WS_POPUP);
             if(!SetWindowPos(window,nullptr,monitor.rcMonitor.left,monitor.rcMonitor.top,monitor.rcMonitor.right-monitor.rcMonitor.left,monitor.rcMonitor.bottom-monitor.rcMonitor.top,SWP_FRAMECHANGED|SWP_NOZORDER))return 0;
         }else{
             SetWindowLongPtrW(window,GWL_STYLE,r.window_style);
-            SetWindowPos(window,nullptr,r.window_rect.left,r.window_rect.top,r.window_rect.right-r.window_rect.left,r.window_rect.bottom-r.window_rect.top,SWP_FRAMECHANGED|SWP_NOZORDER);
+            SetWindowPlacement(window,&r.window_placement);
+            SetWindowPos(window,nullptr,0,0,0,0,SWP_FRAMECHANGED|SWP_NOZORDER|SWP_NOMOVE|SWP_NOSIZE);
         }
         r.fullscreen=!r.fullscreen;return 0;
+    }
+    if(message==WM_DPICHANGED){
+        auto* rect=reinterpret_cast<RECT*>(lparam);
+        if(!renderer.fullscreen)SetWindowPos(window,nullptr,rect->left,rect->top,rect->right-rect->left,rect->bottom-rect->top,SWP_NOZORDER|SWP_NOACTIVATE);
+        return 0;
     }
     // This engine owns geometry and fullscreen handling; restore the launcher procedure at teardown.
     return DefWindowProcW(window,message,wparam,lparam);
@@ -215,7 +224,7 @@ void effect(Constants& state,VALUE color,VALUE tone){
     if(!NIL_P(color)){state.color[0]=property(color,"red")/255;state.color[1]=property(color,"green")/255;state.color[2]=property(color,"blue")/255;state.color[3]=property(color,"alpha")/255;}
     if(!NIL_P(tone)){state.tone[0]=property(tone,"red")/255;state.tone[1]=property(tone,"green")/255;state.tone[2]=property(tone,"blue")/255;state.tone[3]=property(tone,"gray")/255;}
 }
-Constants screen(){Constants s{};s.position[2]=640;s.position[3]=480;s.source[2]=s.source[3]=1;s.transform[0]=s.transform[1]=s.transform[2]=1;s.origin[2]=1;return s;}
+Constants screen(){Constants s{};s.position[2]=static_cast<float>(renderer.width);s.position[3]=static_cast<float>(renderer.height);s.resolution[0]=static_cast<float>(renderer.width);s.resolution[1]=static_cast<float>(renderer.height);s.source[2]=s.source[3]=1;s.transform[0]=s.transform[1]=s.transform[2]=1;s.origin[2]=1;return s;}
 VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
     Check_Type(commands,T_ARRAY);
     if(GetCurrentThreadId()!=renderer.owner)rb_raise(rb_eThreadError,"Graphics requires the game thread");
@@ -225,7 +234,7 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
     if(count>100000)rb_raise(rb_eArgError,"Too many rendering commands");
     VALUE storage=rb_str_new(nullptr,count*sizeof(Draw));
     auto* draws=reinterpret_cast<Draw*>(RSTRING_PTR(storage));
-    RECT viewport{0,0,640,480};
+    RECT viewport{0,0,static_cast<LONG>(renderer.width),static_cast<LONG>(renderer.height)};
     for(long i=0;i<count;++i){
         VALUE command=rb_ary_entry(commands,i);Check_Type(command,T_ARRAY);
         Draw& d=draws[i];memset(&d,0,sizeof(d));d.kind=NUM2INT(rb_ary_entry(command,0));d.state=screen();d.clip=viewport;
@@ -243,8 +252,8 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
             effect(d.state,rb_ary_entry(command,17),rb_ary_entry(command,18));
             VALUE clip=rb_ary_entry(command,20);if(!NIL_P(clip)){RECT area=rectangle(clip);IntersectRect(&d.clip,&viewport,&area);}
             d.state.extra[1]=RTEST(rb_ary_entry(command,21))?1.0f:0.0f;
-        }else if(d.kind==1){viewport=rectangle(rb_ary_entry(command,1));RECT full{0,0,640,480};IntersectRect(&viewport,&viewport,&full);d.clip=viewport;}
-        else if(d.kind==2){effect(d.state,rb_ary_entry(command,2),rb_ary_entry(command,3));d.state.extra[0]=1;d.clip=viewport;viewport={0,0,640,480};}
+        }else if(d.kind==1){viewport=rectangle(rb_ary_entry(command,1));RECT full{0,0,static_cast<LONG>(renderer.width),static_cast<LONG>(renderer.height)};IntersectRect(&viewport,&viewport,&full);d.clip=viewport;}
+        else if(d.kind==2){effect(d.state,rb_ary_entry(command,2),rb_ary_entry(command,3));d.state.extra[0]=1;d.clip=viewport;viewport={0,0,static_cast<LONG>(renderer.width),static_cast<LONG>(renderer.height)};}
         else rb_raise(rb_eArgError,"Unknown rendering command");
     }
     Canvas* mask=NIL_P(mask_value)?nullptr:canvas_get(mask_value);
@@ -260,7 +269,7 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
             r.context->IASetInputLayout(nullptr);r.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             r.context->VSSetShader(r.vertex.Get(),nullptr,0);r.context->PSSetShader(r.pixel.Get(),nullptr,0);
             r.context->PSSetSamplers(0,1,r.sampler.GetAddressOf());r.context->RSSetState(r.raster.Get());
-            D3D11_VIEWPORT full{0,0,640,480,0,1};r.context->RSSetViewports(1,&full);
+            D3D11_VIEWPORT full{0,0,static_cast<float>(r.width),static_cast<float>(r.height),0,1};r.context->RSSetViewports(1,&full);
             r.target(r.scene.target.Get());const float black[4]={0,0,0,1};r.context->ClearRenderTargetView(r.scene.target.Get(),black);
             for(long i=0;i<count;++i){auto& d=draws[i];
                 if(d.kind==0){r.upload(d.bitmap);r.draw(d.bitmap->view,d.state,d.clip,d.blend);}
@@ -272,8 +281,8 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
                 }
             }
             r.target(r.back.Get());r.context->ClearRenderTargetView(r.back.Get(),black);
-            float scale=std::min(r.back_width/640.0f,r.back_height/480.0f);
-            D3D11_VIEWPORT fitted{(r.back_width-640*scale)/2,(r.back_height-480*scale)/2,640*scale,480*scale,0,1};r.context->RSSetViewports(1,&fitted);
+            auto bounds=rgss_display::fit(static_cast<float>(r.width),static_cast<float>(r.height),static_cast<float>(r.back_width),static_cast<float>(r.back_height));
+            D3D11_VIEWPORT fitted{bounds.x,bounds.y,bounds.width,bounds.height,0,1};r.context->RSSetViewports(1,&fitted);
             Constants copy=screen();copy.extra[0]=4;copy.color[0]=r.white_scale;RECT clip{0,0,static_cast<LONG>(r.back_width),static_cast<LONG>(r.back_height)};
             if(fade>=0&&r.frozen_valid){copy.extra[0]=2;copy.extra[2]=fade;copy.extra[3]=mask?fuzz:-1;
                 ID3D11ShaderResourceView* resources[2]={r.frozen.view.Get(),nullptr};if(mask){r.upload(mask);resources[1]=mask->view;}
@@ -330,6 +339,50 @@ VALUE tick(VALUE){
     r.wait_ms=1000.0*(now.QuadPart-start.QuadPart)/r.frequency.QuadPart;r.last_end=now;r.last_cpu=thread_cpu();r.wait_cpu_ms=(r.last_cpu-cpu)/10000.0;++r.frame;return Qnil;
 }
 VALUE freeze_frame(VALUE){char failure[256]{};{try{renderer.initialize();ID3D11ShaderResourceView* empty[3]{};renderer.context->PSSetShaderResources(0,3,empty);renderer.context->CopyResource(renderer.frozen.texture.Get(),renderer.scene.texture.Get());renderer.frozen_valid=true;}catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}}if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);return Qnil;}
+void fit_window(){
+    auto& r=renderer;if(!r.window||r.fullscreen)return;
+    MONITORINFO monitor{sizeof(MONITORINFO)};
+    if(!GetMonitorInfoW(MonitorFromWindow(r.window,MONITOR_DEFAULTTONEAREST),&monitor))throw std::runtime_error("Monitor work area unavailable");
+    DWORD style=static_cast<DWORD>(GetWindowLongPtrW(r.window,GWL_STYLE))|WS_THICKFRAME|WS_MAXIMIZEBOX;
+    using GetDpi=UINT(WINAPI*)(HWND);using AdjustDpi=BOOL(WINAPI*)(LPRECT,DWORD,BOOL,DWORD,UINT);
+    auto get_dpi=reinterpret_cast<GetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"GetDpiForWindow"));
+    auto adjust=reinterpret_cast<AdjustDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"AdjustWindowRectExForDpi"));
+    UINT dpi=get_dpi?get_dpi(r.window):96;DWORD ex_style=static_cast<DWORD>(GetWindowLongPtrW(r.window,GWL_EXSTYLE));
+    auto frame_rect=[&](RECT& rect){if(adjust)adjust(&rect,style,FALSE,ex_style,dpi);else AdjustWindowRectEx(&rect,style,FALSE,ex_style);};
+    RECT frame{};frame_rect(frame);
+    auto fit=rgss_display::fit(static_cast<float>(r.width),static_cast<float>(r.height),
+        static_cast<float>(std::max<LONG>(1,monitor.rcWork.right-monitor.rcWork.left-(frame.right-frame.left))),
+        static_cast<float>(std::max<LONG>(1,monitor.rcWork.bottom-monitor.rcWork.top-(frame.bottom-frame.top))));
+    RECT rect{0,0,static_cast<LONG>(std::min<float>(static_cast<float>(r.width),fit.width)),static_cast<LONG>(std::min<float>(static_cast<float>(r.height),fit.height))};
+    frame_rect(rect);
+    int width=rect.right-rect.left,height=rect.bottom-rect.top;
+    SetWindowLongPtrW(r.window,GWL_STYLE,style);
+    if(!SetWindowPos(r.window,nullptr,monitor.rcWork.left+(monitor.rcWork.right-monitor.rcWork.left-width)/2,
+        monitor.rcWork.top+(monitor.rcWork.bottom-monitor.rcWork.top-height)/2,width,height,SWP_FRAMECHANGED|SWP_NOZORDER))throw std::runtime_error("Resize game window failed");
+}
+VALUE screen_width(VALUE){return UINT2NUM(renderer.width);}
+VALUE screen_height(VALUE){return UINT2NUM(renderer.height);}
+VALUE resize_screen(VALUE,VALUE width,VALUE height){
+    if(GetCurrentThreadId()!=renderer.owner)rb_raise(rb_eThreadError,"Graphics requires the game thread");
+    int w=NUM2INT(width),h=NUM2INT(height);
+    if(!rgss_display::valid(w,h))rb_raise(rb_eArgError,"Screen must be 1..4096 per axis and at most 8294400 pixels");
+    char failure[256]{};
+    {
+        auto& r=renderer;UINT old_width=r.width,old_height=r.height;
+        try{
+            r.width=w;r.height=h;fit_window();
+            if(r.ready){
+                Surface scene,group,frozen;r.surface(scene);r.surface(group);r.surface(frozen);
+                r.target(nullptr);ID3D11ShaderResourceView* empty[3]{};r.context->PSSetShaderResources(0,3,empty);
+                r.scene=std::move(scene);r.group=std::move(group);r.frozen=std::move(frozen);
+                const float black[4]={0,0,0,1};r.context->ClearRenderTargetView(r.scene.target.Get(),black);
+            }
+            r.frozen_valid=false;
+        }catch(const std::exception& e){r.width=old_width;r.height=old_height;strncpy_s(failure,e.what(),_TRUNCATE);}
+    }
+    if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);
+    return Qnil;
+}
 VALUE frame_count(VALUE){return INT2NUM(renderer.frame);}
 VALUE set_frame_count(VALUE,VALUE count){renderer.frame=NUM2INT(count);return count;}
 VALUE frame_rate(VALUE){return INT2NUM(renderer.rate);}
@@ -338,7 +391,7 @@ VALUE reset_deadline(VALUE){QueryPerformanceCounter(&renderer.deadline);renderer
 VALUE begin_frame(VALUE){renderer.cpu_begin=thread_cpu();renderer.script_cpu_ms=renderer.last_cpu?(renderer.cpu_begin-renderer.last_cpu)/10000.0:0;return Qnil;}
 VALUE stats(VALUE){return rb_ary_new_from_args(11,DBL2NUM(renderer.render_ms),DBL2NUM(renderer.wait_ms),renderer.gpu_ms>=0?DBL2NUM(renderer.gpu_ms):Qnil,ULL2NUM(renderer.gpu_valid),ULL2NUM(renderer.gpu_invalid),DBL2NUM(renderer.script_cpu_ms),DBL2NUM(renderer.render_cpu_ms),DBL2NUM(renderer.wait_cpu_ms),ULL2NUM(renderer.sequence),renderer.gpu_valid?ULL2NUM(renderer.gpu_sequence):Qnil,DBL2NUM(renderer.focus_pause_ms));}
 VALUE scene_pixel(VALUE,VALUE vx,VALUE vy){
-    int x=NUM2INT(vx),y=NUM2INT(vy);if(x<0||y<0||x>=640||y>=480)rb_raise(rb_eArgError,"Pixel is outside the scene");
+    int x=NUM2INT(vx),y=NUM2INT(vy);if(x<0||y<0||x>=static_cast<int>(renderer.width)||y>=static_cast<int>(renderer.height))rb_raise(rb_eArgError,"Pixel is outside the scene");
     unsigned char bytes[4]{};char failure[256]{};
     {
         try{
@@ -357,8 +410,25 @@ VALUE scene_pixel(VALUE,VALUE vx,VALUE vy){
 }
 }
 
-void graphics_attach(HWND window){renderer.window=window;renderer.owner=GetCurrentThreadId();input_attach(window);renderer.previous_proc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(window_proc)));SetForegroundWindow(window);}
-void graphics_shutdown(){if(renderer.window&&IsWindow(renderer.window)&&renderer.previous_proc)SetWindowLongPtrW(renderer.window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(renderer.previous_proc));if(renderer.timer){CloseHandle(renderer.timer);renderer.timer=nullptr;}renderer.context.Reset();renderer=Renderer{};}
+void graphics_prepare(){
+    // Set the process default before the launcher creates its game window.
+    using SetDpi=BOOL(WINAPI*)(HANDLE);
+    auto dpi=reinterpret_cast<SetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetProcessDpiAwarenessContext"));
+    if(dpi)dpi(reinterpret_cast<HANDLE>(-4));
+}
+void graphics_attach(HWND window){
+    renderer.window=window;renderer.owner=GetCurrentThreadId();
+    using SetDpi=HANDLE(WINAPI*)(HANDLE);
+    auto dpi=reinterpret_cast<SetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetThreadDpiAwarenessContext"));
+    if(dpi)renderer.previous_dpi=dpi(reinterpret_cast<HANDLE>(-4));
+    wchar_t path[MAX_PATH]{};GetFullPathNameW(L"Game.ini",MAX_PATH,path,nullptr);
+    int width=GetPrivateProfileIntW(L"Lunetile",L"Width",640,path),height=GetPrivateProfileIntW(L"Lunetile",L"Height",480,path);
+    if(!rgss_display::valid(width,height))throw std::runtime_error("Invalid Lunetile screen dimensions in Game.ini");
+    renderer.width=width;renderer.height=height;fit_window();input_attach(window);renderer.previous_proc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(window_proc)));SetForegroundWindow(window);}
+void graphics_shutdown(){if(renderer.window&&IsWindow(renderer.window)&&renderer.previous_proc)SetWindowLongPtrW(renderer.window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(renderer.previous_proc));if(renderer.timer){CloseHandle(renderer.timer);renderer.timer=nullptr;}renderer.context.Reset();
+    using SetDpi=HANDLE(WINAPI*)(HANDLE);auto dpi=reinterpret_cast<SetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetThreadDpiAwarenessContext"));
+    if(dpi&&renderer.previous_dpi)dpi(renderer.previous_dpi);
+    renderer=Renderer{};}
 void graphics_reset(){
     auto& r=renderer;r.rate=40;r.remainder=0;r.frozen_valid=false;QueryPerformanceCounter(&r.deadline);
     if(r.context){float black[4]={0,0,0,1};if(r.scene.target)r.context->ClearRenderTargetView(r.scene.target.Get(),black);if(r.frozen.target)r.context->ClearRenderTargetView(r.frozen.target.Get(),black);}
@@ -369,6 +439,9 @@ void init_graphics(){
     rb_define_singleton_method(graphics,"__present",RUBY_METHOD_FUNC(present),4);
     rb_define_singleton_method(graphics,"__begin",RUBY_METHOD_FUNC(begin_frame),0);
     rb_define_singleton_method(graphics,"__tick",RUBY_METHOD_FUNC(tick),0);
+    rb_define_singleton_method(graphics,"width",RUBY_METHOD_FUNC(screen_width),0);
+    rb_define_singleton_method(graphics,"height",RUBY_METHOD_FUNC(screen_height),0);
+    rb_define_singleton_method(graphics,"resize_screen",RUBY_METHOD_FUNC(resize_screen),2);
     rb_define_singleton_method(graphics,"freeze",RUBY_METHOD_FUNC(freeze_frame),0);
     rb_define_singleton_method(graphics,"frame_count",RUBY_METHOD_FUNC(frame_count),0);
     rb_define_singleton_method(graphics,"frame_count=",RUBY_METHOD_FUNC(set_frame_count),1);

@@ -25,7 +25,7 @@ def package(source,runtime,output):
   for p in selected:
    target=clean/p.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
   converted=staging/'converted'
-  migrate(clean,converted,runtime/'RGSS104E.dll',runtime/'rgssxp-ruby.exe',data_encoding='UTF-8')
+  migrate(clean,converted,runtime/'RGSS104E.dll',runtime/'rgssxp-ruby.exe',data_encoding='UTF-8',widescreen=True)
   game=staging/'game';game.mkdir()
   for name in ('Game.exe','Game.ini','Game.rxproj','RGSS104E.dll'):
    shutil.copy2(converted/name,game/name)
@@ -43,6 +43,7 @@ def package(source,runtime,output):
    '필수: Windows 11 x64, Microsoft Visual C++ x86 런타임, RPG Maker XP Standard RTP.\n'
    '원본 template은 RTP 리소스를 사용합니다. RTP는 이 ZIP에 포함하지 않습니다.\n'
    '영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지 밖의 경로를 지원하지 않습니다.\n'
+   '화면: 1280x720 와이드. 창 크기 조절/최대화, Alt+Enter 전체 화면.\n'
    '새 저장: Saves/RGSSXP. 원본 프로젝트나 기존 세이브를 덮어쓰지 마세요.\n'
    'Game.rxproj와 Data는 변환된 프로젝트이며 기본 XP 스크립트를 덮어쓰면 호환 처리가 사라질 수 있습니다.\n\n'
    'Experimental build. See verification.json for this DLL\'s CI checks.\n'

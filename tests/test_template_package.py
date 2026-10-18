@@ -18,6 +18,7 @@ class TemplatePackageTests(unittest.TestCase):
   (self.runtime/'verification.json').write_text(json.dumps({'passed':True,'runtime_sha256':hashlib.sha256(b'new runtime').hexdigest()}))
 
  def migrate(self,source,out,dll,ruby,**kwargs):
+  self.assertTrue(kwargs.get('widescreen'))
   self.assertFalse((source/'Save1.rxdata').exists())
   self.assertFalse((source/'RGSS104E.dll').exists())
   shutil.copytree(source,out);shutil.copy2(dll,out/'RGSS104E.dll')

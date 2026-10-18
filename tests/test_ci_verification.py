@@ -30,11 +30,11 @@ class CIVerificationTests(unittest.TestCase):
    return verify_ci.verify(self.output)
 
  def test_success_records_scope_and_binary_identity(self):
-  report=self.run_checks([0,0,0])
+  report=self.run_checks([0,0,0,0])
   self.assertTrue(report['passed'])
   self.assertEqual(report['runtime_sha256'],'abc')
   self.assertIn('no full gameplay',report['scope'])
-  self.assertEqual(len(report['steps']),3)
+  self.assertEqual(len(report['steps']),4)
 
  def test_failed_check_never_produces_passed_report(self):
   with self.assertRaises(RuntimeError):self.run_checks([1])

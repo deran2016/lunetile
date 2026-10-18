@@ -1,9 +1,9 @@
 #pragma once
 
 namespace rgss_render {
-struct Constants { float position[4], source[4], transform[4], origin[4], color[4], tone[4], extra[4]; };
+struct Constants { float position[4], source[4], transform[4], origin[4], color[4], tone[4], extra[4], resolution[4] = {640,480,0,0}; };
 inline constexpr char shader[]=R"HLSL(
-cbuffer State:register(b0){float4 position;float4 source;float4 transform;float4 origin;float4 color;float4 tone;float4 extra;};
+cbuffer State:register(b0){float4 position;float4 source;float4 transform;float4 origin;float4 color;float4 tone;float4 extra;float4 resolution;};
 Texture2D image:register(t0);Texture2D old_image:register(t1);Texture2D mask_image:register(t2);SamplerState nearest:register(s0);
 struct Vertex{float4 position:SV_POSITION;float2 uv:TEXCOORD0;float2 local:TEXCOORD1;};
 // Convert only the final SDR image; RGSS blending and transitions remain in their original encoded space.
@@ -13,7 +13,7 @@ Vertex vs(uint id:SV_VertexID){
  float2 corners[6]={float2(0,0),float2(1,0),float2(0,1),float2(0,1),float2(1,0),float2(1,1)};
  float2 base=corners[id];float2 local=(base*position.zw-origin.xy)*transform.xy;
  float2 rotated=float2(local.x*transform.z-local.y*transform.w,local.x*transform.w+local.y*transform.z);
- Vertex v;v.position=float4((position.x+rotated.x)/320-1,1-(position.y+rotated.y)/240,0,1);
+ Vertex v;v.position=float4((position.x+rotated.x)*2/resolution.x-1,1-(position.y+rotated.y)*2/resolution.y,0,1);
  v.uv=source.xy+float2(extra.y>0?1-base.x:base.x,base.y)*source.zw;v.local=base*position.zw;return v;
 }
 float4 ps(Vertex v):SV_TARGET{

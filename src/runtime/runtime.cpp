@@ -194,6 +194,7 @@ extern "C" int __cdecl RGSSSetupRTP(const char* ini, char* error, int capacity) 
 extern "C" void __cdecl RGSSInitialize(HMODULE) {
     if (ever_initialized) { failed = true; log_line("Repeated Ruby initialization is unsupported"); return; }
     ever_initialized = true;
+    graphics_prepare();
     owner = GetCurrentThreadId();
     failed = false;
     static char program[] = "RGSSXP";
@@ -241,9 +242,9 @@ extern "C" unsigned long __cdecl RGSSEval(const char* source) {
 extern "C" int __cdecl RGSSGameMain(HWND window, const char* scripts, const char* archive) {
     if (GetCurrentThreadId() != owner) return 1;
     if (!initialized || failed) return finish_ruby(1);
-    graphics_attach(window);
     int result = 1;
     try {
+        graphics_attach(window);
         std::string path = utf8(wide(scripts, CP_ACP));
         std::string archive_path = utf8(wide(archive, CP_ACP));
         ScriptPaths paths{path.data(), static_cast<long>(path.size()), archive_path.data(), static_cast<long>(archive_path.size())};

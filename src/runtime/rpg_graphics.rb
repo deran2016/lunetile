@@ -126,7 +126,7 @@ class RPG::Sprite < ::Sprite
       cell.bitmap = sheet
       cell.src_rect.set(pattern % 5 * 192, pattern / 5 * 192, 192, 192)
       if data.position == 3
-        cx, cy = viewport ? [viewport.rect.width / 2, viewport.rect.height - 160] : [320, 240]
+        cx, cy = viewport ? [viewport.rect.width / 2, ([Graphics.width, Graphics.height] == [640, 480] ? viewport.rect.height - 160 : viewport.rect.height / 2)] : [Graphics.width / 2, Graphics.height / 2]
       else
         cx, cy = x - ox + src_rect.width / 2, y - oy + src_rect.height / 2
         cy -= src_rect.height / 4 if data.position == 0

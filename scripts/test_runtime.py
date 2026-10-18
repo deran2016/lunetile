@@ -21,7 +21,7 @@ def string(data):return b'"'+integer(len(data))[1:]+data
 def scripts(source):
  return b'\x04\x08['+integer(1)[1:]+b'['+integer(3)[1:]+integer(1)+string(b'Runtime smoke')+string(zlib.compress(source))
 
-def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20):
+def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None):
  if data_encoding not in (None,'UTF-8','CP949','CP932'):raise ValueError('Unsupported test data encoding')
  if data_encoding:source=("raise 'Configured project encoding was not read' unless RGSSXP::DATA_ENCODING == "+repr(data_encoding)+"\n").encode()+source
  out.mkdir(parents=True,exist_ok=False)
@@ -35,6 +35,7 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
  if script_path is None:script_path='Data/Scripts.rxdata' if archive else 'Scripts.rxdata'
  if archive:(out/'Game.rgssad').write_bytes(archive)
  ini=f'[Game]\nLibrary=RGSS104E.dll\nScripts={script_path}\nTitle=RGSSXP Runtime Test\nRTP1=\nRTP2=\nRTP3=\n'
+ if screen_size:ini+='[Lunetile]\nWidth='+str(screen_size[0])+'\nHeight='+str(screen_size[1])+'\n'
  if data_encoding:ini+='[RGSSXP]\nDataEncoding='+data_encoding+'\n'
  (out/'Game.ini').write_text(ini)
  p=subprocess.Popen([str(out/'Game.exe')]+([mode] if mode else []),cwd=out)
@@ -90,6 +91,8 @@ def main():
  except UnicodeEncodeError:
   skipped.append({'case':'Korean project path','reason':'Original ANSI launcher cannot represent this path in the system code page'})
  else:reports.append(run(exe,dll,out/'한글-경로','',(ROOT/'tests/runtime_saves.rb').read_bytes()+source))
+ reports.append(run(exe,dll,out/'wide-config','',b"raise 'INI resolution ignored' unless [Graphics.width,Graphics.height]==[1280,720]\nGraphics.update\nFile.write('runtime-complete.txt','config,false,false')",screen_size=(1280,720),timeout=40))
+ reports.append(run(exe,dll,out/'resolution','',(ROOT/'tests/runtime_resolution.rb').read_bytes(),timeout=40))
  reports.append(run(exe,dll,out/'input-errors','',(ROOT/'tests/runtime_input_errors.rb').read_bytes()))
  for encoding in ('UTF-8','CP949','CP932'):
   reports.append(run(exe,dll,out/('text-'+encoding),'',(ROOT/'tests/runtime_text.rb').read_bytes()+source,data_encoding=encoding))

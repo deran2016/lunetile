@@ -148,3 +148,8 @@ target_compile_features(runtime_output_color PRIVATE cxx_std_17)
 target_compile_definitions(runtime_output_color PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0602)
 target_link_libraries(runtime_output_color PRIVATE d3d11 d3dcompiler dxgi user32)
 set_target_properties(runtime_output_color PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+add_executable(display_geometry_test tests/display_geometry.cpp)
+target_include_directories(display_geometry_test PRIVATE src/runtime)
+target_compile_features(display_geometry_test PRIVATE cxx_std_17)
+set_target_properties(display_geometry_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

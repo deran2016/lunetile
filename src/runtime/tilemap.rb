@@ -21,7 +21,7 @@ class Tilemap < RGSSXP::DisplayObject
   end
   def layers
     return [] unless @map_data && @map_data.xsize > 0 && @map_data.ysize > 0 && visible
-    rect = viewport ? viewport.rect : Rect.new(0, 0, 640, 480)
+    rect = viewport ? viewport.rect : Rect.new(0, 0, Graphics.width, Graphics.height)
     vx, vy = viewport ? [viewport.ox, viewport.oy] : [0, 0]
     first_x, first_y = (@ox + vx).div(32), (@oy + vy).div(32)
     groups = {}
@@ -114,8 +114,8 @@ class RPG::Weather
       when 3 then sprite.x -= 2; sprite.y += 8; sprite.opacity -= 8
       end
       sprite.ox, sprite.oy = @ox, @oy
-      if sprite.opacity < 64 || sprite.x - @ox < -50 || sprite.x - @ox > 750 || sprite.y - @oy < -200 || sprite.y - @oy > 600
-        sprite.x, sprite.y, sprite.opacity = rand(800)-50+@ox,rand(800)-200+@oy,rand(64)+160
+      if sprite.opacity < 64 || sprite.x - @ox < -50 || sprite.x - @ox > (Graphics.width + 110) || sprite.y - @oy < -200 || sprite.y - @oy > (Graphics.height + 120)
+        sprite.x, sprite.y, sprite.opacity = rand(Graphics.width + 160)-50+@ox,rand(Graphics.height + 320)-200+@oy,rand(64)+160
       end
     end
   end

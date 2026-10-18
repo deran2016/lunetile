@@ -10,7 +10,7 @@
 
 [시작하기](#빌드) · [프로젝트 변환](#프로젝트-변환과-실행) · [검증 범위](#검증-기록과-한계) · [기여하기](#기여하기)
 
-RPG Maker XP의 기존 32비트 실행기와 RGSS 인터페이스를 대상으로 합니다. Ruby 4.0.7, C++17, Direct3D 11 기반의 `RGSS104E.dll`을 빌드하며, 기본 해상도 640×480과 논리 갱신 40Hz를 유지합니다.
+RPG Maker XP의 기존 32비트 실행기와 RGSS 인터페이스를 대상으로 합니다. Ruby 4.0.7, C++17, Direct3D 11 기반의 `RGSS104E.dll`을 빌드하며, 기존 프로젝트는 기본 해상도 640×480을 유지하며, 배포 템플릿은 **1280×720 와이드 화면**을 사용합니다. 논리 갱신은 40Hz입니다.
 
 검증된 기본 XP 스크립트 게임을 대상으로 합니다. 모든 RPG Maker XP 게임이나 사용자 플러그인과의 호환성을 보장하지 않으며, 적용할 때는 제공된 변환기로 **원본과 분리된 프로젝트 복사본**을 만듭니다.
 
@@ -23,6 +23,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 - 기존 `Game.exe`가 사용하는 필수 RGSS 함수 5개와 Ruby 스크립트 실행
 - RGSS 값 형식, RPG 데이터 클래스, Marshal 데이터 및 RGSSAD v1 읽기
 - Bitmap, Sprite, Window, Tilemap, 글꼴, 화면 전환 및 Direct3D 11 렌더링
+- 1280×720 와이드 맵·기본 UI, 창 크기 조절·최대화·Alt+Enter 전체 화면
 - 키보드·XInput 입력, WAV/Ogg/MP3/WMA/MIDI 오디오
 - UTF-8·CP949·CP932 프로젝트 데이터 처리와 기존 세이브 가져오기
 - 원본 보존을 전제로 한 프로젝트 변환, ABI 검사 및 회귀 검증 도구
@@ -58,13 +59,13 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 [Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.
 
 ```powershell
-git tag v0.1.0-alpha.4
-git push origin v0.1.0-alpha.4
+git tag v0.1.0-alpha.5
+git push origin v0.1.0-alpha.5
 ```
 
 이미 게시된 태그를 덮어쓰지 않습니다. 수동 실행은 릴리스를 게시하지 않습니다. 별도 PAT 없이 게시 작업에서만 자동 `GITHUB_TOKEN`의 `contents: write` 권한을 사용합니다.
 
-CI는 Python 검사, Ruby x86 검사, DLL ABI, 제공된 실행기의 연결 검사와 템플릿 변환을 확인합니다. 전체 게임 완주·렌더링·오디오 인수 검증은 포함하지 않으며 해당 빌드의 범위는 `verification.json`에 기록됩니다.
+CI는 Python 검사, Ruby x86 검사, DLL ABI, 실행기 연결·640×480/1280×720 렌더링·창 동작 검사, FHD/QHD/4K 배율 계산과 템플릿 변환을 확인합니다. 전체 게임 완주·렌더링·오디오 인수 검증은 포함하지 않으며 해당 빌드의 범위는 `verification.json`에 기록됩니다.
 
 ## 빌드
 
@@ -122,6 +123,14 @@ python -B scripts/migrate_project.py "LOCAL_ORIGINAL_PROJECT" "NEW_PROJECT" --da
 
 원본에 이미 `Saves/` 폴더가 있으면 형식 혼합을 막기 위해 변환을 중단합니다. 새 저장을 원본 엔진에서 읽는 역호환은 지원하지 않습니다. 원복하려면 보존한 원본 프로젝트를 실행하고, 변환 복사본의 새 저장은 별도로 보관하세요.
 
+## 와이드 화면
+
+Release ZIP은 1280×720 맵·메뉴·메시지·전투 배치를 적용한 template입니다. 작은 맵은 중앙에 표시하고, 타이틀·전투 배경은 비율을 유지해 채웁니다. 글자·캐릭터의 기본 픽셀 크기는 유지합니다.
+
+다른 기본 프로젝트를 변환하려면 `migrate_project.py`에 `--widescreen`을 추가하세요. 생략하면 기존 배치를 유지합니다. `Game.ini`의 `[Lunetile] Width=1280`, `Height=720`이 내부 화면 크기를 지정합니다. 창 크기 조절과 전체 화면은 화면 비율을 유지하며, 남는 출력 공간은 검게 표시합니다.
+
+스크립트에서는 `Graphics.width`, `Graphics.height`, `Graphics.resize_screen(width, height)`를 사용할 수 있습니다. 크기 변경 후 기존 UI는 자동 재배치되지 않으므로 장면 사이에서 변경하고 화면 객체를 다시 생성하세요. 사용자 정의 UI 플러그인은 별도 수정이 필요합니다. 설정·API·검증 범위는 [와이드 화면 안내](docs/WIDESCREEN.md)를 참고하세요.
+
 ## 검사
 
 ### 외부 게임 없이 실행하는 검사
@@ -160,7 +169,7 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 - 원본 DLL의 전체 66개 함수, 편집기, 임의 플러그인 및 구형 Ruby 네이티브 확장의 호환성은 보장하지 않습니다.
 - 64비트 실행기, 60/120FPS 및 고주기 로직은 지원 범위에 포함하지 않습니다.
 - RGSSAD v2/v3는 지원하지 않습니다.
-- 물리 게임패드와 Windows 배율은 검증하지 않았습니다.
+- 물리 게임패드와 실제 고배율·여러 모니터 간 DPI 변경은 검증하지 않았습니다. 현재 모니터의 창 동작과 합성 DPI 메시지는 검사합니다.
 - 원본 GDI 경로의 프레임별 GPU 비용 비교는 미확정입니다. 일부 조건에서는 CPU 실행 시간이 증가했으므로 전반적인 성능 향상을 보장하지 않습니다.
 
 ## 문제 해결

@@ -71,7 +71,9 @@ def main():
  ap.add_argument('--endurance-seconds',type=int,help='After the short scenario, keep moving/transferring in the actual map scene; requires --scenario')
  ap.add_argument('--roundtrips',type=int,default=100)
  ap.add_argument('--rtp',type=Path,help='Copy missing local RTP assets into this private test copy; existing project files win')
+ ap.add_argument('--widescreen-checks',action='store_true',help='Check wide stock window bounds and list layout; requires --scenario')
  a=ap.parse_args();out=a.output.resolve()
+ if a.widescreen_checks and not a.scenario:ap.error('--widescreen-checks requires --scenario')
  if a.manual and not a.scenario:ap.error('--manual requires --scenario')
  if a.full_combat and (not a.scenario or a.endurance_seconds is not None):ap.error('--full-combat requires --scenario and no endurance')
  if a.endurance_seconds is not None and (not a.scenario or a.manual or not 1<=a.endurance_seconds<=7200 or not 1<=a.roundtrips<=1000):ap.error('Endurance requires --scenario, no --manual, 1..7200 seconds and 1..1000 roundtrips')
@@ -82,6 +84,7 @@ def main():
  path=out/'Data/Scripts.rxdata';entries=read(path.read_bytes())
  # Preserve the migrated entries; prepend one visible, separately owned test entry.
  source=(ROOT/'tests'/('runtime_stock_scenario.rb' if a.scenario else 'runtime_stock_boot.rb')).read_bytes()
+ if a.widescreen_checks:source+=b'\n'+(ROOT/'tests/runtime_widescreen_ui.rb').read_bytes()
  if a.full_combat:source+=b'\n'+(ROOT/'tests/runtime_full_combat.rb').read_bytes()
  if a.endurance_seconds is not None:
   (out/'scenario-endurance.txt').write_text(f'{a.endurance_seconds}\n{a.roundtrips}\n')
@@ -107,6 +110,7 @@ def main():
  states=state_path.read_text() if state_path.exists() else ''
  required=('Scene_Title','Scene_Map','Scene_Menu','Scene_Save','Scene_Load','Scene_Battle') if a.scenario else ('Scene_Title','Scene_Map','Scene_Menu')
  passed=p.returncode==0 and ((out/'manual-ending-reached.txt').exists() if a.manual else all(scene in states for scene in required) and (out/'runtime-complete.txt').exists())
+ if a.widescreen_checks:passed=passed and (out/'wide-ui-checked.txt').is_file()
  report={'passed':passed,'exit_code':p.returncode,'states':states,'dll_sha256':sha(out/'RGSS104E.dll'),'scope':('Manual UI input' if a.manual else 'Injected logical input')+'; one-hit fixture encounter; no original-gameplay comparison'}
  if a.full_combat:
   combat=progress(out/'full-combat-result.txt')

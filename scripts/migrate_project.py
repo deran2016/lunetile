@@ -60,7 +60,7 @@ def read_project_ini(path,encoding=None):
  ini=configparser.ConfigParser(interpolation=None);ini.read_string(text)
  return ini,chosen
 
-def transform(entries):
+def transform(entries,widescreen=False):
  baseline=json.loads((ROOT/'src/runtime/stock_scripts.json').read_text())
  legacy=json.loads((ROOT/'src/runtime/legacy_pacing.json').read_text())
  helper_index=len(entries)-2 if len(entries)==len(baseline['scripts'])+1 else None
@@ -93,6 +93,9 @@ def transform(entries):
    line=text[:text.index(before)].count('\n')+1
    text=text.replace(before,after)
    edits.append({'line':line,'before':before,'after':after})
+  if widescreen:
+   from widescreen import adapt
+   text,wide_edits=adapt(name,text.replace('\r\n','\n'));edits.extend(wide_edits)
   converted=text.encode('utf-8') if edits else source
   if edits:replacements[index]=converted
   mapping.append({'index':index,'id':entry.id,'name':name,'encoding_before':'UTF-8','encoding_after':'UTF-8','source_sha256_before':sha(source),'source_sha256_after':sha(converted),'compressed_sha256_before':sha(entry.compressed),'changes':edits})
@@ -132,7 +135,7 @@ def inspect_data(source,archive,ruby,staging,project,data_encoding):
  if reader.pos!=len(reader.data):raise MigrationError('Trailing text conversion report data')
  return [{'location':location.decode('utf-8'),'encoding_before':encoding.decode(),'encoding_after':'UTF-8','source_bytes_hex':before.decode(),'utf8_bytes_hex':after.decode(),'source_sha256':sha(bytes.fromhex(before.decode())),'utf8_sha256':sha(bytes.fromhex(after.decode()))} for location,encoding,before,after in records]
 
-def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None):
+def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescreen=False):
  source,output,dll,ruby=[path.resolve() for path in (source,output,dll,ruby)]
  if data_encoding not in (None,'UTF-8','CP949','CP932'):raise MigrationError('Unsupported explicit project data encoding')
  if not source.is_dir():raise MigrationError('Original project directory does not exist')
@@ -147,7 +150,7 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None):
  if archive and ((source/script_path).exists() or archive.normalize(script_path) in archive.entries):raise MigrationError('Reserved converted script path already exists')
  raw=archive.read('Data/Scripts.rxdata') if archive else (source/'Data/Scripts.rxdata').read_bytes()
  entries=read(raw)
- replacements,mapping=transform(entries)
+ replacements,mapping=transform(entries,widescreen)
  converted=write(entries,replacements)
  for item in source.rglob('*'):
   if item.is_symlink() or item.is_junction():raise MigrationError(f'Project links require explicit review: {item.relative_to(source)}')
@@ -172,7 +175,7 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None):
   shutil.copy2(dll,project/'RGSS104E.dll')
   ini=configparser.ConfigParser(interpolation=None);ini_before=None
   if (project/'Game.ini').exists():ini,ini_before=read_project_ini(project/'Game.ini',ini_encoding)
-  for section in ('Game','RGSSXP'):
+  for section in ('Game','RGSSXP') + (('Lunetile',) if widescreen else ()):
    matching=[name for name in ini.sections() if name.casefold()==section.casefold()]
    if len(matching)>1:raise MigrationError('Ambiguous case-insensitive INI section: '+section)
    if matching and matching[0]!=section:
@@ -181,6 +184,10 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None):
    if not matching:ini.add_section(section)
   ini.set('Game','Library','RGSS104E.dll');ini.set('Game','Scripts',script_path)
   if not ini.has_option('Game','Title'):ini.set('Game','Title','RGSSXP compatibility project')
+  if widescreen:
+   if ini.has_section('Lunetile'):ini.remove_section('Lunetile')
+   ini.add_section('Lunetile');ini.set('Lunetile','Width','1280');ini.set('Lunetile','Height','720')
+  manifest['display']={'width':1280,'height':720,'layout':'stock-wide'} if widescreen else {'layout':'original'}
   ini.set('RGSSXP','DataEncoding',data_encoding or 'UTF-8');ini.set('RGSSXP','SaveFormat','1')
   # The unchanged ANSI launcher and the new wide Windows APIs both understand BOM-marked UTF-16 INI files.
   with (project/'Game.ini').open('w',encoding='utf-16') as stream:ini.write(stream,space_around_delimiters=False)
@@ -201,8 +208,9 @@ def main():
  ap.add_argument('--ruby',type=Path,default=RUNTIME_BIN/'rgssxp-ruby.exe')
  ap.add_argument('--data-encoding',choices=['UTF-8','CP949','CP932'],help='Required for non-ASCII project text; explicit decoding is validated before copying')
  ap.add_argument('--ini-encoding',choices=['UTF-8','CP949','CP932'],help='Explicit source Game.ini encoding when it contains non-ASCII text without a BOM')
+ ap.add_argument('--widescreen',action='store_true',help='Adapt reviewed stock UI/camera to 1280x720')
  a=ap.parse_args()
- try:manifest=migrate(a.source,a.output,a.dll,a.ruby,a.data_encoding,a.ini_encoding)
+ try:manifest=migrate(a.source,a.output,a.dll,a.ruby,a.data_encoding,a.ini_encoding,a.widescreen)
  except (MigrationError,OSError,ValueError,configparser.Error) as error:ap.exit(1,f'Migration stopped: {error}\n')
  print(f"Project copy created: {a.output}\n{len(manifest['scripts'])} scripts validated; {sum(bool(x['changes']) for x in manifest['scripts'])} entries changed; original files preserved")
 

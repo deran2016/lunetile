@@ -246,7 +246,7 @@ class Plane < RGSSXP::DisplayObject
   attr_accessor :bitmap
   def emit(commands)
     return unless @bitmap && !@bitmap.disposed? && @zoom_x > 0 && @zoom_y > 0
-    area = @viewport ? @viewport.rect : Rect.new(0, 0, 640, 480)
+    area = @viewport ? @viewport.rect : Rect.new(0, 0, Graphics.width, Graphics.height)
     w, h = @bitmap.width * @zoom_x, @bitmap.height * @zoom_y
     start_x, start_y = area.x - @ox % w, area.y - @oy % h
     y = start_y

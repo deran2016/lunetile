@@ -15,6 +15,7 @@ Canvas* canvas_get(VALUE object);
 void canvas_changed(Canvas* canvas, int left, int top, int right, int bottom);
 void init_bitmap();
 void init_graphics();
+void graphics_prepare();
 void graphics_attach(HWND window);
 void graphics_shutdown();
 void graphics_reset();

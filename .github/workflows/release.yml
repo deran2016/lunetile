@@ -61,6 +61,9 @@ jobs:
             build/runtime-ruby-x86/**/gate.json
             build/ci-verification/*
             build/ci-verification/launcher-smoke/*.json
+            build/ci-verification/launcher-smoke/resolution/*.json
+            build/ci-verification/launcher-smoke/resolution/window-checks.txt
+            build/ci-verification/launcher-smoke/wide-config/*.json
           if-no-files-found: ignore
 
   publish:
@@ -91,9 +94,11 @@ jobs:
 
           Includes the converted template project, Game.exe, the newly built runtime DLL, license notices, and file hashes.
           Extract the ZIP and run Game.exe. No Python or manual migration is required.
+          Uses a 1280x720 widescreen canvas with adapted stock maps, menus, dialogue and battle UI.
+          Resize/maximize the window or use Alt+Enter for aspect-preserving full screen.
           Requires Windows 11 x64, the Microsoft Visual C++ x86 runtime, and RPG Maker XP Standard RTP.
 
-          CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, and template conversion.
+          CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, 640x480/1280x720 rendering and window geometry, FHD/QHD/4K fit calculations, and template conversion.
           Korean project paths are checked only when supported by the system ANSI code page; skips are recorded in verification.json.
           Extract to an ASCII path on English Windows. Full gameplay, rendering, audio, and endurance acceptance were not run for this build.
           The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
