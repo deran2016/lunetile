@@ -1,7 +1,7 @@
 # 원본 창 모드의 GDI 출력 경로
 
 > 독립 소스 저장소 안내: 아래의 이전 DLL 해시·build 경로는 분리 전 검증 기록입니다.
-> 원시 자료는 포함하지 않으며, 새 저장소의 실제 빌드·검사 결과는 [VALIDATION.md](VALIDATION.md)에 구분합니다.
+> 원시 자료는 포함하지 않으며, 새 저장소의 실제 빌드·검사 결과는 [VALIDATION.md](../VALIDATION.md)에 구분합니다.
 
 2026-10-18. 원본 DLL SHA-256은
 `7b6acb5e2c245b8cfda77fced2cc0e94108384cd1b9ffc8510e7304fcb9feb6c`입니다.

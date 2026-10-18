@@ -45,7 +45,7 @@ build/independent-project/migration/manifest.json, build/independent-etw-check.j
 
 ## 분리 전 검증과의 구분
 
-RUNTIME_ACCEPTANCE.md, RUNTIME_STATUS.md, 성능·오디오·색상 등의 문서는 분리 전의 검증 이력을 보존합니다.
+`history/`의 RUNTIME_ACCEPTANCE.md, RUNTIME_STATUS.md, 성능·오디오·색상 등의 문서는 분리 전의 검증 이력을 보존합니다.
 당시 인수된 DLL SHA-256은 3868eeceb9fbba5ffc2509cf371e54240db726645dd64145ca4ef5b7f7fffd41입니다.
 그 해시의 23개 회귀 관문, 기본 검증 게임 자동/실제 키 완주, 30분·100왕복,
 세 쌍 CPU/대기 측정은 이번 새 빌드에서 다시 수행한 결과가 아닙니다.

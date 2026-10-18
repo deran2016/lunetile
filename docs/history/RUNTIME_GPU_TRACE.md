@@ -1,7 +1,7 @@
 # GPU·프레임 대기 반복 측정
 
 > 독립 소스 저장소 안내: 아래의 이전 DLL 해시·build 경로는 분리 전 검증 기록입니다.
-> 원시 자료는 포함하지 않으며, 새 저장소의 실제 빌드·검사 결과는 [VALIDATION.md](VALIDATION.md)에 구분합니다.
+> 원시 자료는 포함하지 않으며, 새 저장소의 실제 빌드·검사 결과는 [VALIDATION.md](../VALIDATION.md)에 구분합니다.
 
 엔진 DLL은 `3868eeceb9fbba5ffc2509cf371e54240db726645dd64145ca4ef5b7f7fffd41` 그대로입니다.
 이 문서는 이후 추가한 측정 도구의 기록입니다. 기존 `RGSSXP-stock-candidate-20261018`과
