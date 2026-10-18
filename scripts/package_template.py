@@ -42,6 +42,7 @@ def package(source,runtime,output):
    '실행: 이 폴더를 풀고 Game.exe를 실행하세요. Python이나 별도 변환은 필요하지 않습니다.\n'
    '필수: Windows 11 x64, Microsoft Visual C++ x86 런타임, RPG Maker XP Standard RTP.\n'
    '원본 template은 RTP 리소스를 사용합니다. RTP는 이 ZIP에 포함하지 않습니다.\n'
+   '영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지 밖의 경로를 지원하지 않습니다.\n'
    '새 저장: Saves/RGSSXP. 원본 프로젝트나 기존 세이브를 덮어쓰지 마세요.\n'
    'Game.rxproj와 Data는 변환된 프로젝트이며 기본 XP 스크립트를 덮어쓰면 호환 처리가 사라질 수 있습니다.\n\n'
    'Experimental build. See verification.json for this DLL\'s CI checks.\n'

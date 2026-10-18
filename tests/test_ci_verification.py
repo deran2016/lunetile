@@ -19,7 +19,14 @@ class CIVerificationTests(unittest.TestCase):
   self.gate=gate
 
  def run_checks(self,codes):
-  with patch.object(verify_ci,'ROOT',self.root),patch.object(verify_ci,'inspect',return_value={'sha256':'abc'}),patch.object(verify_ci.subprocess,'check_output',return_value='commit\n'),patch.object(verify_ci.subprocess,'run',side_effect=[SimpleNamespace(returncode=n) for n in codes]):
+  results=iter(codes)
+  def run(command,**kwargs):
+   code=next(results)
+   if 'scripts/test_runtime.py' in command and code==0:
+    folder=self.output/'launcher-smoke';folder.mkdir()
+    (folder/'skipped.json').write_text('[]')
+   return SimpleNamespace(returncode=code)
+  with patch.object(verify_ci,'ROOT',self.root),patch.object(verify_ci,'inspect',return_value={'sha256':'abc'}),patch.object(verify_ci.subprocess,'check_output',return_value='commit\n'),patch.object(verify_ci.subprocess,'run',side_effect=run):
    return verify_ci.verify(self.output)
 
  def test_success_records_scope_and_binary_identity(self):

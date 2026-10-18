@@ -48,7 +48,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 
 [GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-template-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP을 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 `Data`, `Game.ini`, 프로젝트 파일과 새 Lunetile DLL이 들어 있으므로 Python 설치나 수동 변환이 필요하지 않습니다.
 
-**필수 설치:** Windows 11 x64, Microsoft Visual C++ x86 런타임, **RPG Maker XP Standard RTP**. 제공된 템플릿의 Graphics·Audio 폴더는 비어 있으며 `RTP1=Standard`를 사용합니다. RTP는 ZIP에 포함하지 않습니다.
+**필수 설치:** Windows 11 x64, Microsoft Visual C++ x86 런타임, **RPG Maker XP Standard RTP**. 제공된 템플릿의 Graphics·Audio 폴더는 비어 있으며 `RTP1=Standard`를 사용합니다. RTP는 ZIP에 포함하지 않습니다. 영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지로 표현할 수 없는 경로를 읽지 못합니다.
 
 - 원본 `template/`는 보존하고 별도 복사본만 변환합니다.
 - 개인 세이브·로그·원본 RGSS DLL은 배포하지 않습니다. 새 저장은 `Saves/RGSSXP/`에 생성됩니다.
@@ -58,8 +58,8 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 [Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.
 
 ```powershell
-git tag v0.1.0-alpha.3
-git push origin v0.1.0-alpha.3
+git tag v0.1.0-alpha.4
+git push origin v0.1.0-alpha.4
 ```
 
 이미 게시된 태그를 덮어쓰지 않습니다. 수동 실행은 릴리스를 게시하지 않습니다. 별도 PAT 없이 게시 작업에서만 자동 `GITHUB_TOKEN`의 `contents: write` 권한을 사용합니다.

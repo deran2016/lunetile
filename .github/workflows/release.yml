@@ -60,7 +60,7 @@ jobs:
             build/runtime-ruby-x86/**/*.log
             build/runtime-ruby-x86/**/gate.json
             build/ci-verification/*
-            build/ci-verification/launcher-smoke/summary.json
+            build/ci-verification/launcher-smoke/*.json
           if-no-files-found: ignore
 
   publish:
@@ -94,7 +94,8 @@ jobs:
           Requires Windows 11 x64, the Microsoft Visual C++ x86 runtime, and RPG Maker XP Standard RTP.
 
           CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, and template conversion.
-          Full gameplay, rendering, audio, and endurance acceptance were not run for this build.
+          Korean project paths are checked only when supported by the system ANSI code page; skips are recorded in verification.json.
+          Extract to an ASCII path on English Windows. Full gameplay, rendering, audio, and endurance acceptance were not run for this build.
           The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
           EOF
           gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md

@@ -85,7 +85,11 @@ def main():
  type_source=(ROOT/'tests/rgss_types_reference.rb').read_bytes()+(ROOT/'tests/runtime_types.rb').read_bytes()+source
  reports.append(run(exe,dll,out/'types','',type_source))
  reports.append(run(exe,dll,out/'saves','',(ROOT/'tests/runtime_saves.rb').read_bytes()+source))
- reports.append(run(exe,dll,out/'한글-경로','',(ROOT/'tests/runtime_saves.rb').read_bytes()+source))
+ skipped=[]
+ try:str(out/'한글-경로').encode('mbcs',errors='strict')
+ except UnicodeEncodeError:
+  skipped.append({'case':'Korean project path','reason':'Original ANSI launcher cannot represent this path in the system code page'})
+ else:reports.append(run(exe,dll,out/'한글-경로','',(ROOT/'tests/runtime_saves.rb').read_bytes()+source))
  reports.append(run(exe,dll,out/'input-errors','',(ROOT/'tests/runtime_input_errors.rb').read_bytes()))
  for encoding in ('UTF-8','CP949','CP932'):
   reports.append(run(exe,dll,out/('text-'+encoding),'',(ROOT/'tests/runtime_text.rb').read_bytes()+source,data_encoding=encoding))
@@ -100,6 +104,7 @@ def main():
  reports.append(run(exe,dll,out/'ruby-error','',b'sleep 0.25; 1/0',True))
  reports.append(run(exe,dll,out/'ruby-exit','',b"at_exit { File.write('runtime-complete.txt','exit,false,false') }; sleep 0.25; exit"))
  (out/'summary.json').write_text(json.dumps(reports,indent=2))
+ (out/'skipped.json').write_text(json.dumps(skipped,indent=2)+'\n')
  print('Original launcher + independent Ruby 4 x86 DLL: normal/debug/btest/types/saves/error PASS')
 
 if __name__=='__main__':main()

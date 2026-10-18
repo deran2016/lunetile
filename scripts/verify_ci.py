@@ -24,6 +24,7 @@ def verify(output):
     result=subprocess.run(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,timeout=180)
    report['steps'].append({'name':name,'exit_code':result.returncode})
    if result.returncode:raise RuntimeError(name+' failed; see '+str(output/(name+'.log')))
+  report['launcher_skipped']=json.loads((output/'launcher-smoke/skipped.json').read_text(encoding='utf-8'))
   (output/'artifact.json').write_text(json.dumps(artifact,indent=2)+'\n',encoding='utf-8')
   report['passed']=True
  finally:
