@@ -8,6 +8,7 @@
 #include <vector>
 #include "graphics.h"
 #include "audio.h"
+#include "network.h"
 #include <ruby.h>
 #include <ruby/encoding.h>
 #include <ruby/version.h>
@@ -16,6 +17,7 @@
 void init_rgss_types();
 void init_win32_api();
 void init_file_io(VALUE module);
+extern "C" void init_runtime_json();
 
 namespace {
 bool initialized = false;
@@ -95,6 +97,9 @@ VALUE decode_archive(VALUE, VALUE input, VALUE key_value) {
 }
 // Ruby exceptions remain inside rb_protect; no C++ owner is on the longjmp path.
 VALUE evaluate_bootstrap(VALUE) {
+    init_runtime_json();
+    init_network();
+    rb_eval_string(network_support);
     init_file_io(rb_const_get(rb_cObject, rb_intern("RGSSXP")));
     init_rgss_types();
     init_win32_api();
@@ -143,6 +148,7 @@ VALUE handle_reset(VALUE error) {
     if(!rb_const_defined_at(rb_cObject,name))return Qfalse;
     VALUE klass=rb_const_get_at(rb_cObject,name);
     if(!RB_TYPE_P(klass,T_CLASS)||!rb_obj_is_kind_of(error,klass))return Qfalse;
+    network_shutdown();
     audio_shutdown();
     rb_funcall(rb_const_get(rb_cObject,rb_intern("RGSSXP")),rb_intern("reset_display"),0);
     graphics_reset();
@@ -152,6 +158,7 @@ VALUE handle_reset(VALUE error) {
 int finish_ruby(int result) {
     if (!initialized) return result;
     log_line("Ruby finalizing");
+    network_shutdown(true);
     int status = ruby_cleanup(result);
     audio_shutdown();
     graphics_shutdown();

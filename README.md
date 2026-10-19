@@ -41,7 +41,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 | CMake 3.24 이상 | 네이티브 런타임 구성·빌드 |
 | Python 3.12 | 빌드 보조, 프로젝트 변환 및 검사 |
 | Ruby 3.1 이상 | Ruby 소스 빌드용 부트스트랩 실행기. 검증에는 MSYS2 Ruby 3.4.10 사용 |
-| PowerShell, `tar.exe` | 빌드 스크립트 실행과 소스 압축 해제 |
+| PowerShell, `tar.exe` | 빌드 스크립트 실행과 소스 압축 해제. 통신 검사의 테스트 인증서 생성에는 PowerShell 7 (`pwsh`) 필요 |
 | Microsoft Visual C++ x86 런타임 | 생성된 DLL 실행 |
 
 `python`, `cmake.exe`, `tar.exe`를 PATH에서 실행할 수 있어야 합니다. 최초 빌드에는 고정된 의존 소스를 다운로드할 네트워크 연결이 필요합니다. 부트스트랩 Ruby는 빌드 도구로만 사용하며 게임 실행에 별도로 필요하지 않습니다.
@@ -62,8 +62,8 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 [Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.
 
 ```powershell
-git tag v0.1.0-alpha.8
-git push origin v0.1.0-alpha.8
+git tag v0.1.0-alpha.9
+git push origin v0.1.0-alpha.9
 ```
 
 이미 게시된 태그를 덮어쓰지 않습니다. 수동 실행은 릴리스를 게시하지 않습니다. 별도 PAT 없이 게시 작업에서만 자동 `GITHUB_TOKEN`의 `contents: write` 권한을 사용합니다.
@@ -183,6 +183,18 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 - 물리 게임패드와 실제 고배율·여러 모니터 간 DPI 변경은 검증하지 않았습니다. 현재 모니터의 창 동작과 합성 DPI 메시지는 검사합니다.
 - 원본 GDI 경로의 프레임별 GPU 비용 비교는 미확정입니다. 일부 조건에서는 CPU 실행 시간이 증가했으므로 전반적인 성능 향상을 보장하지 않습니다.
 
+## REST·TCP 통신
+
+게임 스크립트에서 비동기 REST/JSON과 TCP/TLS 클라이언트를 사용할 수 있습니다. 서버 주소를 지정해 API를 호출하기 전에는 접속하지 않습니다. TCP는 TLS가 기본이며 별도 Ruby·OpenSSL 설치는 필요하지 않습니다.
+
+```ruby
+@request = Lunetile::HTTP.request(:post, "https://game.example.com/api/status", json: {"player" => 1})
+# 이후 장면 update에서 @request.done? 확인 후 @request.response 또는 @request.error 사용
+@connection = Lunetile::TCP.connect("game.example.com", 4433) # 비동기 TCP/TLS 연결
+```
+
+요청 취소, HTTP 상태·헤더·본문, TCP 바이트 송수신과 길이 접두사 JSON 예제는 [통신 API 문서](docs/NETWORKING.md)를 참고하세요. 요청·연결 객체는 저장 파일에 넣지 않습니다. 별도 서버와 계정 시스템은 포함하지 않습니다.
+
 ## 문제 해결
 
 | 증상 | 확인할 내용 |
@@ -217,6 +229,7 @@ licenses/      외부 라이브러리 라이선스 고지
 | [텍스트](docs/history/RUNTIME_TEXT.md) · [파일 입출력](docs/history/RUNTIME_FILE_IO.md) | 인코딩과 파일 처리 |
 | [리셋](docs/history/RUNTIME_RESET.md) · [처리 순서](docs/history/RUNTIME_ORDER.md) | F12 및 정수 ID 테이블 호환 처리 |
 | [외부 구성 요소](docs/RUNTIME_THIRD_PARTY.md) | 고정 의존성, 라이선스와 배포 범위 |
+| [REST·TCP 통신](docs/NETWORKING.md) | 비동기 HTTP/JSON·TCP/TLS API와 서버 프로토콜 예제 |
 
 ## 기여하기
 
@@ -226,6 +239,6 @@ PR에는 변경 이유, 영향 범위와 수행한 검사를 적어 주세요. �
 
 ## 라이선스
 
-자체 코드는 [MIT 라이선스](LICENSE)입니다. Ruby 4.0.7, zlib 1.3.2, libogg 1.3.6, libvorbis 1.3.7은 각각의 라이선스를 따르며, 고지 원문은 `licenses/`에 있습니다. Windows API는 Windows SDK를 통해 사용합니다.
+자체 코드는 [MIT 라이선스](LICENSE)입니다. Ruby 4.0.7과 내장 JSON 2.18.0, zlib 1.3.2, libogg 1.3.6, libvorbis 1.3.7은 각각의 라이선스를 따르며, 고지 원문은 `licenses/`에 있습니다. Windows API는 Windows SDK를 통해 사용합니다.
 
 승인된 `template/` 입력을 제외한 빌드 결과, 실행 파일, 게임 데이터·에셋·세이브, 원시 추적과 덤프는 `.gitignore`로 제외합니다. 게임 실행기와 리소스의 사용·배포 권한은 별도로 확인해야 합니다.

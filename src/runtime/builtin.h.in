@@ -1,4 +1,6 @@
 #pragma once
+static const char network_support[] = R"RGSSXP(# encoding: UTF-8
+@network_support@)RGSSXP";
 static const char audio_support[] = R"RGSSXP(# encoding: UTF-8
 @audio_support@)RGSSXP";
 static const char value_types[] = R"RGSSXP(# encoding: UTF-8

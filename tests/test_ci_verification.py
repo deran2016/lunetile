@@ -27,16 +27,19 @@ class CIVerificationTests(unittest.TestCase):
     (folder/'skipped.json').write_text('[]')
     for name,filename,value in [('refresh','refresh-results.txt','[[60,2.0,[120,120,0,0]]]'),('timing-40','timing-comparison.txt','[8,14,8,20,6,100,80,40]'),('timing-120','timing-comparison.txt','[24,42,24,60,18,100,80,40]')]:
      (folder/name).mkdir();(folder/name/filename).write_text(value)
+   if 'scripts/test_runtime_network.py' in command and code==0:
+    folder=self.output/'network';folder.mkdir();(folder/'summary.json').write_text('{"passed":true,"trusted_tls_test":true}')
    return SimpleNamespace(returncode=code)
   with patch.object(verify_ci,'ROOT',self.root),patch.object(verify_ci,'inspect',return_value={'sha256':'abc'}),patch.object(verify_ci.subprocess,'check_output',return_value='commit\n'),patch.object(verify_ci.subprocess,'run',side_effect=run):
    return verify_ci.verify(self.output)
 
  def test_success_records_scope_and_binary_identity(self):
-  report=self.run_checks([0,0,0,0])
+  report=self.run_checks([0,0,0,0,0])
   self.assertTrue(report['passed'])
   self.assertEqual(report['runtime_sha256'],'abc')
   self.assertIn('no full gameplay',report['scope'])
-  self.assertEqual(len(report['steps']),4)
+  self.assertEqual(len(report['steps']),5)
+  self.assertTrue(report['network_validation']['trusted_tls_test'])
 
  def test_failed_check_never_produces_passed_report(self):
   with self.assertRaises(RuntimeError):self.run_checks([1])

@@ -70,6 +70,8 @@ def package(source,runtime,output,diagnostics):
    '고주기 저장은 버전 2입니다. 기존 저장은 읽을 수 있지만 새 저장은 이전 런타임에서 읽을 수 없습니다.\n'
    '새 저장: Saves/RGSSXP. 원본 프로젝트나 기존 세이브를 덮어쓰지 마세요.\n'
    'Game.rxproj와 Data는 변환된 프로젝트이며 기본 XP 스크립트를 덮어쓰면 호환 처리가 사라질 수 있습니다.\n\n'
+   '개발용 통신 API: REST/JSON 및 TCP/TLS. 스크립트가 명시적으로 호출하기 전에는 서버에 접속하지 않습니다.\n'
+   '사용법: https://github.com/deran2016/lunetile/blob/main/docs/NETWORKING.md\n\n'
    '검증 결과·변환 기록·파일 해시: 같은 Release의 lunetile-template-diagnostics.zip (실행에는 불필요).\n'
    '개발 문서·소스: https://github.com/deran2016/lunetile\n'
    'Experimental build; full gameplay/rendering/audio acceptance is not certified.\n'

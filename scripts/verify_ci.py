@@ -19,13 +19,16 @@ def verify(output):
    ('interpreter',[str(ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe'),'--disable-gems','tests/runtime_ruby.rb']),
    ('display-geometry',[str(ROOT/'build/runtime-native/bin/Release/display_geometry_test.exe')]),
    ('launcher',[sys.executable,'-X','utf8','-B','scripts/test_runtime.py','template/Game.exe',str(ROOT/'build/runtime-native/bin/Release/Lunetile.dll'),str(output/'launcher-smoke')]),
+   ('network',[sys.executable,'-X','utf8','-B','scripts/test_runtime_network.py',str(output/'network')]),
   ]
   for name,command in steps:
    with (output/(name+'.log')).open('w',encoding='utf-8') as log:
-    result=subprocess.run(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,timeout=180)
+    result=subprocess.run(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,timeout=300 if name=='network' else 180)
    report['steps'].append({'name':name,'exit_code':result.returncode})
    if result.returncode:raise RuntimeError(name+' failed; see '+str(output/(name+'.log')))
   report['launcher_skipped']=json.loads((output/'launcher-smoke/skipped.json').read_text(encoding='utf-8'))
+  report['network_validation']=json.loads((output/'network/summary.json').read_text(encoding='utf-8'))
+  if report['network_validation'].get('passed') is not True:raise RuntimeError('Network verification did not pass')
   report['refresh_validation']={'logic_rate':120,'scope':'Automated background rendering; successful DXGI submissions, not physical monitor scanout','samples':ast.literal_eval((output/'launcher-smoke/refresh/refresh-results.txt').read_text()),'timing_40':ast.literal_eval((output/'launcher-smoke/timing-40/timing-comparison.txt').read_text()),'timing_120':ast.literal_eval((output/'launcher-smoke/timing-120/timing-comparison.txt').read_text())}
   (output/'artifact.json').write_text(json.dumps(artifact,indent=2)+'\n',encoding='utf-8')
   report['passed']=True
