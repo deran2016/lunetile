@@ -67,7 +67,7 @@ event wait, timers, pictures, fog, flash/effect/animation durations, saved motio
 state and legacy save conversion. They also test settings persistence, atomic
 write failure and versioned save access.
 
-`verification.json` includes timing comparison values and two-second output
+The optional Release diagnostics ZIP's `verification.json` includes timing comparison values and two-second output
 samples: target rate, elapsed seconds and changes in due/submitted/dropped/late
 counts. These are successful DXGI submissions, **not physical monitor scans**.
 Automated tests set the process-local `LUNETILE_TEST_BACKGROUND=1` flag to avoid

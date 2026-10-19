@@ -39,12 +39,16 @@ jobs:
         run: |
           python -X utf8 -B scripts/package_runtime.py build/ci-verification build/lunetile-windows-x86
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
-          python -X utf8 -B scripts/package_template.py template build/lunetile-windows-x86 build/lunetile-template-windows-x86
+          python -X utf8 -B scripts/package_template.py template build/lunetile-windows-x86 build/lunetile-template-windows-x86 build/lunetile-template-diagnostics
           if ($LASTEXITCODE -ne 0) { throw 'Template packaging failed' }
           New-Item -ItemType Directory dist | Out-Null
           Compress-Archive -Path build/lunetile-template-windows-x86 -DestinationPath dist/lunetile-template-windows-x86.zip
-          $hash = (Get-FileHash dist/lunetile-template-windows-x86.zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  lunetile-template-windows-x86.zip" | Set-Content dist/SHA256SUMS.txt -Encoding ascii
+          Compress-Archive -Path build/lunetile-template-diagnostics -DestinationPath dist/lunetile-template-diagnostics.zip
+          $checksums = foreach ($asset in @('lunetile-template-windows-x86.zip','lunetile-template-diagnostics.zip')) {
+            $hash = (Get-FileHash (Join-Path dist $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $asset"
+          }
+          $checksums | Set-Content dist/SHA256SUMS.txt -Encoding ascii
       - name: Upload release assets
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -96,8 +100,11 @@ jobs:
 
           Source commit: $SOURCE_COMMIT
 
-          Includes the converted template project, Game.exe, the newly built runtime DLL, license notices, and file hashes.
-          Extract the ZIP and run Game.exe. No Python or manual migration is required.
+          Download lunetile-template-windows-x86.zip for the converted game project, Game.exe, the newly built runtime DLL, a short README and license notices.
+          Extract this game ZIP and run Game.exe. No Python, manual migration or diagnostics ZIP is required.
+          The starting map is expanded to 40x23 tiles (1280x736 pixels), filling the 1280x720 canvas.
+          Optional lunetile-template-diagnostics.zip contains verification, DLL information, migration/map changes, source/game file hashes, dependency locks and the Ruby port patch.
+          SHA256SUMS.txt verifies both ZIPs. Development documents and historical records remain in the source repository.
           Uses a 1280x720 widescreen canvas with adapted stock maps, menus, dialogue and battle UI.
           Resize/maximize the window or use Alt+Enter for aspect-preserving full screen.
           Runs stock game logic at 120Hz with default 60FPS output. Choose 40/60/120FPS in the in-game display settings.
@@ -105,9 +112,9 @@ jobs:
           Requires Windows 11 x64, the Microsoft Visual C++ x86 runtime, and RPG Maker XP Standard RTP.
 
           CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, 640x480/1280x720 rendering and window geometry, FHD/QHD/4K fit calculations, 120Hz output scheduling, 40/120Hz timing comparisons, settings/save checks, and template conversion.
-          Korean project paths are checked only when supported by the system ANSI code page; skips are recorded in verification.json.
+          Korean project paths are checked only when supported by the system ANSI code page; skips are recorded in the diagnostics ZIP's verification.json.
           Extract to an ASCII path on English Windows. Full gameplay, rendering, audio, and endurance acceptance were not run for this build.
           The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
           EOF
-          gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip lunetile-template-diagnostics.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest=false

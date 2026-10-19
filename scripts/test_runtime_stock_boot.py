@@ -73,9 +73,11 @@ def main():
  ap.add_argument('--rtp',type=Path,help='Copy missing local RTP assets into this private test copy; existing project files win')
  ap.add_argument('--render-rate',type=int,choices=[40,60,120],help='Exercise the stock120 settings scene; requires --scenario')
  ap.add_argument('--widescreen-checks',action='store_true',help='Check wide stock window bounds and list layout; requires --scenario')
+ ap.add_argument('--map-checks',action='store_true',help='Walk the packaged 40x23 map and check terrain at screen edges; requires --scenario and --widescreen-checks')
  a=ap.parse_args();out=a.output.resolve()
  if a.render_rate and not a.scenario:ap.error('--render-rate requires --scenario')
  if a.widescreen_checks and not a.scenario:ap.error('--widescreen-checks requires --scenario')
+ if a.map_checks and (not a.scenario or not a.widescreen_checks or a.manual):ap.error('--map-checks requires --scenario, --widescreen-checks and injected input')
  if a.manual and not a.scenario:ap.error('--manual requires --scenario')
  if a.full_combat and (not a.scenario or a.endurance_seconds is not None):ap.error('--full-combat requires --scenario and no endurance')
  if a.endurance_seconds is not None and (not a.scenario or a.manual or not 1<=a.endurance_seconds<=7200 or not 1<=a.roundtrips<=1000):ap.error('Endurance requires --scenario, no --manual, 1..7200 seconds and 1..1000 roundtrips')
@@ -90,6 +92,7 @@ def main():
   source+=b'\n'+(ROOT/'tests/runtime_refresh_scenario.rb').read_bytes()
   (out/'refresh-test-rate.txt').write_text(str(a.render_rate))
  if a.widescreen_checks:source+=b'\n'+(ROOT/'tests/runtime_widescreen_ui.rb').read_bytes()
+ if a.map_checks:source+=b'\n'+(ROOT/'tests/runtime_template_map.rb').read_bytes()
  if a.full_combat:source+=b'\n'+(ROOT/'tests/runtime_full_combat.rb').read_bytes()
  if a.endurance_seconds is not None:
   (out/'scenario-endurance.txt').write_text(f'{a.endurance_seconds}\n{a.roundtrips}\n')
@@ -112,7 +115,7 @@ def main():
  print(f'PID={p.pid} output={out}',flush=True)
  try:
   if a.endurance_seconds is not None:samples,images=endurance_monitor(p,out,a.endurance_seconds)
-  else:p.wait(timeout=300 if a.manual or a.full_combat else 75 if a.scenario else 45)
+  else:p.wait(timeout=300 if a.manual or a.full_combat else 150 if a.map_checks else 75 if a.scenario else 45)
  finally:
   if p.poll() is None:p.terminate();p.wait()
  state_path=out/('scenario-states.txt' if a.scenario else 'scene-states.txt')
@@ -121,6 +124,7 @@ def main():
  passed=p.returncode==0 and ((out/'manual-ending-reached.txt').exists() if a.manual else all(scene in states for scene in required) and (out/'runtime-complete.txt').exists())
  if a.render_rate:passed=passed and (out/'refresh-settings-selected.txt').is_file()
  if a.widescreen_checks:passed=passed and (out/'wide-ui-checked.txt').is_file()
+ if a.map_checks:passed=passed and all((out/name).is_file() for name in ('template-map-checked.txt','template-large-map-checked.txt'))
  restarted=None
  if passed and a.render_rate:
   original=path.read_bytes()
@@ -134,6 +138,7 @@ def main():
  report={'passed':passed,'exit_code':p.returncode,'states':states,'dll_sha256':sha(out/'RGSS104E.dll'),'scope':('Manual UI input' if a.manual else 'Injected logical input')+'; one-hit fixture encounter; no original-gameplay comparison'}
  if restarted is not None:report['settings_restart_passed']=restarted
  if a.render_rate:report['render_rate']=a.render_rate;report['logic_rate']=120
+ if a.map_checks:report['map_walk']={'passed':all((out/name).is_file() for name in ('template-map-checked.txt','template-large-map-checked.txt')),'tiles':[40,23],'screen':[1280,720],'vertical_scroll_pixels':16,'scope':'Injected directions through stock movement; four corners/out-of-bounds attempts; terrain pixel readback at all four screen edges; separate 80x45 colored tilemap camera/render checks'}
  if a.full_combat:
   combat=progress(out/'full-combat-result.txt')
   report['combat']=combat

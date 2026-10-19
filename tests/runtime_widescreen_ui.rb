@@ -59,10 +59,14 @@ module WideUIProbe
       check
       @checked = true
     end
-    return unless File.exist?('wide-capture-enabled.txt')
     name = $scene.class.name
-    return if @captured[name] || !%w[Scene_Title Scene_Map Scene_Menu Scene_Save Scene_Load Scene_Battle Scene_LunetileDisplay].include?(name)
+    return unless %w[Scene_Title Scene_Map Scene_Menu Scene_Save Scene_Load Scene_Battle Scene_LunetileDisplay].include?(name)
     return unless Graphics.frame_count % 12 == 0
+    capture(name)
+  end
+  def self.capture(name)
+    return unless File.exist?('wide-capture-enabled.txt')
+    return if @captured[name]
     @captured[name] = true
     File.write('wide-capture-request.txt',name)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 15

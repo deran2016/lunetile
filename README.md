@@ -54,19 +54,21 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 
 - 원본 `template/`는 보존하고 별도 복사본만 변환합니다.
 - 개인 세이브·로그·원본 RGSS DLL은 배포하지 않습니다. 새 저장은 `Saves/RGSSXP/`에 생성됩니다.
-- 라이선스·검사 결과·변환 내역·파일별 해시를 포함합니다. 템플릿 파일에 엔진의 MIT 라이선스가 새로 적용되는 것은 아닙니다.
+- 게임 ZIP에는 프로젝트 파일·새 DLL·짧은 실행 안내·라이선스 고지만 포함합니다. 시작 맵은 원본의 지형과 시작 위치를 유지하며 **40×23칸(1280×736픽셀)**으로 확장됩니다.
+- 검증 결과·DLL 정보·변환 및 맵 확장 기록·파일별 해시·의존성 정보와 Ruby 패치는 별도 **`lunetile-template-diagnostics.zip`**에 있습니다. 게임 실행에는 필요하지 않습니다. 개발 문서와 과거 기록은 이 저장소에서 제공합니다.
+- `SHA256SUMS.txt`에는 두 ZIP의 해시가 있습니다. 템플릿 파일에 엔진의 MIT 라이선스가 새로 적용되는 것은 아닙니다.
 - `Get-FileHash lunetile-template-windows-x86.zip -Algorithm SHA256`으로 다운로드 해시를 비교할 수 있습니다.
 
 [Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.
 
 ```powershell
-git tag v0.1.0-alpha.6
-git push origin v0.1.0-alpha.6
+git tag v0.1.0-alpha.7
+git push origin v0.1.0-alpha.7
 ```
 
 이미 게시된 태그를 덮어쓰지 않습니다. 수동 실행은 릴리스를 게시하지 않습니다. 별도 PAT 없이 게시 작업에서만 자동 `GITHUB_TOKEN`의 `contents: write` 권한을 사용합니다.
 
-CI는 Python 검사, Ruby x86 검사, DLL ABI, 실행기 연결·640×480/1280×720 렌더링·창 동작 검사, FHD/QHD/4K 배율 계산과 템플릿 변환을 확인합니다. 전체 게임 완주·렌더링·오디오 인수 검증은 포함하지 않으며 해당 빌드의 범위는 `verification.json`에 기록됩니다.
+CI는 Python 검사, Ruby x86 검사, DLL ABI, 실행기 연결·640×480/1280×720 렌더링·창 동작 검사, FHD/QHD/4K 배율 계산과 템플릿 변환·맵 데이터 확장·배포 파일 분리를 확인합니다. 전체 게임 완주·렌더링·오디오 인수 검증은 포함하지 않으며 해당 빌드의 범위는 진단 ZIP의 `verification.json`에 기록됩니다.
 
 ## 빌드
 
