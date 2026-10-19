@@ -7,7 +7,7 @@ function Write-Pem([string]$Path, [string]$Label, [byte[]]$Bytes) {
 }
 if ($Action -ne 'Create') {
     if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Test root trust changes are restricted to disposable GitHub Actions runners.' }
-    $root = [Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPemFile((Join-Path $Directory 'ca.pem'))
+    $root = [Security.Cryptography.X509Certificates.X509Certificate2]::new([IO.File]::ReadAllBytes((Join-Path $Directory 'ca.cer')))
     $store = [Security.Cryptography.X509Certificates.X509Store]::new('Root','CurrentUser')
     try {
         $store.Open('ReadWrite')
@@ -27,6 +27,11 @@ $now = [DateTimeOffset]::UtcNow
 $root = $request.CreateSelfSigned($now.AddDays(-10),$now.AddDays(10))
 try {
     Write-Pem (Join-Path $Directory 'ca.pem') 'CERTIFICATE' $root.RawData
+    [IO.File]::WriteAllBytes((Join-Path $Directory 'ca.cer'),$root.RawData)
+    $loaded = [Security.Cryptography.X509Certificates.X509Certificate2]::new([IO.File]::ReadAllBytes((Join-Path $Directory 'ca.cer')))
+    try {
+        if ($loaded.HasPrivateKey -or $loaded.Thumbprint -ne $root.Thumbprint) { throw 'Public test CA roundtrip failed.' }
+    } finally { $loaded.Dispose() }
     foreach ($name in @('valid','expired','wrong-host')) {
         $key = [Security.Cryptography.RSA]::Create(2048)
         try {

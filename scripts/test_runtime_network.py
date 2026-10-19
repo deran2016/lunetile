@@ -92,7 +92,9 @@ def verify(output,dll,exe,profiles=('stock120',None)):
  output.mkdir(parents=True,exist_ok=False)
  certificates=output/'certificates'
  script=ROOT/'scripts/test_network_certificates.ps1'
- def cert(action):subprocess.run(['pwsh','-NoProfile','-File',str(script),'-Directory',str(certificates),'-Action',action],check=True,capture_output=True,text=True,timeout=30)
+ def cert(action):
+  result=subprocess.run(['pwsh','-NoProfile','-File',str(script),'-Directory',str(certificates),'-Action',action],capture_output=True,text=True,timeout=30)
+  if result.returncode:raise RuntimeError('Certificate fixture '+action+' failed: '+result.stderr)
  cert('Create')
  trusted=os.environ.get('GITHUB_ACTIONS')=='true'
  report={'passed':False,'trusted_tls_test':trusted,'scope':'Local fixture servers and actual Game.exe; no production server or endurance acceptance','runs':[]}
