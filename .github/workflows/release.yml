@@ -29,6 +29,16 @@ jobs:
           python-version: '3.12'
       - name: Install development dependencies
         run: python -m pip install -r requirements-dev.txt
+      - name: Verify disposable TLS certificate fixtures
+        timeout-minutes: 2
+        run: |
+          $certificates = Join-Path $PWD 'build/tls-fixture-preflight'
+          & ./scripts/test_network_certificates.ps1 -Directory $certificates
+          try {
+            & ./scripts/test_network_certificates.ps1 -Directory $certificates -Action Trust
+          } finally {
+            & ./scripts/test_network_certificates.ps1 -Directory $certificates -Action Remove
+          }
       - name: Build Windows x86 runtime
         run: |
           $ruby = (Get-Command ruby.exe -ErrorAction Stop).Source

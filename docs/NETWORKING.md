@@ -126,6 +126,6 @@ PowerShell 7의 `pwsh`와 빌드된 DLL·Ruby 도구가 필요합니다.
 python -X utf8 -B scripts/test_runtime_network.py build/network-verification
 ```
 
-검사는 로컬 HTTP·TCP·TLS 서버와 실제 Game.exe를 사용합니다. 개발 PC의 인증서 저장소를 변경하지 않습니다. 일회용 GitHub Actions 러너에서만 테스트 CA를 임시 등록해 TLS 성공과 잘못된 호스트명·만료 검사를 수행하고 종료 시 제거합니다. 테스트 키·인증서는 Release에 포함하지 않습니다.
+검사는 로컬 HTTP·TCP·TLS 서버와 실제 Game.exe를 사용합니다. 개발 PC의 인증서 저장소를 변경하지 않습니다. 일회용 GitHub Actions 러너의 LocalMachine 루트 저장소에만 테스트 CA를 임시 등록해 TLS 성공과 잘못된 호스트명·만료 검사를 수행하고 종료 시 제거합니다. 테스트 키·인증서는 Release에 포함하지 않습니다.
 
 별도 서버·로그인 UI·자동 토큰 갱신·WebSocket·UDP·C API·리소스 암호화는 포함하지 않습니다. 운영 서버 연동과 장시간 연결 안정성은 별도 검증 대상입니다. 평문 HTTP/TCP의 내용은 암호화되지 않습니다.

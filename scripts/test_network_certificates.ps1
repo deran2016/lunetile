@@ -8,7 +8,8 @@ function Write-Pem([string]$Path, [string]$Label, [byte[]]$Bytes) {
 if ($Action -ne 'Create') {
     if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Test root trust changes are restricted to disposable GitHub Actions runners.' }
     $root = [Security.Cryptography.X509Certificates.X509Certificate2]::new([IO.File]::ReadAllBytes((Join-Path $Directory 'ca.cer')))
-    $store = [Security.Cryptography.X509Certificates.X509Store]::new('Root','CurrentUser')
+    # CurrentUser Root can display a consent dialog on unattended Windows runners.
+    $store = [Security.Cryptography.X509Certificates.X509Store]::new('Root','LocalMachine')
     try {
         $store.Open('ReadWrite')
         if ($Action -eq 'Trust') { $store.Add($root) } else { $store.Remove($root) }
