@@ -22,13 +22,14 @@ def assets(root):
  image.save(chars/'BenchActor.png')
 
 def run_case(base,exe,dll,metrics,source,out,frames,gpu=False,gpu_engine=False,extra_modules=()):
- out.mkdir();shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/'RGSS104E.dll');shutil.copy2(metrics,out/metrics.name)
+ library='RGSS104E.dll' if sha(dll)==ORIGINAL_DLL else 'Lunetile.dll'
+ out.mkdir();shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/library);shutil.copy2(metrics,out/metrics.name)
  for module in extra_modules:shutil.copy2(module,out/module.name)
- runtime_hash=sha(out/'RGSS104E.dll');metrics_hash=sha(out/metrics.name)
+ runtime_hash=sha(out/library);metrics_hash=sha(out/metrics.name)
  shutil.copytree(base/'Data',out/'Data');shutil.copytree(base/'Graphics',out/'Graphics')
  (out/'Scripts.rxdata').write_bytes(scripts(source));(out/'bench-frames.txt').write_text(str(frames))
  if gpu:(out/'bench-gpu.txt').write_text('Diagnostic only; not paired primary timings')
- (out/'Game.ini').write_text('[Game]\nLibrary=RGSS104E.dll\nScripts=Scripts.rxdata\nTitle=RGSSXP rendered benchmark\nRTP1=\nRTP2=\nRTP3=\n')
+ (out/'Game.ini').write_text(f'[Game]\nLibrary={library}\nScripts=Scripts.rxdata\nTitle=RGSSXP rendered benchmark\nRTP1=\nRTP2=\nRTP3=\n')
  process=subprocess.Popen([str(out/'Game.exe')],cwd=out)
  print(f'RUN {out.name} pid={process.pid}',flush=True)
  began=time.monotonic();modules={};memory=[];counter=None;gpu_samples=[];next_gpu=0;last_phase=None;phase_started=began
@@ -60,7 +61,7 @@ def run_case(base,exe,dll,metrics,source,out,frames,gpu=False,gpu_engine=False,e
   if gpu_engine:(out/'gpu-engines.json').write_text(json.dumps(gpu_samples,indent=2))
   (out/'modules.json').write_text(json.dumps(modules,indent=2));(out/'memory.json').write_text(json.dumps(memory))
  assert process.returncode==0 and (out/'runtime-complete.txt').is_file(),{'exit':process.returncode,'case':str(out)}
- assert sha(out/'RGSS104E.dll')==runtime_hash and sha(out/metrics.name)==metrics_hash
+ assert sha(out/library)==runtime_hash and sha(out/metrics.name)==metrics_hash
  assert runtime_hash in modules.values() and metrics_hash in modules.values(),'Expected modules were not sampled'
  assert all(sha(out/module.name) in modules.values() for module in extra_modules),'Diagnostic module was not sampled'
  if runtime_hash!=ORIGINAL_DLL:assert ORIGINAL_DLL not in modules.values(),'Original runtime loaded in replacement case'

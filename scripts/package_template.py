@@ -30,7 +30,7 @@ def package(source,runtime,output,diagnostics):
   for other in (source,runtime,diagnostics if target==output else output):
    if target.is_relative_to(other) or other.is_relative_to(target):raise ValueError('Inputs and outputs must be separate')
  report=json.loads((runtime/'verification.json').read_text(encoding='utf-8'))
- if report.get('passed') is not True or report.get('runtime_sha256')!=digest(runtime/'RGSS104E.dll'):
+ if report.get('passed') is not True or report.get('runtime_sha256')!=digest(runtime/'Lunetile.dll'):
   raise ValueError('Runtime does not match passed verification')
  selected=[source/name for name in ('Game.exe','Game.ini','Game.rxproj')]
  for folder,extensions in ASSETS.items():
@@ -43,11 +43,11 @@ def package(source,runtime,output,diagnostics):
   for p in selected:
    target=clean/p.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
   converted=staging/'converted'
-  migrate(clean,converted,runtime/'RGSS104E.dll',runtime/'rgssxp-ruby.exe',data_encoding='UTF-8',widescreen=True,high_refresh=True)
+  migrate(clean,converted,runtime/'Lunetile.dll',runtime/'rgssxp-ruby.exe',data_encoding='UTF-8',widescreen=True,high_refresh=True)
   map_changes=expand_map(converted,runtime/'rgssxp-ruby.exe',staging)
   game=staging/'game';game.mkdir()
   diagnostic_files=staging/'diagnostics';diagnostic_files.mkdir()
-  for name in ('Game.exe','Game.ini','Game.rxproj','RGSS104E.dll'):
+  for name in ('Game.exe','Game.ini','Game.rxproj','Lunetile.dll'):
    shutil.copy2(converted/name,game/name)
   for folder in ASSETS:
    if (converted/folder).is_dir():shutil.copytree(converted/folder,game/folder)
@@ -61,6 +61,7 @@ def package(source,runtime,output,diagnostics):
   (game/'README.txt').write_text(
    'Lunetile - converted template project\n\n'
    '실행: 이 폴더를 풀고 Game.exe를 실행하세요. Python이나 별도 변환은 필요하지 않습니다.\n'
+   '엔진: Lunetile.dll (Game.ini의 Library 설정으로 선택). 원본 RGSS DLL은 포함하지 않습니다.\n'
    '필수: Windows 11 x64, Microsoft Visual C++ x86 런타임, RPG Maker XP Standard RTP.\n'
    '원본 template은 RTP 리소스를 사용합니다. RTP는 이 ZIP에 포함하지 않습니다.\n'
    '영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지 밖의 경로를 지원하지 않습니다.\n'

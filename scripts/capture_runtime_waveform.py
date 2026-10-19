@@ -29,14 +29,15 @@ def capture(exe,dll,tool,out,phase,data=None):
  if phase not in [(f,p) for f in ('wav','mid') for p in (50,100,150)]+[('sequence',100),('compressed',100),('wma-roles',100),('channels',100),('channels-held',100),('channels-repeat',100),('volumes',100)]:raise ValueError('Unknown audio calibration case')
  assert sha(exe)==ORIGINAL_EXE
  out.mkdir(parents=True,exist_ok=False)
- shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/'RGSS104E.dll')
- runtime_hash=sha(out/'RGSS104E.dll')
+ library='RGSS104E.dll' if sha(dll)==ORIGINAL_DLL else 'Lunetile.dll'
+ shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/library)
+ runtime_hash=sha(out/library)
  if data:shutil.copytree(data,out/'Data')
  else:fixtures(out/'Data',phase[0].startswith('channels') or phase[0]=='volumes',phase[0] in ('compressed','wma-roles'))
  source=(ROOT/'tests'/('rgss_wma_roles_reference.rb' if phase[0]=='wma-roles' else 'runtime_audio_volumes.rb' if phase[0]=='volumes' else 'runtime_audio_channels.rb' if phase[0].startswith('channels') else 'runtime_audio_waveform.rb')).read_bytes();tool_hash=sha(tool)
  (out/'Scripts.rxdata').write_bytes(scripts(source))
  (out/'audio-case.txt').write_text(phase[0]+','+str(phase[1]))
- (out/'Game.ini').write_text('[Game]\nLibrary=RGSS104E.dll\nScripts=Scripts.rxdata\nTitle=RGSSXP process audio diagnostic\nRTP1=\nRTP2=\nRTP3=\n')
+ (out/'Game.ini').write_text(f'[Game]\nLibrary={library}\nScripts=Scripts.rxdata\nTitle=RGSSXP process audio diagnostic\nRTP1=\nRTP2=\nRTP3=\n')
  game=subprocess.Popen([str(out/'Game.exe')],cwd=out)
  images={};recorder=None
  try:
@@ -46,9 +47,9 @@ def capture(exe,dll,tool,out,phase,data=None):
    for item in psutil.Process(game.pid).memory_maps():
     path=Path(item.path)
     if path.suffix.lower() in ('.exe','.dll') and path.is_file():images[str(path)]=sha(path)
-   if str(out/'RGSS104E.dll') in images:break
+   if str(out/library) in images:break
    time.sleep(.05)
-  assert images.get(str(out/'RGSS104E.dll'))==runtime_hash
+  assert images.get(str(out/library))==runtime_hash
   assert not any(Path(name).name.lower()=='rgssframepacing.dll' for name in images)
   if runtime_hash!=ORIGINAL_DLL:assert ORIGINAL_DLL not in images.values()
   print('Waiting for initial test frame: '+str(out),flush=True)
@@ -66,7 +67,7 @@ def capture(exe,dll,tool,out,phase,data=None):
   assert game.returncode==0 and (out/'runtime-complete.txt').exists()
   stats=json.loads(stdout);assert stats['bytes']>0 and stats['packets']>0
   if not stats.get('target_exited'):raise RuntimeError('Capture deadline elapsed before the owned game exited; incomplete probe')
-  assert sha(out/'RGSS104E.dll')==runtime_hash
+  assert sha(out/library)==runtime_hash
   assert sha(tool)==tool_hash
   result={'passed':True,'case':{'format':phase[0],'pitch':phase[1]},'dll_sha256':runtime_hash,'capture_tool_sha256':tool_hash,'source_sha256':hashlib.sha256(source).hexdigest(),'fixtures':{name:sha(out/'Data'/name) for name in ('sustain.wav','sustain.mid')},'capture':stats,'scope':'Process-tree PCM acquisition only; waveform analysis and fidelity verdict separate; MIDI uses identical Graphics.update dispatch. Capture starts after initial frame readiness; foreground waits are not latency measurements.'}
   if phase[0]=='sequence':del result['case'];result['scenario']='Same-process pitch changes and MIDI teardown'

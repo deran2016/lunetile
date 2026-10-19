@@ -7,7 +7,7 @@ from test_runtime import sha,ORIGINAL_DLL
 def review(project):
  boot=json.loads((project/'boot-result.json').read_text())
  assert boot['passed'] and boot['endurance']['meets_duration_and_roundtrip_gate']
- assert boot['dll_sha256']==sha(project/'RGSS104E.dll')!=ORIGINAL_DLL
+ assert boot['dll_sha256']==sha(project/'Lunetile.dll')!=ORIGINAL_DLL
  images=json.loads((project/'modules.json').read_text())
  assert boot['dll_sha256'] in images.values() and ORIGINAL_DLL not in images.values()
  identity=json.loads((project/'gpu-memory-identity.json').read_text(encoding='utf-8-sig'))

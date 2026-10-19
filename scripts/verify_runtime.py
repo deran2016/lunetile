@@ -7,7 +7,7 @@ from rxdata import read
 def main():
  ap=argparse.ArgumentParser(description=__doc__)
  ap.add_argument('project',type=Path);ap.add_argument('original_dll',type=Path);ap.add_argument('save',type=Path);ap.add_argument('output',type=Path)
- ap.add_argument('--dll',type=Path,default=ROOT/'build/runtime-native/bin/Release/RGSS104E.dll')
+ ap.add_argument('--dll',type=Path,default=ROOT/'build/runtime-native/bin/Release/Lunetile.dll')
  ap.add_argument('--ruby',type=Path,default=ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe')
  a=ap.parse_args();out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
  project,original,dll,save,ruby=[p.resolve() for p in (a.project,a.original_dll,a.dll,a.save,a.ruby)]

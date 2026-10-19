@@ -9,7 +9,7 @@ def main():
  source=out/'boot-result.json';report=json.loads(source.read_text())
  target=out/'endurance-review.json'
  if target.exists():raise FileExistsError(target)
- assert report['passed'] and report['dll_sha256']==sha(out/'RGSS104E.dll')!=ORIGINAL_DLL
+ assert report['passed'] and report['dll_sha256']==sha(out/'Lunetile.dll')!=ORIGINAL_DLL
  old=report['endurance'];assert old['meets_duration_and_roundtrip_gate']
  samples=json.loads((out/'memory-samples.json').read_text());images=json.loads((out/'modules.json').read_text())
  assert report['dll_sha256'] in images.values()

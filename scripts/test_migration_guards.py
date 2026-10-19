@@ -27,7 +27,7 @@ def main():
  manifest=migrate(source,out/'utf8-explicit-result',a.dll,a.ruby,'UTF-8')
  assert manifest['data_encoding_explicit']
  ini=configparser.ConfigParser();ini.read(out/'utf8-explicit-result/Game.ini',encoding='utf-16')
- assert ini.get('Game','Library')=='RGSS104E.dll' and ini.get('RGSSXP','SaveFormat')=='1'
+ assert ini.get('Game','Library')=='Lunetile.dll' and ini.get('RGSSXP','SaveFormat')=='1'
  if a.original_dll:
   assert not (out/'utf8-explicit-result/renamed-original.dll').exists()
   assert any(entry['path']=='renamed-original.dll' for entry in manifest['removed_engine_files'])

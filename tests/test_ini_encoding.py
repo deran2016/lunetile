@@ -31,7 +31,7 @@ class IniEncodingTests(unittest.TestCase):
    assert Path(folder).resolve().is_relative_to(TEMP_ROOT.resolve())
    path=Path(folder)/'Game.ini'
    ini=configparser.ConfigParser(interpolation=None)
-   ini['Game']={'Title':'한글 프로젝트','Library':'RGSS104E.dll','Scripts':'Data/Scripts.rxdata'}
+   ini['Game']={'Title':'한글 프로젝트','Library':'Lunetile.dll','Scripts':'Data/Scripts.rxdata'}
    with path.open('w',encoding='utf-16') as stream:ini.write(stream,space_around_delimiters=False)
    self.assertTrue(path.read_bytes().startswith(b'\xff\xfe'))
    for name,value in ini['Game'].items():

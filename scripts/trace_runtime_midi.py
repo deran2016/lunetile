@@ -9,7 +9,7 @@ def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 def main():
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('project',type=Path);a=ap.parse_args()
  project=a.project.resolve();project.relative_to((ROOT/'build').resolve())
- expected=sha(ROOT/'build/runtime-native/bin/Release/RGSS104E.dll')
+ expected=sha(ROOT/'build/runtime-native/bin/Release/Lunetile.dll')
  device=frida.get_local_device();deadline=time.monotonic()+60;pid=None
  while time.monotonic()<deadline:
   for process in device.enumerate_processes():
@@ -20,7 +20,7 @@ def main():
   if pid is not None:break
   time.sleep(.1)
  if pid is None:raise TimeoutError('Owned waveform process did not appear')
- assert sha(project/'Game.exe')=='0ed9b5139edb0ad0f0f4b5b88dd0265ddbf56d36d6f173d6a22f3b23e8212e22' and sha(project/'RGSS104E.dll')==expected
+ assert sha(project/'Game.exe')=='0ed9b5139edb0ad0f0f4b5b88dd0265ddbf56d36d6f173d6a22f3b23e8212e22' and sha(project/'Lunetile.dll')==expected
  if (project/'midi-timing.jsonl').exists():raise FileExistsError('Timing output already exists')
  source=(ROOT/'scripts/trace_runtime_midi.js').read_text();messages=[];ended=threading.Event()
  session=device.attach(pid);session.on('detached',lambda *args:ended.set());script=session.create_script(source)

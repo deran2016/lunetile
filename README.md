@@ -10,13 +10,13 @@
 
 [시작하기](#빌드) · [프로젝트 변환](#프로젝트-변환과-실행) · [검증 범위](#검증-기록과-한계) · [기여하기](#기여하기)
 
-RPG Maker XP의 기존 32비트 실행기와 RGSS 인터페이스를 대상으로 합니다. Ruby 4.0.7, C++17, Direct3D 11 기반의 `RGSS104E.dll`을 빌드하며, 기존 프로젝트는 기본 해상도 640×480을 유지하며, 배포 템플릿은 **1280×720 와이드 화면**을 사용합니다. 변환된 배포판은 게임 진행 시간을 유지하는 **120Hz 로직**과 기본 **60FPS 출력**을 사용하며, 게임 내에서 40/60/120FPS를 선택할 수 있습니다. 기존 프로젝트의 기본 갱신은 40Hz를 유지합니다.
+RPG Maker XP의 기존 32비트 실행기와 RGSS 인터페이스를 대상으로 합니다. Ruby 4.0.7, C++17, Direct3D 11 기반의 `Lunetile.dll`을 빌드하며, 기존 프로젝트는 기본 해상도 640×480을 유지하며, 배포 템플릿은 **1280×720 와이드 화면**을 사용합니다. 변환된 배포판은 게임 진행 시간을 유지하는 **120Hz 로직**과 기본 **60FPS 출력**을 사용하며, 게임 내에서 40/60/120FPS를 선택할 수 있습니다. 기존 프로젝트의 기본 갱신은 40Hz를 유지합니다.
 
 검증된 기본 XP 스크립트 게임을 대상으로 합니다. 모든 RPG Maker XP 게임이나 사용자 플러그인과의 호환성을 보장하지 않으며, 적용할 때는 제공된 변환기로 **원본과 분리된 프로젝트 복사본**을 만듭니다.
 
 > **개발 단계:** 검토된 기본 스크립트 범위의 실험적 런타임입니다. 원본 게임의 백업을 보관하고 별도 복사본에서 사용하세요.
 
-Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·권리자와 제휴하거나 승인을 받은 프로젝트가 아닙니다. 제품명은 호환 대상을 설명하기 위해 사용합니다. 기존 코드명 `RGSSXP`, `rgssxp-ruby.exe`, `Saves/RGSSXP`와 실행기가 요구하는 `RGSS104E.dll` 이름은 인터페이스·도구·저장 형식의 호환성을 위해 유지합니다.
+Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·권리자와 제휴하거나 승인을 받은 프로젝트가 아닙니다. 제품명은 호환 대상을 설명하기 위해 사용합니다. 자체 엔진 파일명은 **`Lunetile.dll`**이며 변환본의 `Game.ini`에서 `Library=Lunetile.dll`로 선택합니다. RGSS 함수 이름, 기존 코드명 `RGSSXP`, `rgssxp-ruby.exe`, `Saves/RGSSXP`는 인터페이스·도구·저장 형식의 호환성을 위해 유지합니다.
 
 ## 주요 기능
 
@@ -62,8 +62,8 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 [Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.
 
 ```powershell
-git tag v0.1.0-alpha.7
-git push origin v0.1.0-alpha.7
+git tag v0.1.0-alpha.8
+git push origin v0.1.0-alpha.8
 ```
 
 이미 게시된 태그를 덮어쓰지 않습니다. 수동 실행은 릴리스를 게시하지 않습니다. 별도 PAT 없이 게시 작업에서만 자동 `GITHUB_TOKEN`의 `contents: write` 권한을 사용합니다.
@@ -83,7 +83,7 @@ powershell -NoProfile -File scripts/build_runtime.ps1 -BaseRuby "BOOTSTRAP_RUBY_
 
 | 출력 | 용도 |
 |---|---|
-| `build/runtime-native/bin/Release/RGSS104E.dll` | 게임 실행용 자체 엔진 |
+| `build/runtime-native/bin/Release/Lunetile.dll` | 게임 실행용 자체 엔진 |
 | `build/runtime-native/bin/Release/rgssxp-ruby.exe` | 변환 시 Ruby 구문 검사. 게임 실행에는 불필요 |
 | `build/runtime-deps/` | 의존 소스와 다운로드 캐시 |
 | `build/runtime-ruby-x86/` | Ruby 빌드 결과와 검사 기록 |
@@ -155,7 +155,7 @@ python -X utf8 -B -m unittest discover -s tests -v
 빌드된 DLL의 PE 형식, x86 대상, 필수 export와 의존성을 확인합니다.
 
 ```powershell
-python -B scripts/inspect_runtime.py build/runtime-native/bin/Release/RGSS104E.dll
+python -B scripts/inspect_runtime.py build/runtime-native/bin/Release/Lunetile.dll
 ```
 
 ### 원본 파일이 필요한 검사
@@ -163,7 +163,7 @@ python -B scripts/inspect_runtime.py build/runtime-native/bin/Release/RGSS104E.d
 아래 자리표시자를 실제 파일·폴더 경로로 바꿉니다. 출력에는 기존 결과와 겹치지 않는 새 폴더를 사용하세요.
 
 ```powershell
-python -B scripts/test_runtime.py "LOCAL_ORIGINAL_GAME_EXE" build/runtime-native/bin/Release/RGSS104E.dll build/launcher-smoke
+python -B scripts/test_runtime.py "LOCAL_ORIGINAL_GAME_EXE" build/runtime-native/bin/Release/Lunetile.dll build/launcher-smoke
 python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL" "LOCAL_ORIGINAL_SAVE" build/verification
 ```
 

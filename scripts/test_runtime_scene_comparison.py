@@ -24,14 +24,15 @@ def shared_probe():
 
 def run_case(project,dll,out,rtp,probe):
  shutil.copytree(project,out,ignore=shutil.ignore_patterns('Saves','*.log','manual-*'))
- shutil.copy2(dll,out/'RGSS104E.dll')
+ library='RGSS104E.dll' if sha(dll)==ORIGINAL_DLL else 'Lunetile.dll'
+ shutil.copy2(dll,out/library)
  for name in ('Graphics','Audio'):shutil.copytree(rtp/name,out/name,dirs_exist_ok=True,copy_function=copy_missing)
  pictures=out/'Graphics/Pictures';pictures.mkdir(parents=True,exist_ok=True)
  Image.new('RGBA',(96,64),(255,100,30,180)).save(pictures/'Validation.png')
  path=out/'Data/Scripts.rxdata';entries=read(path.read_bytes());index=len(entries)-1
  entry=Entry(0,b'Owned original/new scene oracle',zlib.compress(probe),b'')
  path.write_bytes(write(entries[:index]+[entry]+entries[index:],{index:probe}))
- (out/'Game.ini').write_text('[Game]\nLibrary=RGSS104E.dll\nScripts=Data/Scripts.rxdata\nTitle=RGSS full-scene comparison\nRTP1=\nRTP2=\nRTP3=\n')
+ (out/'Game.ini').write_text(f'[Game]\nLibrary={library}\nScripts=Data/Scripts.rxdata\nTitle=RGSS full-scene comparison\nRTP1=\nRTP2=\nRTP3=\n')
  process=subprocess.Popen([str(out/'Game.exe')],cwd=out);print('Full-scene oracle PID='+str(process.pid)+' '+str(out),flush=True)
  started=time.monotonic();images={}
  try:

@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def main():
  ap=argparse.ArgumentParser(description=__doc__)
  ap.add_argument('verification',type=Path);ap.add_argument('output',type=Path)
- ap.add_argument('--dll',type=Path,default=ROOT/'build/runtime-native/bin/Release/RGSS104E.dll')
+ ap.add_argument('--dll',type=Path,default=ROOT/'build/runtime-native/bin/Release/Lunetile.dll')
  ap.add_argument('--integration-report',type=Path,action='append',default=[])
  ap.add_argument('--performance-report',type=Path)
  ap.add_argument('--audio-report',type=Path)
@@ -52,7 +52,7 @@ def main():
   if not wma.get('passed') or wma['dll_sha256']!=artifact['sha256'] or wma['replacement']['dll_sha256']!=artifact['sha256'] or wma['original']['dll_sha256']!='7b6acb5e2c245b8cfda77fced2cc0e94108384cd1b9ffc8510e7304fcb9feb6c':raise ValueError('WMA report does not identify passed original/replacement captures for this DLL')
   if len(wma['checks'])!=12 or {(row['role'],row['pitch']) for row in wma['checks']}!=expected or not all(row['passed'] for row in wma['checks']):raise ValueError('WMA report must cover all twelve role/pitch cases')
  out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
- shutil.copy2(a.dll,out/'RGSS104E.dll');shutil.copy2(ROOT/'LICENSE',out/'LICENSE')
+ shutil.copy2(a.dll,out/'Lunetile.dll');shutil.copy2(ROOT/'LICENSE',out/'LICENSE')
  shutil.copy2(helper,out/helper.name)
  (out/'ruby-helper.json').write_text(json.dumps(helper_info,indent=2)+'\n')
  scripts=out/'scripts';scripts.mkdir()
@@ -81,7 +81,7 @@ def main():
  if audio:(out/'audio-validation.json').write_text(json.dumps(audio,indent=2)+'\n')
  if compressed:(out/'compressed-audio-validation.json').write_text(json.dumps(compressed,indent=2)+'\n')
  if wma:(out/'wma-audio-validation.json').write_text(json.dumps(wma,indent=2)+'\n')
- (out/'README.txt').write_text('Lunetile development build: Ruby 4.0.7 x86\n\nNOT A CERTIFIED GAME ENGINE RELEASE.\nImplemented for reviewed stock XP projects; validation scope is defined by the included reports. This is not universal game compatibility certification.\nDo not replace your installed RGSS104E.dll. Use a separate project copy.\nNo original RGSS DLL or frame-pacing helper is required by this DLL.\nRequires Windows 11 x64 and the Microsoft Visual C++ x86 runtime.\nRead verification.json for the actual checks for this binary; docs/history/ contains historical evidence, not acceptance of this build.\n\nMigration (Python 3.12+; output must not exist):\n  python scripts/migrate_project.py ORIGINAL_PROJECT NEW_PROJECT\nFor non-ASCII data/INI, specify the actual --data-encoding and --ini-encoding; see docs/history/RUNTIME_TEXT.md.\nrgssxp-ruby.exe is the syntax/encoding helper; it is not required while playing.\n\nRuby, zlib, libogg and libvorbis sources/hashes and the Ruby porting patch are documented in the lock files.\nOwn code is MIT; library notices are in licenses/.\n',encoding='utf-8')
+ (out/'README.txt').write_text('Lunetile development build: Ruby 4.0.7 x86\n\nNOT A CERTIFIED GAME ENGINE RELEASE.\nImplemented for reviewed stock XP projects; validation scope is defined by the included reports. This is not universal game compatibility certification.\nUse Lunetile.dll in a converted project copy; Game.ini must select Library=Lunetile.dll.\nNo original RGSS DLL or frame-pacing helper is required by this DLL.\nRequires Windows 11 x64 and the Microsoft Visual C++ x86 runtime.\nRead verification.json for the actual checks for this binary; docs/history/ contains historical evidence, not acceptance of this build.\n\nMigration (Python 3.12+; output must not exist):\n  python scripts/migrate_project.py ORIGINAL_PROJECT NEW_PROJECT\nFor non-ASCII data/INI, specify the actual --data-encoding and --ini-encoding; see docs/history/RUNTIME_TEXT.md.\nrgssxp-ruby.exe is the syntax/encoding helper; it is not required while playing.\n\nRuby, zlib, libogg and libvorbis sources/hashes and the Ruby porting patch are documented in the lock files.\nOwn code is MIT; library notices are in licenses/.\n',encoding='utf-8')
  files={path.relative_to(out).as_posix():hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(out.rglob('*')) if path.is_file()}
  (out/'SHA256SUMS.json').write_text(json.dumps(files,indent=2)+'\n')
  print('Development package: '+str(out))

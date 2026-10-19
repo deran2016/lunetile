@@ -14,7 +14,7 @@ class TemplatePackageTests(unittest.TestCase):
   (self.source/'Data').mkdir()
   for name in ('Scripts','Map001','System'):(self.source/f'Data/{name}.rxdata').write_bytes(name.encode())
   for name in ('LICENSE','artifact.json','ruby.lock.json','dependencies.lock.json','ruby-msvc32-size-fetch-add.patch','rgssxp-ruby.exe'):(self.runtime/name).write_bytes(b'notice')
-  (self.runtime/'RGSS104E.dll').write_bytes(b'new runtime')
+  (self.runtime/'Lunetile.dll').write_bytes(b'new runtime')
   for name in ('docs','licenses'):(self.runtime/name).mkdir()
   (self.runtime/'licenses/notice').write_bytes(b'original notice')
   (self.runtime/'docs/history.md').write_bytes(b'historical documentation')
@@ -29,17 +29,18 @@ class TemplatePackageTests(unittest.TestCase):
   self.assertTrue(kwargs.get('high_refresh'))
   self.assertFalse((source/'Save1.rxdata').exists())
   self.assertFalse((source/'RGSS104E.dll').exists())
-  shutil.copytree(source,out);shutil.copy2(dll,out/'RGSS104E.dll')
+  shutil.copytree(source,out);shutil.copy2(dll,out/'Lunetile.dll')
   (out/'migration').mkdir();(out/'migration/manifest.json').write_text('{}')
 
  def test_only_project_files_and_verified_runtime_are_shipped(self):
   with patch('package_template.migrate',side_effect=self.migrate):hashes=self.package()
   self.assertEqual((self.source/'RGSS104E.dll').read_bytes(),b'original')
-  self.assertEqual((self.output/'RGSS104E.dll').read_bytes(),b'new runtime')
+  self.assertEqual((self.output/'Lunetile.dll').read_bytes(),b'new runtime')
+  self.assertFalse((self.output/'RGSS104E.dll').exists())
   self.assertFalse((self.output/'Save1.rxdata').exists())
   self.assertFalse((self.output/'private.log').exists())
   self.assertFalse((self.output/'rgssxp-ruby.exe').exists())
-  self.assertEqual({p.name for p in self.output.iterdir()},{'Game.exe','Game.ini','Game.rxproj','RGSS104E.dll','Data','Graphics','Audio','README.txt','LICENSE','licenses'})
+  self.assertEqual({p.name for p in self.output.iterdir()},{'Game.exe','Game.ini','Game.rxproj','Lunetile.dll','Data','Graphics','Audio','README.txt','LICENSE','licenses'})
   self.assertEqual({p.relative_to(self.diagnostics).as_posix() for p in self.diagnostics.rglob('*') if p.is_file()},
    {'migration/manifest.json','artifact.json','verification.json','ruby.lock.json','dependencies.lock.json','ruby-msvc32-size-fetch-add.patch','template-source.json','template-map.json','SHA256SUMS.json'})
   self.assertEqual((self.output/'licenses/notice').read_bytes(),b'original notice')
@@ -48,7 +49,7 @@ class TemplatePackageTests(unittest.TestCase):
   for name,digest in hashes.items():self.assertEqual(hashlib.sha256((self.output/name).read_bytes()).hexdigest(),digest)
 
  def test_wrong_runtime_hash_is_rejected_without_output(self):
-  (self.runtime/'RGSS104E.dll').write_bytes(b'unverified')
+  (self.runtime/'Lunetile.dll').write_bytes(b'unverified')
   with self.assertRaises(ValueError):self.package()
   self.assertFalse(self.output.exists())
   self.assertFalse(self.diagnostics.exists())

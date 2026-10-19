@@ -21,7 +21,7 @@ Run from the repository root on Windows. Use VS2022 C++ tools with the Windows S
 python -m pip install -r requirements-dev.txt
 powershell -NoProfile -File scripts/build_runtime.ps1 -BaseRuby "BOOTSTRAP_RUBY_EXE"
 python -X utf8 -B -m unittest discover -s tests -v
-python -B scripts/inspect_runtime.py build/runtime-native/bin/Release/RGSS104E.dll
+python -B scripts/inspect_runtime.py build/runtime-native/bin/Release/Lunetile.dll
 ```
 
 These install development dependencies, build the runtime, run unit tests, and inspect DLL architecture/exports.

@@ -13,7 +13,7 @@ def main():
  before={str(p):sha(p) for p in (exe,dll,a.project/'Data/Scripts.rxdata')}
  # The observer must refuse a replacement runtime before touching any import.
  probe=("observer=Win32API.new("+repr(str(observer).replace('\\','/'))+",'WaitObserveStart','','I'); raise 'Wrong runtime accepted' unless observer.call<0; File.write('runtime-complete.txt','observer-reject,false,false'); sleep 0.5").encode()
- run(exe,ROOT/'build/runtime-native/bin/Release/RGSS104E.dll',out/'wrong-runtime','',probe)
+ run(exe,ROOT/'build/runtime-native/bin/Release/Lunetile.dll',out/'wrong-runtime','',probe)
  entries=read((a.project/'Data/Scripts.rxdata').read_bytes())
  source=b'\n'.join(e.source() for e in entries[:-1])+b'\n'+(ROOT/'tests/runtime_wait_profile.rb').read_bytes()+b'\nbegin\n'+(ROOT/'tests/runtime_bench.rb').read_bytes()+b'\nensure\n WaitProfile.finish\nend\n'
  case=run_case(a.fixture.resolve(),exe,dll,ROOT/'build/runtime-native/bin/Release/RGSSBenchMetrics.dll',source,out/'original',a.frames,extra_modules=(observer,))

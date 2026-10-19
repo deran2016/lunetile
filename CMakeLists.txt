@@ -117,7 +117,7 @@ target_link_libraries(RGSS104E PRIVATE "${ruby_library}" zlibstatic user32 advap
 target_link_libraries(rgssxp-ruby PRIVATE "${ruby_library}" user32 advapi32 shell32 ws2_32 iphlpapi imagehlp shlwapi bcrypt)
 set_target_properties(rgssxp-ruby PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 target_link_libraries(RGSS104E PRIVATE vorbisfile xaudio2 winmm mfplat mfreadwrite mfuuid dsound dxguid)
-set_target_properties(RGSS104E PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set_target_properties(RGSS104E PROPERTIES OUTPUT_NAME Lunetile RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 add_executable(midi_port_probe EXCLUDE_FROM_ALL tests/midi_port_probe.cpp)
 target_compile_features(midi_port_probe PRIVATE cxx_std_17)
 target_compile_definitions(midi_port_probe PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0602)

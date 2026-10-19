@@ -166,7 +166,7 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescre
    if not item.is_file():continue
    record={'path':relative.as_posix(),'sha256':sha(item.read_bytes())}
    manifest['files'].append(record)
-   if item.name.lower() in ('rgss104e.dll','rgssframepacing.dll') or record['sha256']==ORIGINAL_DLL:
+   if item.name.lower() in ('rgss104e.dll','lunetile.dll','rgssframepacing.dll') or record['sha256']==ORIGINAL_DLL:
     manifest['removed_engine_files'].append(record);continue
    if relative.parts[0].lower()=='saves':raise MigrationError('Existing Saves/ directory requires explicit review; refusing to mix engine save formats')
    destination=project/relative
@@ -175,7 +175,7 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescre
    destination.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(item,destination)
   (project/script_path).parent.mkdir(parents=True,exist_ok=True)
   (project/script_path).write_bytes(converted)
-  shutil.copy2(dll,project/'RGSS104E.dll')
+  shutil.copy2(dll,project/'Lunetile.dll')
   ini=configparser.ConfigParser(interpolation=None);ini_before=None
   if (project/'Game.ini').exists():ini,ini_before=read_project_ini(project/'Game.ini',ini_encoding)
   for section in ('Game','RGSSXP') + (('Lunetile',) if widescreen or high_refresh else ()):
@@ -185,7 +185,7 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescre
     values=list(ini.items(matching[0],raw=True));ini.remove_section(matching[0]);ini.add_section(section)
     for key,value in values:ini.set(section,key,value)
    if not matching:ini.add_section(section)
-  ini.set('Game','Library','RGSS104E.dll');ini.set('Game','Scripts',script_path)
+  ini.set('Game','Library','Lunetile.dll');ini.set('Game','Scripts',script_path)
   if not ini.has_option('Game','Title'):ini.set('Game','Title','RGSSXP compatibility project')
   if widescreen:
    if ini.has_section('Lunetile'):ini.remove_section('Lunetile')
@@ -210,7 +210,7 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescre
 def main():
  ap=argparse.ArgumentParser(description=__doc__)
  ap.add_argument('source',type=Path);ap.add_argument('output',type=Path)
- ap.add_argument('--dll',type=Path,default=RUNTIME_BIN/'RGSS104E.dll')
+ ap.add_argument('--dll',type=Path,default=RUNTIME_BIN/'Lunetile.dll')
  ap.add_argument('--ruby',type=Path,default=RUNTIME_BIN/'rgssxp-ruby.exe')
  ap.add_argument('--data-encoding',choices=['UTF-8','CP949','CP932'],help='Required for non-ASCII project text; explicit decoding is validated before copying')
  ap.add_argument('--ini-encoding',choices=['UTF-8','CP949','CP932'],help='Explicit source Game.ini encoding when it contains non-ASCII text without a BOM')

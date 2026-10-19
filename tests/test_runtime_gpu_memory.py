@@ -9,7 +9,7 @@ class GpuMemoryReviewTests(unittest.TestCase):
   root=Path(__file__).resolve().parents[1]/'build/test-runtime-gpu-memory';root.mkdir(parents=True,exist_ok=True)
   self.temporary=tempfile.TemporaryDirectory(dir=root);self.addCleanup(self.temporary.cleanup)
   self.folder=Path(self.temporary.name)
-  (self.folder/'RGSS104E.dll').write_bytes(b'analysis unit fixture')
+  (self.folder/'Lunetile.dll').write_bytes(b'analysis unit fixture')
   self.digest=hashlib.sha256(b'analysis unit fixture').hexdigest()
   (self.folder/'boot-result.json').write_text(json.dumps({'passed':True,'dll_sha256':self.digest,'endurance':{'meets_duration_and_roundtrip_gate':True}}))
   (self.folder/'modules.json').write_text(json.dumps({'owned.dll':self.digest}))
@@ -48,7 +48,7 @@ class GpuMemoryReviewTests(unittest.TestCase):
   self.rows[10]['rows'][0]['DedicatedUsage']=-1
   with self.assertRaises(AssertionError):self.run_review()
   self.rows[10]['rows'][0]['DedicatedUsage']=1000
-  (self.folder/'RGSS104E.dll').write_bytes(b'changed')
+  (self.folder/'Lunetile.dll').write_bytes(b'changed')
   with self.assertRaises(AssertionError):self.run_review()
 
 

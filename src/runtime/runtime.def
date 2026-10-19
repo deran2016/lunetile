@@ -1,4 +1,4 @@
-LIBRARY RGSS104E
+LIBRARY Lunetile
 EXPORTS
  RGSSEval @8
  RGSSFinalize @9

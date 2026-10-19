@@ -11,14 +11,14 @@ def verify(output):
  try:
   gate=json.loads((ROOT/'build/runtime-ruby-x86/patched-4.0.7/gate.json').read_text(encoding='utf-8-sig'))
   if gate.get('passed') is not True:raise ValueError('Ruby build gate did not pass')
-  artifact=inspect(ROOT/'build/runtime-native/bin/Release/RGSS104E.dll')
+  artifact=inspect(ROOT/'build/runtime-native/bin/Release/Lunetile.dll')
   report['runtime_sha256']=artifact['sha256']
   report['source_commit']=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
   steps=[
    ('unit',[sys.executable,'-X','utf8','-B','-m','unittest','discover','-s','tests','-v']),
    ('interpreter',[str(ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe'),'--disable-gems','tests/runtime_ruby.rb']),
    ('display-geometry',[str(ROOT/'build/runtime-native/bin/Release/display_geometry_test.exe')]),
-   ('launcher',[sys.executable,'-X','utf8','-B','scripts/test_runtime.py','template/Game.exe',str(ROOT/'build/runtime-native/bin/Release/RGSS104E.dll'),str(output/'launcher-smoke')]),
+   ('launcher',[sys.executable,'-X','utf8','-B','scripts/test_runtime.py','template/Game.exe',str(ROOT/'build/runtime-native/bin/Release/Lunetile.dll'),str(output/'launcher-smoke')]),
   ]
   for name,command in steps:
    with (output/(name+'.log')).open('w',encoding='utf-8') as log:

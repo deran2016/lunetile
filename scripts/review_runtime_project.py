@@ -6,7 +6,7 @@ from test_runtime import ORIGINAL_EXE,ORIGINAL_DLL,sha
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('project',type=Path)
  a=ap.parse_args();project=a.project.resolve()
- if sha(project/'Game.exe')!=ORIGINAL_EXE or sha(project/'RGSS104E.dll')==ORIGINAL_DLL:
+ if sha(project/'Game.exe')!=ORIGINAL_EXE or sha(project/'Lunetile.dll')==ORIGINAL_DLL:
   raise ValueError('Expected an unchanged launcher and independently built DLL')
  process=subprocess.Popen([str(project/'Game.exe')],cwd=project)
  print(f'PID={process.pid} project={project}',flush=True)

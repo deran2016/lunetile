@@ -28,5 +28,5 @@ foreach ($name in @('ogg', 'vorbis')) {
 if ($LASTEXITCODE -ne 0) { throw 'Runtime CMake configure failed' }
 & cmake.exe --build $native --config Release
 if ($LASTEXITCODE -ne 0) { throw 'Runtime DLL build failed' }
-Write-Output "Runtime DLL: $native/bin/Release/RGSS104E.dll"
+Write-Output "Runtime DLL: $native/bin/Release/Lunetile.dll"
 Write-Output "Ruby migration helper: $native/bin/Release/rgssxp-ruby.exe"

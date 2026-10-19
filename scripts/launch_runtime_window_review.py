@@ -7,9 +7,9 @@ from test_runtime import ROOT,ORIGINAL_EXE,ORIGINAL_DLL,sha,scripts
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('exe',type=Path);ap.add_argument('dll',type=Path);ap.add_argument('output',type=Path);a=ap.parse_args()
  out=a.output.resolve();assert sha(a.exe)==ORIGINAL_EXE;out.mkdir(parents=True,exist_ok=False)
- shutil.copy2(a.exe,out/'Game.exe');shutil.copy2(a.dll,out/'RGSS104E.dll');(out/'Scripts.rxdata').write_bytes(scripts((ROOT/'tests/runtime_window_review.rb').read_bytes()))
- runtime_hash=sha(out/'RGSS104E.dll')
- (out/'Game.ini').write_text('[Game]\nLibrary=RGSS104E.dll\nScripts=Scripts.rxdata\nTitle=RGSSXP window review\nRTP1=\nRTP2=\nRTP3=\n')
+ shutil.copy2(a.exe,out/'Game.exe');shutil.copy2(a.dll,out/'Lunetile.dll');(out/'Scripts.rxdata').write_bytes(scripts((ROOT/'tests/runtime_window_review.rb').read_bytes()))
+ runtime_hash=sha(out/'Lunetile.dll')
+ (out/'Game.ini').write_text('[Game]\nLibrary=Lunetile.dll\nScripts=Scripts.rxdata\nTitle=RGSSXP window review\nRTP1=\nRTP2=\nRTP3=\n')
  process=subprocess.Popen([str(out/'Game.exe')],cwd=out);print('Window review PID='+str(process.pid)+' '+str(out),flush=True)
  began=time.monotonic();images={}
  try:
@@ -22,7 +22,7 @@ def main():
  finally:
   if process.poll() is None:process.terminate();process.wait()
   (out/'modules.json').write_text(json.dumps(images,indent=2));(out/'process-result.json').write_text(json.dumps({'exit_code':process.returncode,'dll_sha256':runtime_hash,'scope':'Manual window actions; inspect trace and screenshots before claiming UI validation'},indent=2))
- assert sha(out/'RGSS104E.dll')==runtime_hash and images and runtime_hash in images.values()
+ assert sha(out/'Lunetile.dll')==runtime_hash and images and runtime_hash in images.values()
  if runtime_hash!=ORIGINAL_DLL:assert ORIGINAL_DLL not in images.values()
 
 if __name__=='__main__':main()

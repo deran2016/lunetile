@@ -25,8 +25,8 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
  if data_encoding not in (None,'UTF-8','CP949','CP932'):raise ValueError('Unsupported test data encoding')
  if data_encoding:source=("raise 'Configured project encoding was not read' unless RGSSXP::DATA_ENCODING == "+repr(data_encoding)+"\n").encode()+source
  out.mkdir(parents=True,exist_ok=False)
- shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/'RGSS104E.dll')
- runtime_hash=sha(out/'RGSS104E.dll')
+ shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/'Lunetile.dll')
+ runtime_hash=sha(out/'Lunetile.dll')
  if data:shutil.copytree(data,out/'Data',ignore=shutil.ignore_patterns('Scripts.rxdata'))
  if import_save:
   (out/'Saves/Import').mkdir(parents=True)
@@ -34,7 +34,7 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
  (out/'Scripts.rxdata').write_bytes(scripts(source))
  if script_path is None:script_path='Data/Scripts.rxdata' if archive else 'Scripts.rxdata'
  if archive:(out/'Game.rgssad').write_bytes(archive)
- ini=f'[Game]\nLibrary=RGSS104E.dll\nScripts={script_path}\nTitle=RGSSXP Runtime Test\nRTP1=\nRTP2=\nRTP3=\n'
+ ini=f'[Game]\nLibrary=Lunetile.dll\nScripts={script_path}\nTitle=RGSSXP Runtime Test\nRTP1=\nRTP2=\nRTP3=\n'
  if screen_size or timing_profile:
   ini+='[Lunetile]\n'
   if screen_size:ini+='Width='+str(screen_size[0])+'\nHeight='+str(screen_size[1])+'\n'
@@ -57,7 +57,7 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
       signature=(str(path),path.stat().st_mtime_ns,path.stat().st_size)
       if signature not in MODULE_HASHES:MODULE_HASHES[signature]=sha(path)
       all_modules[str(path)]=MODULE_HASHES[signature]
-     if path.name.lower() in ('rgss104e.dll','rgssframepacing.dll'):
+     if path.name.lower() in ('lunetile.dll','rgss104e.dll','rgssframepacing.dll'):
       modules[str(path)]=sha(path)
    except psutil.NoSuchProcess:pass
    time.sleep(.05)
@@ -65,8 +65,9 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
   if p.poll() is None:p.terminate();p.wait()
  result={'pid':p.pid,'exit_code':p.returncode,'modules':modules,'all_image_hashes':all_modules,'runtime_sha256':runtime_hash,'complete':(out/'runtime-complete.txt').read_text() if (out/'runtime-complete.txt').exists() else None,'log':(out/'rgssxp.log').read_text(encoding='utf-8',errors='replace') if (out/'rgssxp.log').exists() else ''}
  (out/'result.json').write_text(json.dumps(result,indent=2))
- assert sha(out/'RGSS104E.dll')==runtime_hash
+ assert sha(out/'Lunetile.dll')==runtime_hash
  assert modules and all(value==runtime_hash and value!=ORIGINAL_DLL for value in modules.values()),result
+ assert {Path(name).name.lower() for name in modules}=={'lunetile.dll'},result
  assert ORIGINAL_DLL not in all_modules.values(),'Original RGSS found under a different filename'
  assert not any(Path(name).name.lower()=='rgssframepacing.dll' for name in modules),result
  assert 'Ruby finalized' in result['log'],result

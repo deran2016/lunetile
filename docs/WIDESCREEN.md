@@ -66,6 +66,10 @@ stock map refresh resets transient map effects/events as it does after an editor
 data-version change. New saves use the existing version 2 format.
 
 The playable ZIP contains only project files, runtime, README and license notices.
+The engine is named `Lunetile.dll`; the converted `Game.ini` selects it with
+`Library=Lunetile.dll`. The original `RGSS104E.dll` is excluded. Keep the unchanged
+`Game.exe` and use the converted INI; renaming a DLL alone does not update that
+setting. RGSS function names, project/save formats and save paths are unchanged.
 Reports, migration/map records, source/game hashes, dependency locks and the Ruby
 patch are in `lunetile-template-diagnostics.zip`, which is optional for playing.
 `SHA256SUMS.txt` is a separate Release attachment covering both ZIPs. Development

@@ -135,7 +135,7 @@ def main():
    restarted=subprocess.run([str(out/'Game.exe')],cwd=out,env=environment,timeout=15).returncode==0 and (out/'refresh-settings-restarted.txt').read_text()==str(a.render_rate)
   finally:path.write_bytes(original)
   passed &= restarted
- report={'passed':passed,'exit_code':p.returncode,'states':states,'dll_sha256':sha(out/'RGSS104E.dll'),'scope':('Manual UI input' if a.manual else 'Injected logical input')+'; one-hit fixture encounter; no original-gameplay comparison'}
+ report={'passed':passed,'exit_code':p.returncode,'states':states,'dll_sha256':sha(out/'Lunetile.dll'),'scope':('Manual UI input' if a.manual else 'Injected logical input')+'; one-hit fixture encounter; no original-gameplay comparison'}
  if restarted is not None:report['settings_restart_passed']=restarted
  if a.render_rate:report['render_rate']=a.render_rate;report['logic_rate']=120
  if a.map_checks:report['map_walk']={'passed':all((out/name).is_file() for name in ('template-map-checked.txt','template-large-map-checked.txt')),'tiles':[40,23],'screen':[1280,720],'vertical_scroll_pixels':16,'scope':'Injected directions through stock movement; four corners/out-of-bounds attempts; terrain pixel readback at all four screen edges; separate 80x45 colored tilemap camera/render checks'}

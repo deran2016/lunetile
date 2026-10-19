@@ -10,11 +10,11 @@ def png():
  return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',2,2,8,2,0,0,0))+chunk(b'IDAT',zlib.compress((b'\0'+bytes([17,31,47])*2)*2))+chunk(b'IEND',b'')
 
 def run_case(exe,dll,out,rtp):
- out.mkdir();shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/'RGSS104E.dll')
+ out.mkdir();shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/'Lunetile.dll')
  (out/'Graphics/Titles').mkdir(parents=True)
  (out/'override.png').write_bytes(png());(out/'rtp-root.txt').write_text(str(rtp),encoding='utf-8')
  (out/'Scripts.rxdata').write_bytes(scripts((ROOT/'tests/rgss_rtp_reference.rb').read_bytes()))
- (out/'Game.ini').write_text('[Game]\nLibrary=RGSS104E.dll\nScripts=Scripts.rxdata\nTitle=RGSS registered RTP lookup\nRTP1=Standard\nRTP2=\nRTP3=\n')
+ (out/'Game.ini').write_text('[Game]\nLibrary=Lunetile.dll\nScripts=Scripts.rxdata\nTitle=RGSS registered RTP lookup\nRTP1=Standard\nRTP2=\nRTP3=\n')
  process=subprocess.Popen([str(out/'Game.exe')],cwd=out);began=time.monotonic();images={}
  print('Registered RTP probe PID='+str(process.pid)+' '+str(out),flush=True)
  try:
