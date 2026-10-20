@@ -116,6 +116,7 @@ struct Voice {
     size_t event=0;
     Clock::time_point began{},fade_began{},fade_end{},resume_began{},next_gain{};
     double elapsed_us=0,completion_us=0;
+    uint64_t start_sample=0;
     float volume=1,pitch=1,fade_start=1;
     bool loop=false,paused=false,fading=false,ended=false,resuming=false;
     ~Voice(){
@@ -227,9 +228,9 @@ public:
         auto task=std::make_shared<std::packaged_task<decltype(action())()>>(std::move(action));auto future=task->get_future();
         {std::lock_guard<std::mutex> lock(mutex);jobs.emplace_back([task]{(*task)();});}ready.notify_one();return future.get();
     }
-    void play(unsigned kind,std::string key,std::vector<unsigned char> bytes,int volume,int pitch){
+    void play(unsigned kind,std::string key,std::vector<unsigned char> bytes,int volume,int pitch,int64_t position_ms=-1){
         prior_error();step();auto now=Clock::now();
-        if(kind<2&&channels[kind]&&channels[kind]->key==key&&channels[kind]->pitch==pitch/100.0f&&!channels[kind]->fading){auto& voice=*channels[kind];voice.gain(volume/100.0f);return;}
+        if(position_ms<=0&&kind<2&&channels[kind]&&channels[kind]->key==key&&channels[kind]->pitch==pitch/100.0f&&!channels[kind]->fading){auto& voice=*channels[kind];voice.gain(volume/100.0f);return;}
         if(kind==3&&effects.size()>=64)throw std::runtime_error("SE exceeds the 64 simultaneous voice limit");
         auto voice=std::make_unique<Voice>();voice->data=decode_audio(bytes);voice->key=std::move(key);voice->loop=kind<2;voice->pitch=pitch/100.0f;voice->began=now;
         size_t total=voice->data.pcm.size();for(auto& active:channels)if(active)total+=active->data.pcm.size();for(auto& active:effects)total+=active->data.pcm.size();if(total>256*1024*1024)throw std::runtime_error("Active decoded audio exceeds 256 MiB");
@@ -237,16 +238,48 @@ public:
             checked(com,"MIDI COM initialization");
             if(kind<3){auto& output=midi_outputs[kind];if(!output)output=std::make_shared<MidiOutput>(voice->pitch);else output->pitch(voice->pitch);finish(channels[kind]);voice->midi=output;}
             else voice->midi=std::make_shared<MidiOutput>(voice->pitch);
+            if(position_ms>0){
+                voice->elapsed_us=voice->data.duration_us?std::fmod(position_ms*1000.0,static_cast<double>(voice->data.duration_us)):0;
+                // Replay state at the seek point while muted, including program/controllers and held notes.
+                voice->midi->gain(0);
+                while(voice->event<voice->data.midi.size()&&voice->data.midi[voice->event].microseconds<voice->elapsed_us){
+                    const auto& item=voice->data.midi[voice->event++];
+                    if(!item.sysex.empty())voice->midi->sysex(item.sysex);else voice->midi_event(item.message);
+                }
+            }
             voice->completion_us=voice->data.midi_segment_us+voice->midi->queued_microseconds();voice->paused=kind==0&&channels[2]!=nullptr;voice->gain(volume/100.0f);
         }else{
             initialize();checked(engine->CreateSourceVoice(&voice->pcm,&voice->data.format,0,2.0f),"XAudio2 source voice");
             XAUDIO2_BUFFER buffer{};buffer.Flags=XAUDIO2_END_OF_STREAM;buffer.pAudioData=voice->data.pcm.data();buffer.AudioBytes=static_cast<UINT32>(voice->data.pcm.size());
             if(voice->loop){buffer.LoopCount=XAUDIO2_LOOP_INFINITE;buffer.LoopBegin=voice->data.loop_start;buffer.LoopLength=voice->data.loop_length;}
+            if(position_ms>0){
+                uint64_t frames=voice->data.pcm.size()/voice->data.format.nBlockAlign;
+                uint64_t start=static_cast<uint64_t>(position_ms)*voice->data.format.nSamplesPerSec/1000;
+                uint64_t loop_begin=buffer.LoopBegin,loop_length=buffer.LoopLength?buffer.LoopLength:frames-loop_begin;
+                if(voice->loop&&start>=loop_begin+loop_length)start=loop_begin+(start-loop_begin)%loop_length;
+                else if(start>=frames)start=frames-1;
+                voice->start_sample=start;buffer.PlayBegin=static_cast<UINT32>(start);buffer.PlayLength=static_cast<UINT32>(frames-start);
+            }
             // Original WMA output ignores pitch in all four roles; keep the requested value for existing replay policy.
             checked(voice->pcm->SubmitSourceBuffer(&buffer),"XAudio2 audio buffer");voice->gain(volume/100.0f);checked(voice->pcm->SetFrequencyRatio(voice->data.ignore_pitch?1.0f:voice->pitch),"XAudio2 pitch");
             if(kind==0&&channels[2])voice->paused=true;else checked(voice->pcm->Start(),"XAudio2 playback");
         }
         voice->began=Clock::now();if(kind==3)effects.push_back(std::move(voice));else{finish(channels[kind]);channels[kind]=std::move(voice);if(kind==2&&channels[0])channels[0]->pause(true,Clock::now());}
+    }
+    int64_t position(unsigned kind){
+        prior_error();step();auto& voice=channels[kind];if(!voice)return 0;
+        if(voice->pcm){
+            XAUDIO2_VOICE_STATE state{};voice->pcm->GetState(&state);
+            uint64_t sample=voice->start_sample+state.SamplesPlayed;
+            uint64_t begin=voice->data.loop_start,length=voice->data.loop_length;
+            if(!length)length=voice->data.pcm.size()/voice->data.format.nBlockAlign-begin;
+            if(voice->loop&&sample>=begin+length)sample=begin+(sample-begin)%length;
+            return static_cast<int64_t>(sample*1000/voice->data.format.nSamplesPerSec);
+        }
+        double time=voice->elapsed_us;
+        if(!voice->paused)time+=std::chrono::duration<double,std::micro>(Clock::now()-voice->began).count();
+        if(voice->loop&&voice->data.duration_us)time=std::fmod(time,static_cast<double>(voice->data.duration_us));
+        return static_cast<int64_t>(time/1000);
     }
     void stop(unsigned kind){prior_error();if(kind==3){for(auto it=effects.begin();it!=effects.end();){finish(*it);it=effects.erase(it);}}else finish(channels[kind]);step();}
     void fade(unsigned kind,int milliseconds){prior_error();step();if(!milliseconds){stop(kind);return;}if(channels[kind]){auto& voice=*channels[kind];voice.fading=true;voice.fade_start=voice.volume;voice.fade_began=Clock::now();voice.fade_end=voice.fade_began+std::chrono::milliseconds(milliseconds);}}
@@ -257,12 +290,15 @@ public:
 };
 std::unique_ptr<AudioWorker> worker;
 AudioWorker& audio(){if(!worker)worker=std::make_unique<AudioWorker>();return *worker;}
-VALUE play(VALUE,VALUE vk,VALUE key,VALUE bytes,VALUE vv,VALUE vp){
+VALUE play_at(VALUE,VALUE vk,VALUE key,VALUE bytes,VALUE vv,VALUE vp,VALUE vposition){
+    int64_t position=NIL_P(vposition)?-1:NUM2LL(vposition);if(!NIL_P(vposition)&&(position<0||position>2147483647))rb_raise(rb_eArgError,"Invalid audio start position");
     unsigned kind=NUM2UINT(vk);if(kind>3)rb_raise(rb_eArgError,"Invalid audio channel");StringValue(key);StringValue(bytes);int volume=NUM2INT(vv),pitch=NUM2INT(vp);
     if(volume<0||volume>100||pitch<50||pitch>150||RSTRING_LEN(bytes)>128*1024*1024)rb_raise(rb_eArgError,"Audio volume/pitch/data exceeds supported limits");
-    char failure[512]{};{try{std::string name(RSTRING_PTR(key),RSTRING_LEN(key));std::vector<unsigned char> copied(RSTRING_PTR(bytes),RSTRING_PTR(bytes)+RSTRING_LEN(bytes));auto& target=audio();target.invoke([&target,kind,name=std::move(name),copied=std::move(copied),volume,pitch]()mutable{target.play(kind,std::move(name),std::move(copied),volume,pitch);});}catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}}
+    char failure[512]{};{try{std::string name(RSTRING_PTR(key),RSTRING_LEN(key));std::vector<unsigned char> copied(RSTRING_PTR(bytes),RSTRING_PTR(bytes)+RSTRING_LEN(bytes));auto& target=audio();target.invoke([&target,kind,name=std::move(name),copied=std::move(copied),volume,pitch,position]()mutable{target.play(kind,std::move(name),std::move(copied),volume,pitch,position);});}catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}}
     RB_GC_GUARD(key);RB_GC_GUARD(bytes);if(*failure)rb_raise(rb_path2class("RGSSError"),"Audio: %s",failure);return Qnil;
 }
+VALUE play(VALUE self,VALUE kind,VALUE key,VALUE bytes,VALUE volume,VALUE pitch){return play_at(self,kind,key,bytes,volume,pitch,Qnil);}
+VALUE position(VALUE,VALUE value){unsigned kind=NUM2UINT(value);if(kind>1)rb_raise(rb_eArgError,"Position requires BGM or BGS");char failure[512]{};int64_t result=0;{try{auto& target=audio();result=target.invoke([&target,kind]{return target.position(kind);});}catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}}if(*failure)rb_raise(rb_path2class("RGSSError"),"Audio: %s",failure);return LL2NUM(result);}
 VALUE stop(VALUE,VALUE value){unsigned kind=NUM2UINT(value);if(kind>3)rb_raise(rb_eArgError,"Invalid audio channel");char failure[512]{};{try{auto& target=audio();target.invoke([&target,kind]{target.stop(kind);});}catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}}if(*failure)rb_raise(rb_path2class("RGSSError"),"Audio: %s",failure);return Qnil;}
 VALUE fade(VALUE,VALUE vk,VALUE vm){unsigned kind=NUM2UINT(vk);int milliseconds=NUM2INT(vm);if(kind>2||milliseconds<0)rb_raise(rb_eArgError,"Invalid audio fade");char failure[512]{};{try{auto& target=audio();target.invoke([&target,kind,milliseconds]{target.fade(kind,milliseconds);});}catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}}if(*failure)rb_raise(rb_path2class("RGSSError"),"Audio: %s",failure);return Qnil;}
 VALUE snapshot(VALUE){
@@ -272,4 +308,4 @@ VALUE snapshot(VALUE){
 }
 }
 void audio_shutdown(){worker.reset();}
-void init_audio(){VALUE module=rb_define_module("Audio");rb_define_singleton_method(module,"__play",RUBY_METHOD_FUNC(play),5);rb_define_singleton_method(module,"__stop",RUBY_METHOD_FUNC(stop),1);rb_define_singleton_method(module,"__fade",RUBY_METHOD_FUNC(fade),2);rb_define_singleton_method(module,"__snapshot",RUBY_METHOD_FUNC(snapshot),0);}
+void init_audio(){VALUE module=rb_define_module("Audio");rb_define_singleton_method(module,"__play_at",RUBY_METHOD_FUNC(play_at),6);rb_define_singleton_method(module,"__position",RUBY_METHOD_FUNC(position),1);rb_define_singleton_method(module,"__play",RUBY_METHOD_FUNC(play),5);rb_define_singleton_method(module,"__stop",RUBY_METHOD_FUNC(stop),1);rb_define_singleton_method(module,"__fade",RUBY_METHOD_FUNC(fade),2);rb_define_singleton_method(module,"__snapshot",RUBY_METHOD_FUNC(snapshot),0);}

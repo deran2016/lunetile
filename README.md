@@ -14,6 +14,8 @@ RPG Maker XP의 기존 32비트 실행기와 RGSS 인터페이스를 대상으�
 
 검증된 기본 XP 스크립트 게임을 대상으로 합니다. 모든 RPG Maker XP 게임이나 사용자 플러그인과의 호환성을 보장하지 않으며, 적용할 때는 제공된 변환기로 **원본과 분리된 프로젝트 복사본**을 만듭니다.
 
+**VX Ace:** 제공된 `template-vxa/`의 126개 기본 스크립트를 위한 별도 **`LunetileVXA.dll`**도 빌드합니다. 일반 변환은 544×416·60Hz를 유지하고, 배포 템플릿은 1280×720·120Hz 로직과 40/60/120FPS 출력을 사용합니다. VX Ace의 데이터·저장·ABI는 XP와 분리합니다. 변환과 배포 명령, 검증 범위는 [VX Ace 안내](docs/VXA.md)를 참고하세요.
+
 > **개발 단계:** 검토된 기본 스크립트 범위의 실험적 런타임입니다. 원본 게임의 백업을 보관하고 별도 복사본에서 사용하세요.
 
 Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·권리자와 제휴하거나 승인을 받은 프로젝트가 아닙니다. 제품명은 호환 대상을 설명하기 위해 사용합니다. 자체 엔진 파일명은 **`Lunetile.dll`**이며 변환본의 `Game.ini`에서 `Library=Lunetile.dll`로 선택합니다. RGSS 함수 이름, 기존 코드명 `RGSSXP`, `rgssxp-ruby.exe`, `Saves/RGSSXP`는 인터페이스·도구·저장 형식의 호환성을 위해 유지합니다.
@@ -99,6 +101,8 @@ powershell -NoProfile -File scripts/build_runtime.ps1 -BaseRuby "BOOTSTRAP_RUBY_
 ```powershell
 python -B scripts/migrate_project.py "LOCAL_ORIGINAL_PROJECT" "NEW_PROJECT"
 ```
+
+엔진은 기본적으로 자동 판별하며 `--engine xp` 또는 `--engine vxa`로 명시할 수 있습니다. 프로젝트 파일·INI·검토된 실행기의 식별이 충돌하면 중단합니다. VX Ace에서는 기본 DLL 경로가 `LunetileVXA.dll`로 선택됩니다.
 
 기본 빌드 결과를 자동으로 사용합니다. 다른 결과물을 쓰려면 `--dll`과 `--ruby`로 경로를 지정합니다.
 
@@ -211,6 +215,7 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 
 ```text
 template/      배포용 원본 게임 프로젝트 (변환 전)
+template-vxa/  배포용 VX Ace 원본 프로젝트 (변환 전)
 src/runtime/   C++·Ruby 엔진, ABI 정의, 의존성 lock 및 패치
 scripts/       빌드·변환·검사·성능 측정 도구
 tests/         Python 테스트, Ruby 검증 시나리오, 네이티브 측정 도구

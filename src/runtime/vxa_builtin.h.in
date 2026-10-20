@@ -1,0 +1,5 @@
+#pragma once
+@vxa_support@
+static void evaluate_vxa() {
+@vxa_evaluate@
+}

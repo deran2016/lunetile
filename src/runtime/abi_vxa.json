@@ -1,0 +1,15 @@
+{
+  "launcher_sha256": "e5435c0e86a8181a3d88206d5dd47145f2aa768afcae6d8c2ae449f8601a8724",
+  "architecture": "x86",
+  "calling_convention": "cdecl",
+  "evidence": "REA ev_2c85781ec0838d708782a8d2216484d778ae9f0df84d2dbcead24bc3cb37dc99; original RGSS301.dll PE export table",
+  "exports": [
+    {"name":"RGSSEval","ordinal":7,"arguments":["const char* source"]},
+    {"name":"RGSSFinalize","ordinal":8,"arguments":[]},
+    {"name":"RGSSGameMain","ordinal":10,"arguments":["HWND window","const wchar_t* scripts","const wchar_t* archive"]},
+    {"name":"RGSSInitialize3","ordinal":21,"arguments":["HMODULE runtime"]},
+    {"name":"RGSSSetupFonts","ordinal":26,"arguments":[]},
+    {"name":"RGSSSetupRTP","ordinal":27,"arguments":["const wchar_t* ini","wchar_t* error","int capacity"]}
+  ],
+  "scope": "Supplied VX Ace launcher contract; other private exports are not provided"
+}

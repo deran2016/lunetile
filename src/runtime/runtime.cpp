@@ -13,6 +13,10 @@
 #include <ruby/encoding.h>
 #include <ruby/version.h>
 #include "builtin.h"
+#ifdef RGSS_VXA
+#include "vxa_builtin.h"
+#include "movie.h"
+#endif
 
 void init_rgss_types();
 void init_win32_api();
@@ -26,6 +30,7 @@ bool failed = false;
 DWORD owner = 0;
 std::vector<std::wstring> rtp_paths;
 std::string data_encoding = "UTF-8";
+std::vector<std::wstring> private_fonts;
 
 void log_line(const std::string& text) {
     FILE* stream = nullptr;
@@ -114,6 +119,10 @@ VALUE evaluate_bootstrap(VALUE) {
     init_input();
     init_audio();
     rb_eval_string(audio_support);
+#ifdef RGSS_VXA
+    evaluate_vxa();
+    init_movie();
+#endif
     return rb_eval_string(R"RUBY(# encoding: UTF-8
 module RGSSXP
   VERSION = '0.1.0'
@@ -162,29 +171,54 @@ int finish_ruby(int result) {
     int status = ruby_cleanup(result);
     audio_shutdown();
     graphics_shutdown();
+#ifdef RGSS_VXA
+    movie_attach(nullptr);
+#endif
+    for (const auto& font : private_fonts) RemoveFontResourceExW(font.c_str(), FR_PRIVATE, nullptr);
+    private_fonts.clear();
     initialized = false;
     log_line("Ruby finalized");
     return status;
 }
 }
 
+#ifdef RGSS_VXA
+extern "C" int __cdecl RGSSSetupRTP(const wchar_t* ini, wchar_t* error, int capacity) {
+#else
 extern "C" int __cdecl RGSSSetupRTP(const char* ini, char* error, int capacity) {
+#endif
     try {
         rtp_paths.clear();
+#ifdef RGSS_VXA
+        std::wstring ini_path = ini ? ini : L"";
+#else
         std::wstring ini_path = wide(ini, CP_ACP);
+#endif
         wchar_t encoding[32]{};
         GetPrivateProfileStringW(L"RGSSXP", L"DataEncoding", L"UTF-8", encoding, 32, ini_path.c_str());
         data_encoding = utf8(encoding);
         if (data_encoding != "UTF-8" && data_encoding != "CP949" && data_encoding != "CP932")
             throw std::runtime_error("Unsupported explicit project data encoding");
-        for (int i = 1; i <= 3; ++i) {
+        for (int i = 1; i <=
+#ifdef RGSS_VXA
+            1
+#else
+            3
+#endif
+            ; ++i) {
             wchar_t name[512]{};
+#ifdef RGSS_VXA
+            std::wstring key = L"RTP";
+            const wchar_t* registry = L"SOFTWARE\\Enterbrain\\RGSS3\\RTP";
+#else
             std::wstring key = L"RTP" + std::to_wstring(i);
+            const wchar_t* registry = L"SOFTWARE\\Enterbrain\\RGSS\\RTP";
+#endif
             GetPrivateProfileStringW(L"Game", key.c_str(), L"", name, 512, ini_path.c_str());
             if (!*name) continue;
             wchar_t path[32768]{};
             DWORD bytes = sizeof(path);
-            LSTATUS status = RegGetValueW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Enterbrain\\RGSS\\RTP", name,
+            LSTATUS status = RegGetValueW(HKEY_LOCAL_MACHINE, registry, name,
                 RRF_RT_REG_SZ, nullptr, path, &bytes);
             if (status != ERROR_SUCCESS || !std::filesystem::is_directory(path))
                 throw std::runtime_error("Configured RTP is not installed: " + utf8(name));
@@ -193,12 +227,33 @@ extern "C" int __cdecl RGSSSetupRTP(const char* ini, char* error, int capacity) 
         if (error && capacity > 0) error[0] = '\0';
         return 1;
     } catch (const std::exception& e) {
-        if (error && capacity > 0) strncpy_s(error, capacity, e.what(), _TRUNCATE);
+        if (error && capacity > 0) {
+#ifdef RGSS_VXA
+            auto message = wide(e.what(), CP_UTF8);
+            wcsncpy_s(error, capacity, message.c_str(), _TRUNCATE);
+#else
+            strncpy_s(error, capacity, e.what(), _TRUNCATE);
+#endif
+        }
         log_line(e.what());
         return 0;
     }
 }
+#ifdef RGSS_VXA
+extern "C" void __cdecl RGSSSetupFonts() {
+    try {
+        if (!std::filesystem::is_directory(L"Fonts")) return;
+        for (const auto& entry : std::filesystem::directory_iterator(L"Fonts")) {
+            if (!entry.is_regular_file()) continue;
+            auto path = entry.path().wstring();
+            if (AddFontResourceExW(path.c_str(), FR_PRIVATE, nullptr)) private_fonts.push_back(path);
+        }
+    } catch (const std::exception& e) { log_line(e.what()); }
+}
+extern "C" void __cdecl RGSSInitialize3(HMODULE) {
+#else
 extern "C" void __cdecl RGSSInitialize(HMODULE) {
+#endif
     if (ever_initialized) { failed = true; log_line("Repeated Ruby initialization is unsupported"); return; }
     ever_initialized = true;
     graphics_prepare();
@@ -246,14 +301,26 @@ extern "C" unsigned long __cdecl RGSSEval(const char* source) {
     if (ruby_failed(status)) return 0;
     return static_cast<unsigned long>(result);
 }
+#ifdef RGSS_VXA
+extern "C" int __cdecl RGSSGameMain(HWND window, const wchar_t* scripts, const wchar_t* archive) {
+#else
 extern "C" int __cdecl RGSSGameMain(HWND window, const char* scripts, const char* archive) {
+#endif
     if (GetCurrentThreadId() != owner) return 1;
     if (!initialized || failed) return finish_ruby(1);
     int result = 1;
     try {
         graphics_attach(window);
+#ifdef RGSS_VXA
+        movie_attach(window);
+#endif
+#ifdef RGSS_VXA
+        std::string path = utf8(scripts ? scripts : L"");
+        std::string archive_path = utf8(archive ? archive : L"");
+#else
         std::string path = utf8(wide(scripts, CP_ACP));
         std::string archive_path = utf8(wide(archive, CP_ACP));
+#endif
         ScriptPaths paths{path.data(), static_cast<long>(path.size()), archive_path.data(), static_cast<long>(archive_path.size())};
         for(;;){
             int status=0;

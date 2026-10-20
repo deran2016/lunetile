@@ -52,9 +52,10 @@ class PE:
    result.append(self.text(descriptor[3]))
   raise ValueError('Unterminated import table')
 
-def inspect(path):
+def inspect(path,engine='xp'):
  root=Path(__file__).resolve().parents[1]
- abi=json.loads((root/'src/runtime/abi.json').read_text())
+ if engine not in ('xp','vxa'):raise ValueError('Unknown runtime engine')
+ abi=json.loads((root/('src/runtime/abi_vxa.json' if engine=='vxa' else 'src/runtime/abi.json')).read_text())
  pe=PE(path)
  if pe.machine!=0x14c:raise ValueError('DLL must be x86')
  exports=pe.exports();imports=pe.imports()
@@ -66,7 +67,8 @@ def inspect(path):
 
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('dll',type=Path);ap.add_argument('--output',type=Path)
- a=ap.parse_args();text=json.dumps(inspect(a.dll),indent=2)+'\n'
+ ap.add_argument('--engine',choices=('xp','vxa'),default='xp')
+ a=ap.parse_args();text=json.dumps(inspect(a.dll,a.engine),indent=2)+'\n'
  if a.output:a.output.write_text(text)
  print(text)
 

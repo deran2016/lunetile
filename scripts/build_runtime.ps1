@@ -13,7 +13,7 @@ if (!(Test-Path (Join-Path $deps "zlib-$($zlib.version)"))) {
     if ($LASTEXITCODE -ne 0) { throw 'zlib extraction failed' }
 }
 $native = Join-Path $repo 'build/runtime-native'
-foreach ($name in @('ogg', 'vorbis')) {
+foreach ($name in @('ogg', 'vorbis', 'theora')) {
     $dependency = $lock.$name
     $source = Join-Path $deps "lib$name-$($dependency.version)"
     $archive = "$source.tar.gz"

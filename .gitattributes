@@ -12,3 +12,6 @@ licenses/* -text -whitespace
 template/Data/*.rxdata -text
 template/Game.exe -text
 template/Game.rxproj -text
+template-vxa/Data/*.rvdata2 -text
+template-vxa/Game.exe -text
+template-vxa/Game.rvproj2 -text

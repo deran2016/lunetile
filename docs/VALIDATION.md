@@ -1,5 +1,31 @@
 # 독립 저장소 분리 검증
 
+## 2026-10-20 VX Ace 네이티브 구현 검증
+
+- `LunetileVXA.dll` SHA-256: `677d2f1f882fb9bc1ee325e95ff170facd64631c50f0c765625682cca818c7df`.
+- 제공된 Unicode `Game.exe`로 독립 DLL 로드, 544×416/60Hz, 1280×720/120Hz 및 출력 40/60/120FPS 스케줄러, 한글 경로를 검사했습니다. 원본 RGSS301 DLL이 로드되지 않았는지 모듈 목록도 확인했습니다.
+- `scripts/test_runtime_vxa.py OUTPUT --stock`: 실제 SceneManager의 타이틀→새 게임→맵→메뉴→맵, 전투 공격→승리·보상→맵, 저장 헤더·16번 슬롯·손상 저장 거부·원본 저장 가져오기·새 프로세스 복원을 검사합니다. 이동 1칸은 60Hz에서 16회, 120Hz에서 32회 갱신하며 타이머 시간도 유지됩니다.
+- GPU 화면 읽기로 맵·전투의 검정 화면을 거부합니다. 이 검사에서 무인자 `Color.new`의 불투명 초기값 문제를 발견해 투명 검정으로 수정했습니다. 실제 타이틀·맵·메뉴·전투 캡처도 검토했습니다.
+- `scripts/test_runtime_vxa_media.py build/vxa-media-final`: PCM/MIDI 위치·재생 시작 위치·ME 일시정지/재개·루프, 유음/무음 OGV 재생 시간·화면 색상 61종, 누락·손상·잘린 영상 거부 통과.
+- `scripts/test_runtime_vxa_lifecycle.py build/vxa-lifecycle-final`: 게임과 동영상 중 F12 및 종료, 오류 후 자원 재사용 통과.
+- `scripts/test_runtime_vxa_window.py build/vxa-window-final`: 기본/와이드 창의 크기 변경·최대화·복원·전체 화면·논리 해상도 유지와 실제 표시 픽셀 검사 통과. 자체 시험 창에만 Win32 메시지를 보냈으며 물리 키보드 검사는 아닙니다.
+- 같은 변경의 XP 실행기 회귀(`build/xp-vxa-regression-1`)와 XP 오디오 회귀(`build/vxa-media-xp-audio-regression`)도 통과했습니다.
+- 최종 `build/vxa-release-verification`에서는 스킬·상태·장비 교체·상점 구매·이름 입력·메시지/선택지 Fiber와 밀리초 기준 페이드 시간도 검사했습니다. 120Hz에서 페이드 시간을 중복 보정하던 문제를 수정했습니다.
+- 최종 배포물은 `build/vxa-release-final/`에 있습니다. 게임 ZIP의 30개 파일 해시를 확인하고, 압축을 푼 원본 `Game.exe`를 수정 없이 실행해 타이틀 표시·새 DLL 로드·원본 DLL 부재·정상 종료를 확인했습니다. ZIP 해시는 같은 폴더의 `SHA256SUMS.txt`에 기록했습니다.
+
+보고서는 로컬 `build/`에 있으며 배포 진단 ZIP에는 해당 DLL과 일치하는 검증 요약을 포함합니다.
+전체 게임 완주, 원본과의 픽셀/음향 단위 일치, 장시간 성능·물리 모니터의 120Hz 출력, 임의 사용자 플러그인은 인증하지 않습니다.
+
+## 2026-10-20 VX Ace 변환·패키지 검사
+
+- `python -X utf8 -B -m unittest discover -s tests -q`: 75개 통과. VX Ace 변환·패키지 10개와 기존 XP 회귀 검사를 포함합니다.
+- 제공된 `template-vxa`의 126개 스크립트를 왕복 처리했으며, 변경하지 않은 항목의 바이트·문자열 메타데이터·참조 번호가 보존됩니다. 이름·순서·소스 SHA-256이 다르면 변환을 거부합니다.
+- 실제 Ruby 4.0.7 x86으로 기본 데이터 15개를 검사했습니다. 잘못된 Marshal 끝부분, 아카이브 범위·중복·경로·겹침과 엔진 식별 충돌에 대한 거부 검사를 통과했습니다.
+- `python -X utf8 -B scripts/migrate_project.py template-vxa build/vxa-migration-check --engine vxa --widescreen --high-refresh`: 변환 성공. Main 한 항목에만 호환 코드를 추가하고 126개 구문 검사 및 데이터 검사를 통과했습니다.
+- 시작 맵 17×13×4를 40×23×4로 확장하는 검사는 기존 모든 타일·이벤트와 시작 위치 `(8,6)` 및 System 파일 바이트 보존을 확인했습니다.
+- 패키지 검사는 원본 RGSS DLL·개인 저장·로그의 제외, 원본 입력 불변, 검증 보고서와 DLL 해시 불일치 거부, ZIP 내부 바이트 검증을 확인했습니다.
+- 이 절의 변환·정적 검사는 플레이 완료의 증거가 아닙니다. 현재 DLL의 네이티브 실행 결과는 생성된 `verification-vxa.json`을 기준으로 확인하며 과거 XP 결과와 구분합니다. 사용법과 한계는 [VXA.md](VXA.md)에 있습니다.
+
 ## 2026-10-19 통신 API 추가 검사
 
 - 로컬 DLL SHA-256: `d4d4182ff8856a3df8447bed63da40aa139d231037aa2ec78e54d1d6f3be55c4`. 공개 CI 빌드의 해시는 각 Release 진단 ZIP의 `verification.json`을 기준으로 확인합니다.

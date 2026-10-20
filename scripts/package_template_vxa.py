@@ -1,0 +1,74 @@
+"""Package the reviewed VX Ace template; require matching native verification."""
+import argparse,json,shutil,subprocess,tempfile,zipfile
+from pathlib import Path
+from migrate_project import ROOT,sha,migrate
+from migrate_vxa import declarations
+
+ASSETS={'Data':{'.rvdata2'},'Graphics':{'.png','.jpg','.jpeg','.bmp'},'Audio':{'.ogg','.wav','.mp3','.wma','.mid','.midi'},'Movies':{'.ogv'},'Fonts':{'.ttf','.otf'}}
+def digest(path):return sha(path.read_bytes())
+
+def expand_map(project,ruby,staging):
+ helper=staging/'expand-vxa.rb'
+ helper.write_text(declarations()+'\n'+(ROOT/'scripts/expand_vxa_map.rb').read_text(encoding='utf-8'),encoding='utf-8')
+ before={p.name:digest(p) for p in (project/'Data').glob('Map*.rvdata2')}
+ result=subprocess.run([str(ruby),'--disable-gems',str(helper),str(project)],capture_output=True,text=True,encoding='utf-8',timeout=30)
+ if result.returncode:raise ValueError('VX Ace map expansion failed: '+result.stderr)
+ map_id,x,y,nx,ny,sx,sy=json.loads(result.stdout);name=f'Map{map_id:03d}.rvdata2'
+ return {'map':'Data/'+name,'size_before':[x,y,4],'size_after':[nx,ny,4],'start':[map_id,sx,sy],'sha256_before':before[name],'sha256_after':digest(project/'Data'/name)}
+
+def package(source,runtime,output,diagnostics):
+ source,runtime,output,diagnostics=[Path(p).resolve() for p in (source,runtime,output,diagnostics)]
+ for target in (output,diagnostics):
+  if target.exists():raise ValueError('Output already exists; refusing to overwrite')
+  for other in (source,runtime,diagnostics if target==output else output):
+   if target.is_relative_to(other) or other.is_relative_to(target):raise ValueError('Inputs and outputs must be separate')
+ dll=runtime/'LunetileVXA.dll'
+ report=json.loads((runtime/'verification-vxa.json').read_text(encoding='utf-8'))
+ if report.get('passed') is not True or report.get('runtime_sha256')!=digest(dll):raise ValueError('VX Ace runtime does not match passed verification')
+ selected=[source/name for name in ('Game.exe','Game.ini','Game.rvproj2')]
+ for folder,extensions in ASSETS.items():selected.extend(p for p in (source/folder).rglob('*') if p.is_file() and p.suffix.lower() in extensions)
+ for path in selected:
+  if not path.is_file() or path.is_symlink() or not path.resolve().is_relative_to(source):raise ValueError('Invalid template input')
+ before={p.relative_to(source).as_posix():digest(p) for p in selected}
+ with tempfile.TemporaryDirectory(prefix='template-vxa-',dir=output.parent) as tmp:
+  staging=Path(tmp);clean=staging/'source';clean.mkdir()
+  for path in selected:
+   target=clean/path.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,target)
+  converted=staging/'converted'
+  migrate(clean,converted,dll,runtime/'rgssxp-ruby.exe',widescreen=True,high_refresh=True,engine='vxa')
+  changes=expand_map(converted,runtime/'rgssxp-ruby.exe',staging)
+  diagnostic=staging/'diagnostics';diagnostic.mkdir()
+  shutil.move(str(converted/'migration'),diagnostic/'migration')
+  shutil.copy2(runtime/'verification-vxa.json',diagnostic/'verification-vxa.json')
+  for name in ('abi_vxa.json','ruby.lock.json','dependencies.lock.json'):
+   shutil.copy2(ROOT/'src/runtime'/name,diagnostic/name)
+  shutil.copy2(ROOT/'LICENSE',converted/'LICENSE');shutil.copytree(ROOT/'licenses',converted/'licenses')
+  (converted/'README.txt').write_text('Lunetile VX Ace template\n\nGame.exe 실행. RPG Maker VX Ace RTP 및 Visual C++ x86 런타임 필요.\n1280x720, 120Hz 로직. 출력 40/60/120FPS.\n새 저장: Saves/LunetileVXA. RTP와 원본 RGSS301.dll은 포함하지 않습니다.\n전체 게임 및 사용자 스크립트 호환은 인증하지 않았습니다.\n',encoding='utf-8')
+  if before!={p.relative_to(source).as_posix():digest(p) for p in selected}:raise ValueError('Template inputs changed during packaging')
+  hashes={p.relative_to(converted).as_posix():digest(p) for p in sorted(converted.rglob('*')) if p.is_file()}
+  for name,value in (('template-source.json',before),('template-map.json',changes),('SHA256SUMS.json',hashes)):
+   (diagnostic/name).write_text(json.dumps(value,indent=2)+'\n',encoding='utf-8')
+  converted.rename(output)
+  try:diagnostic.rename(diagnostics)
+  except OSError:
+   output.rename(converted);raise
+ return hashes
+
+def archive(directory,path):
+ if path.exists():raise ValueError('ZIP already exists; refusing to overwrite')
+ with zipfile.ZipFile(path,'x',zipfile.ZIP_DEFLATED) as output:
+  for item in sorted(directory.rglob('*')):
+   if item.is_file():output.write(item,item.relative_to(directory).as_posix())
+ with zipfile.ZipFile(path) as result:
+  if result.testzip():raise ValueError('ZIP checksum validation failed')
+  for item in result.namelist():
+   if sha(result.read(item))!=digest(directory/item):raise ValueError('ZIP content mismatch')
+
+if __name__=='__main__':
+ ap=argparse.ArgumentParser(description=__doc__)
+ for name in ('source','runtime','output','diagnostics'):ap.add_argument(name,type=Path)
+ ap.add_argument('--zip',action='store_true')
+ args=ap.parse_args();package(args.source,args.runtime,args.output,args.diagnostics)
+ if args.zip:
+  archive(args.output,args.output.parent/'lunetile-template-vxa-windows-x86.zip')
+  archive(args.diagnostics,args.diagnostics.parent/'lunetile-template-vxa-diagnostics.zip')

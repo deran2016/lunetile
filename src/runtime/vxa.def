@@ -1,0 +1,8 @@
+LIBRARY LunetileVXA
+EXPORTS
+ RGSSEval @7
+ RGSSFinalize @8
+ RGSSGameMain @10
+ RGSSInitialize3 @21
+ RGSSSetupFonts @26
+ RGSSSetupRTP @27

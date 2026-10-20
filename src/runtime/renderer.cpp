@@ -15,6 +15,7 @@
 #include "render_shader.h"
 #include "display_geometry.h"
 #include "refresh_clock.h"
+#include "engine_profile.h"
 
 namespace {
 using Microsoft::WRL::ComPtr;
@@ -36,7 +37,7 @@ struct Renderer {
     DWORD window_style=0;
     WINDOWPLACEMENT window_placement{sizeof(WINDOWPLACEMENT)};
     bool fullscreen=false;
-    UINT width=640,height=480;
+    UINT width=engine_width,height=engine_height;
     UINT back_width=640,back_height=480;
     HANDLE previous_dpi=nullptr;
     HMONITOR color_monitor=nullptr;
@@ -61,7 +62,7 @@ struct Renderer {
     UINT64 sequence=0,gpu_sequence=0,cpu_begin=0,last_cpu=0;
     bool frozen_valid=false,close=false,ready=false,test_background=false;
     LARGE_INTEGER frequency{},deadline{},last_end{};
-    int rate=40,frame=0;
+    int rate=engine_rate,frame=0;
     int remainder=0;
     double wait_ms=0,render_ms=0;
     double script_cpu_ms=0,render_cpu_ms=0,wait_cpu_ms=0;
@@ -441,6 +442,32 @@ VALUE scene_pixel(VALUE,VALUE vx,VALUE vy){
     if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);
     return rb_ary_new_from_args(4,INT2NUM(bytes[0]),INT2NUM(bytes[1]),INT2NUM(bytes[2]),INT2NUM(bytes[3]));
 }
+#ifdef RGSS_VXA
+VALUE snapshot(VALUE) {
+    VALUE args[]{INT2NUM(renderer.width),INT2NUM(renderer.height)};
+    VALUE bitmap=rb_class_new_instance(2,args,rb_path2class("Bitmap"));
+    Canvas* canvas=canvas_get(bitmap);
+    char failure[256]{};
+    {
+        try {
+            auto& r=renderer;r.initialize();
+            ComPtr<ID3D11Texture2D> staging;
+            D3D11_TEXTURE2D_DESC desc{};r.scene.texture->GetDesc(&desc);
+            desc.Usage=D3D11_USAGE_STAGING;desc.BindFlags=0;desc.CPUAccessFlags=D3D11_CPU_ACCESS_READ;desc.MiscFlags=0;
+            checked(r.device->CreateTexture2D(&desc,nullptr,&staging),"Create scene snapshot");
+            r.context->CopyResource(staging.Get(),r.scene.texture.Get());
+            D3D11_MAPPED_SUBRESOURCE data{};
+            checked(r.context->Map(staging.Get(),0,D3D11_MAP_READ,0,&data),"Read scene snapshot");
+            for(int y=0;y<canvas->height;++y)
+                memcpy(canvas->pixels+static_cast<size_t>(y)*canvas->width*4,static_cast<unsigned char*>(data.pData)+static_cast<size_t>(y)*data.RowPitch,canvas->width*4);
+            r.context->Unmap(staging.Get(),0);
+            canvas_changed(canvas,0,0,canvas->width,canvas->height);
+        } catch(const std::exception& e) {strncpy_s(failure,e.what(),_TRUNCATE);}
+    }
+    if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);
+    return bitmap;
+}
+#endif
 }
 
 void graphics_prepare(){
@@ -457,7 +484,8 @@ void graphics_attach(HWND window){
     auto dpi=reinterpret_cast<SetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetThreadDpiAwarenessContext"));
     if(dpi)renderer.previous_dpi=dpi(reinterpret_cast<HANDLE>(-4));
     wchar_t path[MAX_PATH]{};GetFullPathNameW(L"Game.ini",MAX_PATH,path,nullptr);
-    int width=GetPrivateProfileIntW(L"Lunetile",L"Width",640,path),height=GetPrivateProfileIntW(L"Lunetile",L"Height",480,path);
+    int width=GetPrivateProfileIntW(L"Lunetile",L"Width",engine_width,path),height=GetPrivateProfileIntW(L"Lunetile",L"Height",engine_height,path);
+    renderer.refresh.logic=renderer.refresh.output=engine_rate;
     if(!rgss_display::valid(width,height))throw std::runtime_error("Invalid Lunetile screen dimensions in Game.ini");
     wchar_t profile[32]{};GetPrivateProfileStringW(L"Lunetile",L"TimingProfile",L"legacy",profile,32,path);
     if(_wcsicmp(profile,L"legacy")&&_wcsicmp(profile,L"stock120"))throw std::runtime_error("Unknown Lunetile timing profile");
@@ -472,7 +500,7 @@ void graphics_shutdown(){if(renderer.window&&IsWindow(renderer.window)&&renderer
     if(dpi&&renderer.previous_dpi)dpi(renderer.previous_dpi);
     renderer=Renderer{};}
 void graphics_reset(){
-    auto& r=renderer;r.rate=r.refresh.high()?120:40;r.remainder=0;r.refresh.reset();r.frozen_valid=false;QueryPerformanceCounter(&r.deadline);
+    auto& r=renderer;r.rate=r.refresh.high()?120:engine_rate;r.remainder=0;r.refresh.reset();r.frozen_valid=false;QueryPerformanceCounter(&r.deadline);
     if(r.context){float black[4]={0,0,0,1};if(r.scene.target)r.context->ClearRenderTargetView(r.scene.target.Get(),black);if(r.frozen.target)r.context->ClearRenderTargetView(r.frozen.target.Get(),black);}
     input_reset();
 }
@@ -498,6 +526,9 @@ void init_graphics(){
     rb_define_singleton_method(graphics,"frame_reset",RUBY_METHOD_FUNC(reset_deadline),0);
     rb_define_singleton_method(graphics,"__timings",RUBY_METHOD_FUNC(stats),0);
     rb_define_singleton_method(graphics,"__scene_pixel",RUBY_METHOD_FUNC(scene_pixel),2);
+#ifdef RGSS_VXA
+    rb_define_singleton_method(graphics,"__snapshot",RUBY_METHOD_FUNC(snapshot),0);
+#endif
 }
 
-int graphics_time_scale(){return renderer.refresh.high()?3:1;}
+int graphics_time_scale(){return renderer.refresh.high()?120/engine_rate:1;}

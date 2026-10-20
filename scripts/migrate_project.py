@@ -138,7 +138,35 @@ def inspect_data(source,archive,ruby,staging,project,data_encoding):
  if reader.pos!=len(reader.data):raise MigrationError('Trailing text conversion report data')
  return [{'location':location.decode('utf-8'),'encoding_before':encoding.decode(),'encoding_after':'UTF-8','source_bytes_hex':before.decode(),'utf8_bytes_hex':after.decode(),'source_sha256':sha(bytes.fromhex(before.decode())),'utf8_sha256':sha(bytes.fromhex(after.decode()))} for location,encoding,before,after in records]
 
-def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescreen=False,high_refresh=False):
+def detect_engine(source,engine='auto',ini_encoding=None):
+ if engine not in ('auto','xp','vxa'):raise MigrationError('Unknown engine')
+ signals=set()
+ for filename,kind in (('Game.rxproj','xp'),('Game.rvproj2','vxa'),('Data/Scripts.rxdata','xp'),('Data/Scripts.rvdata2','vxa'),('Game.rgssad','xp'),('Game.rgss3a','vxa')):
+  if (source/filename).exists():signals.add(kind)
+ if (source/'Game.ini').is_file():
+  ini,_=read_project_ini(source/'Game.ini',ini_encoding)
+  for section in ini.sections():
+   if section.lower()=='game':
+    library=ini.get(section,'Library',fallback='').lower()
+    if 'rgss301' in library or 'lunetilevxa' in library:signals.add('vxa')
+    elif 'rgss104' in library or library=='lunetile.dll':signals.add('xp')
+ if (source/'Game.exe').is_file():
+  launcher=sha((source/'Game.exe').read_bytes())
+  if launcher==ORIGINAL_EXE:signals.add('xp')
+  baseline=ROOT/'src/runtime/vxa_stock_scripts.json'
+  if baseline.is_file() and launcher==json.loads(baseline.read_text(encoding='utf-8'))['launcher_sha256']:signals.add('vxa')
+ if len(signals)>1:raise MigrationError('Conflicting project engine identifiers')
+ if engine!='auto' and signals and engine not in signals:raise MigrationError('Requested engine conflicts with project identifiers')
+ if engine=='auto':
+  if not signals:raise MigrationError('Unable to identify project engine')
+  return signals.pop()
+ return engine
+
+def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescreen=False,high_refresh=False,engine='auto'):
+ engine=detect_engine(source,engine,ini_encoding)
+ if engine=='vxa':
+  from migrate_vxa import migrate as migrate_vxa
+  return migrate_vxa(source,output,dll,ruby,data_encoding,ini_encoding,widescreen,high_refresh)
  source,output,dll,ruby=[path.resolve() for path in (source,output,dll,ruby)]
  if data_encoding not in (None,'UTF-8','CP949','CP932'):raise MigrationError('Unsupported explicit project data encoding')
  if not source.is_dir():raise MigrationError('Original project directory does not exist')
@@ -210,14 +238,17 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescre
 def main():
  ap=argparse.ArgumentParser(description=__doc__)
  ap.add_argument('source',type=Path);ap.add_argument('output',type=Path)
- ap.add_argument('--dll',type=Path,default=RUNTIME_BIN/'Lunetile.dll')
+ ap.add_argument('--dll',type=Path)
+ ap.add_argument('--engine',choices=('auto','xp','vxa'),default='auto')
  ap.add_argument('--ruby',type=Path,default=RUNTIME_BIN/'rgssxp-ruby.exe')
  ap.add_argument('--data-encoding',choices=['UTF-8','CP949','CP932'],help='Required for non-ASCII project text; explicit decoding is validated before copying')
  ap.add_argument('--ini-encoding',choices=['UTF-8','CP949','CP932'],help='Explicit source Game.ini encoding when it contains non-ASCII text without a BOM')
  ap.add_argument('--widescreen',action='store_true',help='Adapt reviewed stock UI/camera to 1280x720')
  ap.add_argument('--high-refresh',action='store_true',help='Convert reviewed stock timing to 120 Hz logic and selectable 40/60/120 FPS output')
  a=ap.parse_args()
- try:manifest=migrate(a.source,a.output,a.dll,a.ruby,a.data_encoding,a.ini_encoding,a.widescreen,a.high_refresh)
+ try:
+  engine=detect_engine(a.source,a.engine,a.ini_encoding)
+  manifest=migrate(a.source,a.output,a.dll or RUNTIME_BIN/('LunetileVXA.dll' if engine=='vxa' else 'Lunetile.dll'),a.ruby,a.data_encoding,a.ini_encoding,a.widescreen,a.high_refresh,engine)
  except (MigrationError,OSError,ValueError,configparser.Error) as error:ap.exit(1,f'Migration stopped: {error}\n')
  print(f"Project copy created: {a.output}\n{len(manifest['scripts'])} scripts validated; {sum(bool(x['changes']) for x in manifest['scripts'])} entries changed; original files preserved")
 

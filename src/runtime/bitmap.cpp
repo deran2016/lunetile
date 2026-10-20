@@ -302,6 +302,70 @@ VALUE canvas_hue(VALUE self, VALUE angle) {
 }
 }
 
+#ifdef RGSS_VXA
+static int CALLBACK found_font(const LOGFONTW*,const TEXTMETRICW*,DWORD,LPARAM result) {
+    *reinterpret_cast<bool*>(result)=true;return 0;
+}
+static VALUE font_exists(VALUE,VALUE name) {
+    StringValue(name);
+    VALUE utf=rb_str_encode(name,rb_enc_from_encoding(rb_utf8_encoding()),0,Qnil);
+    LOGFONTW font{};font.lfCharSet=DEFAULT_CHARSET;
+    int count=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,RSTRING_PTR(utf),static_cast<int>(RSTRING_LEN(utf)),font.lfFaceName,LF_FACESIZE-1);
+    if(!count)return Qfalse;
+    bool found=false;
+    HDC dc=GetDC(nullptr);
+    if(!dc)return Qfalse;
+    EnumFontFamiliesExW(dc,&font,found_font,reinterpret_cast<LPARAM>(&found),0);
+    ReleaseDC(nullptr,dc);
+    return found?Qtrue:Qfalse;
+}
+static VALUE vxa_blur(VALUE object) {
+    Canvas* canvas=canvas_get(object);
+    const int w=canvas->width,h=canvas->height;
+    VALUE buffer=rb_str_new(nullptr,static_cast<long>(w)*h*4);
+    auto* out=reinterpret_cast<unsigned char*>(RSTRING_PTR(buffer));
+    for(int y=0;y<h;++y)for(int x=0;x<w;++x)for(int c=0;c<4;++c){
+        unsigned sum=0;
+        for(int dy=-1;dy<=1;++dy)for(int dx=-1;dx<=1;++dx)
+            sum+=canvas->pixels[(static_cast<size_t>(std::clamp(y+dy,0,h-1))*w+std::clamp(x+dx,0,w-1))*4+c];
+        out[(static_cast<size_t>(y)*w+x)*4+c]=static_cast<unsigned char>((sum+4)/9);
+    }
+    memcpy(canvas->pixels,out,static_cast<size_t>(w)*h*4);
+    canvas_changed(canvas,0,0,w,h);
+    RB_GC_GUARD(buffer);
+    return Qnil;
+}
+static VALUE vxa_radial_blur(VALUE object,VALUE angle_value,VALUE division_value) {
+    const int angle=std::clamp(NUM2INT(angle_value),0,359);
+    const int divisions=std::clamp(NUM2INT(division_value),2,100);
+    Canvas* canvas=canvas_get(object);
+    const int w=canvas->width,h=canvas->height;
+    VALUE buffer=rb_str_new(nullptr,static_cast<long>(w)*h*4);
+    auto* out=reinterpret_cast<unsigned char*>(RSTRING_PTR(buffer));
+    const double cx=(w-1)*.5,cy=(h-1)*.5;
+    double cosine[100]{},sine[100]{};
+    for(int i=0;i<divisions;++i){
+        double radians=(static_cast<double>(i)/(divisions-1)-.5)*angle*3.141592653589793/180;
+        cosine[i]=cos(radians);sine[i]=sin(radians);
+    }
+    for(int y=0;y<h;++y)for(int x=0;x<w;++x){
+        unsigned sum[4]{};
+        for(int i=0;i<divisions;++i){
+            int sx=static_cast<int>(std::round(cx+(x-cx)*cosine[i]-(y-cy)*sine[i]));
+            int sy=static_cast<int>(std::round(cy+(x-cx)*sine[i]+(y-cy)*cosine[i]));
+            if(sx<0||sy<0||sx>=w||sy>=h)continue;
+            const auto* p=canvas->pixels+(static_cast<size_t>(sy)*w+sx)*4;
+            for(int c=0;c<4;++c)sum[c]+=p[c];
+        }
+        for(int c=0;c<4;++c)out[(static_cast<size_t>(y)*w+x)*4+c]=static_cast<unsigned char>(sum[c]/divisions);
+    }
+    memcpy(canvas->pixels,out,static_cast<size_t>(w)*h*4);
+    canvas_changed(canvas,0,0,w,h);
+    RB_GC_GUARD(buffer);
+    return Qnil;
+}
+#endif
+
 Canvas* canvas_get(VALUE object) {
     auto* canvas = raw_canvas(object);
     if (canvas->disposed || !canvas->pixels) rb_raise(graphics_error, "disposed bitmap");
@@ -333,4 +397,9 @@ void init_bitmap() {
     rb_define_method(bitmap_class,"dispose",RUBY_METHOD_FUNC(canvas_dispose),0);
     rb_define_method(bitmap_class,"disposed?",RUBY_METHOD_FUNC(canvas_disposed),0);
     rb_define_method(bitmap_class,"hue_change",RUBY_METHOD_FUNC(canvas_hue),1);
+#ifdef RGSS_VXA
+    rb_define_method(bitmap_class,"__blur",RUBY_METHOD_FUNC(vxa_blur),0);
+    rb_define_method(bitmap_class,"__radial_blur",RUBY_METHOD_FUNC(vxa_radial_blur),2);
+    rb_define_singleton_method(rb_define_class("Font",rb_cObject),"exist?",RUBY_METHOD_FUNC(font_exists),1);
+#endif
 }

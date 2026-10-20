@@ -1,0 +1,427 @@
+{
+  "RPG::Actor": [
+    "name",
+    "face_index",
+    "character_index",
+    "initial_level",
+    "face_name",
+    "class_id",
+    "character_name",
+    "id",
+    "features",
+    "note",
+    "equips",
+    "nickname",
+    "description",
+    "max_level",
+    "icon_index"
+  ],
+  "RPG::Animation": [
+    "animation2_hue",
+    "position",
+    "name",
+    "animation2_name",
+    "frames",
+    "animation1_hue",
+    "frame_max",
+    "animation1_name",
+    "timings",
+    "id"
+  ],
+  "RPG::Animation::Frame": [
+    "cell_data",
+    "cell_max"
+  ],
+  "RPG::Animation::Timing": [
+    "flash_duration",
+    "se",
+    "flash_color",
+    "frame",
+    "flash_scope",
+    "condition"
+  ],
+  "RPG::Armor": [
+    "description",
+    "name",
+    "icon_index",
+    "price",
+    "note",
+    "id",
+    "features",
+    "params",
+    "etype_id",
+    "atype_id"
+  ],
+  "RPG::BGM": [
+    "name",
+    "volume",
+    "pitch"
+  ],
+  "RPG::BGS": [
+    "name",
+    "volume",
+    "pitch"
+  ],
+  "RPG::BaseItem::Feature": [
+    "code",
+    "data_id",
+    "value"
+  ],
+  "RPG::Class": [
+    "name",
+    "learnings",
+    "id",
+    "features",
+    "note",
+    "params",
+    "exp_params",
+    "icon_index",
+    "description"
+  ],
+  "RPG::Class::Learning": [
+    "level",
+    "skill_id",
+    "note"
+  ],
+  "RPG::CommonEvent": [
+    "trigger",
+    "name",
+    "switch_id",
+    "list",
+    "id"
+  ],
+  "RPG::Enemy": [
+    "name",
+    "gold",
+    "battler_hue",
+    "exp",
+    "hit",
+    "battler_name",
+    "actions",
+    "note",
+    "id",
+    "eva",
+    "features",
+    "params",
+    "drop_items"
+  ],
+  "RPG::Enemy::Action": [
+    "condition_type",
+    "rating",
+    "skill_id",
+    "condition_param2",
+    "condition_param1"
+  ],
+  "RPG::Enemy::DropItem": [
+    "denominator",
+    "kind",
+    "data_id"
+  ],
+  "RPG::EventCommand": [
+    "indent",
+    "code",
+    "parameters"
+  ],
+  "RPG::Item": [
+    "description",
+    "name",
+    "consumable",
+    "occasion",
+    "icon_index",
+    "price",
+    "scope",
+    "animation_id",
+    "note",
+    "speed",
+    "id",
+    "features",
+    "effects",
+    "damage",
+    "success_rate",
+    "hit_type",
+    "itype_id",
+    "repeats",
+    "tp_gain"
+  ],
+  "RPG::ME": [
+    "name",
+    "pitch",
+    "volume"
+  ],
+  "RPG::Map": [
+    "parallax_name",
+    "height",
+    "events",
+    "parallax_sx",
+    "bgm",
+    "tileset_id",
+    "encounter_step",
+    "width",
+    "data",
+    "bgs",
+    "parallax_loop_y",
+    "autoplay_bgm",
+    "encounter_list",
+    "autoplay_bgs",
+    "parallax_show",
+    "scroll_type",
+    "parallax_loop_x",
+    "disable_dashing",
+    "parallax_sy",
+    "display_name",
+    "specify_battleback",
+    "note",
+    "battleback1_name",
+    "battleback2_name"
+  ],
+  "RPG::MapInfo": [
+    "scroll_x",
+    "name",
+    "expanded",
+    "order",
+    "scroll_y",
+    "parent_id"
+  ],
+  "RPG::SE": [
+    "name",
+    "pitch",
+    "volume"
+  ],
+  "RPG::Skill": [
+    "message2",
+    "description",
+    "name",
+    "occasion",
+    "icon_index",
+    "message1",
+    "scope",
+    "animation_id",
+    "note",
+    "mp_cost",
+    "speed",
+    "id",
+    "features",
+    "effects",
+    "damage",
+    "success_rate",
+    "hit_type",
+    "stype_id",
+    "tp_cost",
+    "required_wtype_id1",
+    "required_wtype_id2",
+    "repeats",
+    "tp_gain"
+  ],
+  "RPG::State": [
+    "message2",
+    "name",
+    "priority",
+    "icon_index",
+    "message1",
+    "message4",
+    "restriction",
+    "release_by_damage",
+    "message3",
+    "note",
+    "id",
+    "features",
+    "auto_removal_timing",
+    "min_turns",
+    "max_turns",
+    "chance_by_damage",
+    "steps_to_remove",
+    "remove_by_walking",
+    "remove_at_battle_end",
+    "remove_by_damage",
+    "remove_by_restriction",
+    "description"
+  ],
+  "RPG::System": [
+    "elements",
+    "start_y",
+    "airship",
+    "test_battlers",
+    "_",
+    "edit_map_id",
+    "battle_end_me",
+    "party_members",
+    "start_x",
+    "ship",
+    "battler_hue",
+    "sounds",
+    "variables",
+    "battle_bgm",
+    "version_id",
+    "start_map_id",
+    "battler_name",
+    "magic_number",
+    "switches",
+    "gameover_me",
+    "game_title",
+    "title_bgm",
+    "terms",
+    "test_troop_id",
+    "boat",
+    "skill_types",
+    "weapon_types",
+    "armor_types",
+    "currency_unit",
+    "window_tone",
+    "japanese",
+    "opt_draw_title",
+    "opt_use_midi",
+    "opt_transparent",
+    "opt_followers",
+    "opt_slip_death",
+    "opt_extra_exp",
+    "opt_display_tp",
+    "battleback1_name",
+    "battleback2_name",
+    "title1_name",
+    "title2_name",
+    "opt_floor_death"
+  ],
+  "RPG::System::Terms": [
+    "params",
+    "etypes",
+    "commands",
+    "basic"
+  ],
+  "RPG::System::TestBattler": [
+    "actor_id",
+    "level",
+    "equips"
+  ],
+  "RPG::System::Vehicle": [
+    "start_y",
+    "bgm",
+    "start_x",
+    "character_index",
+    "character_name",
+    "start_map_id"
+  ],
+  "RPG::Tileset": [
+    "id",
+    "name",
+    "mode",
+    "tileset_names",
+    "flags",
+    "note"
+  ],
+  "RPG::Troop": [
+    "members",
+    "name",
+    "pages",
+    "id"
+  ],
+  "RPG::Troop::Member": [
+    "y",
+    "hidden",
+    "x",
+    "enemy_id"
+  ],
+  "RPG::Troop::Page": [
+    "list",
+    "span",
+    "condition"
+  ],
+  "RPG::Troop::Page::Condition": [
+    "turn_valid",
+    "actor_hp",
+    "turn_a",
+    "turn_ending",
+    "enemy_hp",
+    "switch_valid",
+    "enemy_index",
+    "actor_valid",
+    "actor_id",
+    "enemy_valid",
+    "switch_id",
+    "turn_b"
+  ],
+  "RPG::UsableItem::Damage": [
+    "type",
+    "element_id",
+    "formula",
+    "variance",
+    "critical"
+  ],
+  "RPG::UsableItem::Effect": [
+    "code",
+    "data_id",
+    "value1",
+    "value2"
+  ],
+  "RPG::Weapon": [
+    "description",
+    "name",
+    "icon_index",
+    "price",
+    "animation_id",
+    "note",
+    "id",
+    "features",
+    "params",
+    "etype_id",
+    "wtype_id"
+  ],
+  "RPG::Event": [
+    "id",
+    "name",
+    "x",
+    "y",
+    "pages"
+  ],
+  "RPG::Event::Page": [
+    "condition",
+    "graphic",
+    "move_type",
+    "move_speed",
+    "move_frequency",
+    "move_route",
+    "walk_anime",
+    "step_anime",
+    "direction_fix",
+    "through",
+    "priority_type",
+    "trigger",
+    "list"
+  ],
+  "RPG::Event::Page::Condition": [
+    "switch1_valid",
+    "switch2_valid",
+    "variable_valid",
+    "self_switch_valid",
+    "item_valid",
+    "actor_valid",
+    "switch1_id",
+    "switch2_id",
+    "variable_id",
+    "variable_value",
+    "self_switch_ch",
+    "item_id",
+    "actor_id"
+  ],
+  "RPG::Event::Page::Graphic": [
+    "tile_id",
+    "character_name",
+    "character_index",
+    "direction",
+    "pattern"
+  ],
+  "RPG::MoveRoute": [
+    "repeat",
+    "skippable",
+    "wait",
+    "list"
+  ],
+  "RPG::MoveCommand": [
+    "code",
+    "parameters"
+  ],
+  "RPG::Map::Encounter": [
+    "troop_id",
+    "weight",
+    "region_set"
+  ]
+}

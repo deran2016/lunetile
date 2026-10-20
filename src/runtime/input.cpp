@@ -37,7 +37,17 @@ VALUE update(VALUE){
     for(auto& value:pressed)value=false;
     return Qnil;
 }
-int button(VALUE value){int id=NUM2INT(value);if(id<0||id>=30)rb_raise(rb_eArgError,"Unknown input button");return id;}
+int button(VALUE value){
+#ifdef RGSS_VXA
+    if(SYMBOL_P(value)){
+        VALUE input=rb_const_get(rb_cObject,rb_intern("Input"));
+        ID name=SYM2ID(value);
+        if(!rb_const_defined_at(input,name))rb_raise(rb_eArgError,"Unknown input button");
+        value=rb_const_get_at(input,name);
+    }
+#endif
+    int id=NUM2INT(value);if(id<0||id>=30)rb_raise(rb_eArgError,"Unknown input button");return id;
+}
 VALUE press(VALUE,VALUE value){return buttons[button(value)].held?Qtrue:Qfalse;}
 VALUE trigger(VALUE,VALUE value){return buttons[button(value)].trigger?Qtrue:Qfalse;}
 VALUE repeat(VALUE,VALUE value){return buttons[button(value)].repeat?Qtrue:Qfalse;}

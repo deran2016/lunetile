@@ -21,6 +21,9 @@ __pycache__/
 *.rxdata
 *.rgssad
 *.rxproj
+*.rvdata2
+*.rgss3a
+*.rvproj2
 *.etl
 *.dmp
 *.zip
@@ -46,3 +49,16 @@ __pycache__/
 !template/Audio/**/*.ogg
 !template/Audio/**/*.mp3
 !template/Audio/**/*.mid
+
+# User-supplied VX Ace project; no original engine, personal saves or logs.
+!template-vxa/Game.exe
+!template-vxa/Game.rvproj2
+!template-vxa/Data/*.rvdata2
+!template-vxa/Graphics/**/*.png
+!template-vxa/Graphics/**/*.jpg
+!template-vxa/Audio/**/*.wav
+!template-vxa/Audio/**/*.ogg
+!template-vxa/Audio/**/*.mp3
+!template-vxa/Audio/**/*.mid
+template-vxa/System/
+template-vxa/Saves/

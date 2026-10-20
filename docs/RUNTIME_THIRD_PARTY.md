@@ -14,6 +14,7 @@
 | zlib | 1.3.2 | Scripts.rxdata 압축 해제. 공식 소스의 LICENSE |
 | libogg | 1.3.6 | Ogg 컨테이너. 공식 소스의 COPYING (BSD 3-Clause) |
 | libvorbis | 1.3.7 | Vorbis 디코딩. 공식 소스의 COPYING (BSD 3-Clause) |
+| libtheora | 1.1.1 | VX Ace OGV 영상 디코딩. 공식 소스의 COPYING (BSD 3-Clause), `licenses/theora-COPYING` |
 | Microsoft VC Runtime / Windows | MSVC 2022 / Windows 11 | 시스템·C/C++ 런타임. 설치된 x86 VC Runtime 사용 |
 
 소스 URL·SHA-256·패치 해시는 `src/runtime/ruby.lock.json`과

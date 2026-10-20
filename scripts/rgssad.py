@@ -5,7 +5,10 @@ class Archive:
  def __init__(self,path):
   self.path=path;self.entries={}
   with path.open('rb') as stream:
-   if stream.read(8)!=b'RGSSAD\0\1':raise ValueError('Only RGSSAD v1 is supported')
+   header=stream.read(8)
+   if header==b'RGSSAD\0\3':
+    self.size=path.stat().st_size;self.index_v3(stream);return
+   if header!=b'RGSSAD\0\1':raise ValueError('Only RGSSAD v1 and v3 are supported')
    self.size=path.stat().st_size;key=0xdeadcafe
    while stream.tell()<self.size:
     length=self.word(stream)^key;key=self.step(key)
@@ -22,6 +25,26 @@ class Archive:
     if len(self.entries)>=100000:raise ValueError('Too many archive entries')
     self.entries[name]=(stream.tell(),length,key)
     stream.seek(length,1)
+ def index_v3(self,stream):
+  key=(self.word(stream)*9+3)&0xffffffff
+  ranges=[]
+  while True:
+   offset=self.word(stream)^key
+   if offset==0:break
+   length=self.word(stream)^key;entry_key=self.word(stream)^key;name_size=self.word(stream)^key
+   if not 1<=name_size<=4096:raise ValueError('Invalid archive filename length')
+   encrypted=stream.read(name_size)
+   if len(encrypted)!=name_size:raise ValueError('Truncated archive filename')
+   name=self.normalize(bytes(byte^((key>>((i%4)*8))&255) for i,byte in enumerate(encrypted)))
+   if b'\0' in name or b':' in name or any(part in (b'',b'.',b'..') for part in name.split(b'/')):raise ValueError('Invalid archive path')
+   if offset>self.size or length>self.size-offset:raise ValueError('Archive entry exceeds file bounds')
+   if name in self.entries:raise ValueError('Duplicate archive path')
+   if len(self.entries)>=100000:raise ValueError('Too many archive entries')
+   self.entries[name]=(offset,length,entry_key);ranges.append((offset,offset+length))
+  end=stream.tell()
+  for start,stop in sorted(ranges):
+   if start<end:raise ValueError('Overlapping archive entry or index')
+   end=stop
  @staticmethod
  def step(key):return (key*7+3)&0xffffffff
  @staticmethod

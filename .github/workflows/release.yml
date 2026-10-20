@@ -45,16 +45,22 @@ jobs:
           & ./scripts/build_runtime.ps1 -BaseRuby $ruby
       - name: Verify CI build
         run: python -X utf8 -B scripts/verify_ci.py build/ci-verification
+      - name: Verify VX Ace runtime
+        run: python -X utf8 -B scripts/test_runtime_vxa.py build/ci-verification/vxa
       - name: Package binaries and notices
         run: |
           python -X utf8 -B scripts/package_runtime.py build/ci-verification build/lunetile-windows-x86
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
           python -X utf8 -B scripts/package_template.py template build/lunetile-windows-x86 build/lunetile-template-windows-x86 build/lunetile-template-diagnostics
           if ($LASTEXITCODE -ne 0) { throw 'Template packaging failed' }
+          python -X utf8 -B scripts/package_template_vxa.py template-vxa build/runtime-native/bin/Release build/lunetile-template-vxa-windows-x86 build/lunetile-template-vxa-diagnostics
+          if ($LASTEXITCODE -ne 0) { throw 'VX Ace template packaging failed' }
           New-Item -ItemType Directory dist | Out-Null
           Compress-Archive -Path build/lunetile-template-windows-x86 -DestinationPath dist/lunetile-template-windows-x86.zip
           Compress-Archive -Path build/lunetile-template-diagnostics -DestinationPath dist/lunetile-template-diagnostics.zip
-          $checksums = foreach ($asset in @('lunetile-template-windows-x86.zip','lunetile-template-diagnostics.zip')) {
+          Compress-Archive -Path build/lunetile-template-vxa-windows-x86 -DestinationPath dist/lunetile-template-vxa-windows-x86.zip
+          Compress-Archive -Path build/lunetile-template-vxa-diagnostics -DestinationPath dist/lunetile-template-vxa-diagnostics.zip
+          $checksums = foreach ($asset in @('lunetile-template-windows-x86.zip','lunetile-template-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip')) {
             $hash = (Get-FileHash (Join-Path dist $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $asset"
           }
@@ -86,6 +92,8 @@ jobs:
             build/ci-verification/network/summary.json
             build/ci-verification/network/logic*/network-results.json
             build/ci-verification/network/logic*/network-finalized.json
+            build/ci-verification/vxa/**/*
+            build/runtime-native/bin/Release/verification-vxa.json
           if-no-files-found: ignore
 
   publish:
@@ -119,20 +127,23 @@ jobs:
           Extract this game ZIP and run Game.exe. No Python, manual migration or diagnostics ZIP is required.
           The starting map is expanded to 40x23 tiles (1280x736 pixels), filling the 1280x720 canvas.
           Optional lunetile-template-diagnostics.zip contains verification, DLL information, migration/map changes, source/game file hashes, dependency locks and the Ruby port patch.
-          SHA256SUMS.txt verifies both ZIPs. Development documents and historical records remain in the source repository.
+          VX Ace: lunetile-template-vxa-windows-x86.zip contains the separate LunetileVXA.dll and converted template-vxa project. It requires RPG Maker VX Ace RTP, which is not bundled.
+          VX Ace diagnostics are in lunetile-template-vxa-diagnostics.zip; its verification-vxa.json records the actual checks for this DLL. XP test results do not certify VX Ace gameplay.
+          New VX Ace saves use Saves/LunetileVXA and imported saves use Saves/Import. The original RGSS301.dll, personal saves and logs are excluded.
+          SHA256SUMS.txt verifies all four ZIPs. Development documents and historical records remain in the source repository.
           Uses a 1280x720 widescreen canvas with adapted stock maps, menus, dialogue and battle UI.
           Resize/maximize the window or use Alt+Enter for aspect-preserving full screen.
           Runs stock game logic at 120Hz with default 60FPS output. Choose 40/60/120FPS in the in-game display settings.
           Adds asynchronous Ruby REST/JSON and TCP/TLS clients in Lunetile.dll. No server is contacted until game scripts explicitly call the networking API.
           See docs/NETWORKING.md in the source repository for the API and length-prefixed TCP example. No external Ruby, OpenSSL or networking DLL installation is required.
-          Gameplay timing is adapted from the reviewed 40Hz stock scripts. New saves use version 2; older saves can be imported, but older runtimes cannot read new saves.
-          Requires Windows 11 x64, the Microsoft Visual C++ x86 runtime, and RPG Maker XP Standard RTP.
+          XP timing is adapted from reviewed 40Hz stock scripts; VX Ace timing is adapted from its 60Hz stock scripts. Save formats and directories are engine-specific.
+          Requires Windows 11 x64, the Microsoft Visual C++ x86 runtime, and the matching engine RTP: RPG Maker XP Standard RTP for XP, RPG Maker VX Ace RTP for VX Ace.
 
           CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, 640x480/1280x720 rendering and window geometry, FHD/QHD/4K fit calculations, 120Hz output scheduling, 40/120Hz timing comparisons, settings/save checks, and template conversion.
-          Korean project paths are checked only when supported by the system ANSI code page; skips are recorded in the diagnostics ZIP's verification.json.
+          XP Korean project paths are checked only when supported by the system ANSI code page; skips are recorded in verification.json. VX Ace uses Unicode launcher paths and checks Korean paths independently.
           Networking checks use local HTTP/TCP/TLS fixture servers, including trusted TLS success on this disposable CI runner, certificate rejection, cancellation, F12 cleanup, limits and gameplay updates during delayed responses.
-          Extract to an ASCII path on English Windows. Full gameplay, rendering, audio, and endurance acceptance were not run for this build.
+          Extract XP to an ASCII path on English Windows. VX Ace supports Unicode extraction paths. Full gameplay, rendering, audio, and endurance acceptance were not run for this CI build.
           The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
           EOF
-          gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip lunetile-template-diagnostics.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip lunetile-template-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest=false
