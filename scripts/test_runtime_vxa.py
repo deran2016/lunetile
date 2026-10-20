@@ -60,6 +60,8 @@ File.write('runtime-complete.txt','VXA wide refresh')
 """,high=True,wide=True,rate=rate)
  run(out/'한글-경로',smoke)
  run(out/'features',(ROOT/'tests/runtime_vxa_features.rb').read_bytes())
+ for rate in (40,60,120):
+  run(out/f'render-timing-{rate}',(ROOT/'tests/runtime_render_timing.rb').read_bytes(),high=True,wide=True,rate=rate)
  if args.stock:
   entries=read((ROOT/'template-vxa/Data/Scripts.rvdata2').read_bytes())
   definitions=b'\n'.join(e.source().replace(b'\r\r\n',b'\n') for e in entries if e.name!=b'Main')
@@ -75,11 +77,16 @@ Graphics.update
 File.write('runtime-complete.txt','save restored in new process')
 """
   run(out/'restart-load',reload,rtp=True,wide=True,high=True,saves=out/'stock-120-60/Saves')
+  movement=definitions+b'\n'+(ROOT/'src/runtime/vxa_stock.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_movement.rb').read_bytes()
+  run(out/'movement-60',movement,rtp=True)
+  for rate in (40,60,120):run(out/f'movement-120-{rate}',movement,rtp=True,wide=True,high=True,rate=rate)
  artifact=inspect(ROOT/'build/runtime-native/bin/Release/LunetileVXA.dll',engine='vxa')
  report={'passed':True,'runtime_sha256':artifact['sha256'],'scope':'Original Unicode launcher, independent DLL load, basic rendering, 544x416 and 1280x720, 120Hz logic and 40/60/120FPS output, archive and graphics API regression; no full campaign or pixel/audio parity certification','cases':['basic','wide-40','wide-60','wide-120','한글-경로','features']}
  if args.stock:
   report['stock_scenarios']=[json.loads((out/name/'vxa-stock-result.json').read_text(encoding='utf-8')) for name in ['stock-60','stock-120-40','stock-120-60','stock-120-120']]
   report['process_restart_save_load']=True
+  report['movement_timing']=[json.loads((out/name/'movement.json').read_text()) for name in ['movement-60','movement-120-40','movement-120-60','movement-120-120']]
+ report['render_timing']=[json.loads((out/f'render-timing-{rate}/render-timing.json').read_text()) for rate in (40,60,120)]
  (out/'summary.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
  (ROOT/'build/runtime-native/bin/Release/verification-vxa.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
  print('VX Ace launcher smoke PASS')

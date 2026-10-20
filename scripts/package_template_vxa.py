@@ -64,6 +64,21 @@ def archive(directory,path):
   for item in result.namelist():
    if sha(result.read(item))!=digest(directory/item):raise ValueError('ZIP content mismatch')
 
+def runtime_patch_archive(project,path):
+ with tempfile.TemporaryDirectory(prefix='vxa-speed-fix-',dir=path.parent) as tmp:
+  directory=Path(tmp)
+  for name in ('LunetileVXA.dll','LICENSE'):shutil.copy2(project/name,directory/name)
+  shutil.copytree(project/'licenses',directory/'licenses')
+  (directory/'README.txt').write_text(
+   'Lunetile VX Ace 120Hz speed fix\n\n'
+   '게임과 편집기를 종료하고 변환본을 백업하세요.\n'
+   'LunetileVXA.dll을 기존 Game.exe 옆에 복사하여 교체하세요.\n'
+   'Data, Saves, Game.ini는 변경하지 않습니다. 전체 템플릿으로 기존 프로젝트를 덮어쓰지 마세요.\n'
+   'alpha.10/alpha.11 변환본에 적용할 수 있습니다. 이전 버전은 편집기 복구 스크립트도 적용하세요.\n'
+   '렌더링이 늦으면 출력 프레임을 건너뛰어 120Hz 게임 로직을 따라잡습니다. 실제 120FPS 출력을 보장하지 않습니다.\n'
+   'DLL SHA256: '+digest(directory/'LunetileVXA.dll')+'\n',encoding='utf-8')
+  archive(directory,path)
+
 def editor_fix_archive(path):
  with tempfile.TemporaryDirectory(prefix='vxa-editor-fix-',dir=path.parent) as tmp:
   directory=Path(tmp)
@@ -84,8 +99,10 @@ if __name__=='__main__':
  for name in ('source','runtime','output','diagnostics'):ap.add_argument(name,type=Path)
  ap.add_argument('--zip',action='store_true')
  ap.add_argument('--editor-fix',type=Path)
+ ap.add_argument('--runtime-patch',type=Path)
  args=ap.parse_args();package(args.source,args.runtime,args.output,args.diagnostics)
  if args.zip:
   archive(args.output,args.output.parent/'lunetile-template-vxa-windows-x86.zip')
   archive(args.diagnostics,args.diagnostics.parent/'lunetile-template-vxa-diagnostics.zip')
  if args.editor_fix:editor_fix_archive(args.editor_fix)
+ if args.runtime_patch:runtime_patch_archive(args.output,args.runtime_patch)

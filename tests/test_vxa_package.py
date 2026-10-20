@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
-from package_template_vxa import package,expand_map,archive,digest,editor_fix_archive
+from package_template_vxa import package,expand_map,archive,digest,editor_fix_archive,runtime_patch_archive
 
 RUBY=ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe'
 class VXAPackageTests(unittest.TestCase):
@@ -22,6 +22,14 @@ class VXAPackageTests(unittest.TestCase):
   (self.runtime/'verification-vxa.json').write_text(json.dumps({'passed':True,'runtime_sha256':'wrong'}))
   with self.assertRaises(ValueError):package(self.source,self.runtime,self.root/'out',self.root/'diag')
   self.assertFalse((self.root/'out').exists())
+ def test_runtime_patch_preserves_project_data(self):
+  for name in ('LunetileVXA.dll','LICENSE','Game.ini','Save01.rvdata2'):(self.source/name).write_bytes(b'fixture')
+  (self.source/'licenses').mkdir();(self.source/'licenses/notice.txt').write_bytes(b'notice')
+  target=self.root/'patch.zip';runtime_patch_archive(self.source,target)
+  with zipfile.ZipFile(target) as zipped:
+   self.assertEqual(set(zipped.namelist()),{'LunetileVXA.dll','LICENSE','licenses/notice.txt','README.txt'})
+   self.assertEqual(zipped.read('LunetileVXA.dll'),b'fixture')
+   self.assertIn(digest(self.source/'LunetileVXA.dll'),zipped.read('README.txt').decode('utf-8'))
  def test_packaging_excludes_private_files_and_checks_zip(self):
   for name in ('Game.exe','Game.ini','Game.rvproj2','Save01.rvdata2','RGSS301.dll','private.log'):(self.source/name).write_bytes(b'source')
   (self.source/'Data').mkdir();(self.source/'Data/Scripts.rvdata2').write_bytes(b'scripts')

@@ -53,15 +53,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
           python -X utf8 -B scripts/package_template.py template-xp build/lunetile-windows-x86 build/lunetile-template-xp-windows-x86 build/lunetile-template-xp-diagnostics
           if ($LASTEXITCODE -ne 0) { throw 'Template packaging failed' }
-          python -X utf8 -B scripts/package_template_vxa.py template-vxa build/runtime-native/bin/Release build/lunetile-template-vxa-windows-x86 build/lunetile-template-vxa-diagnostics --editor-fix build/lunetile-vxa-editor-fix.zip
+          python -X utf8 -B scripts/package_template_vxa.py template-vxa build/runtime-native/bin/Release build/lunetile-template-vxa-windows-x86 build/lunetile-template-vxa-diagnostics --editor-fix build/lunetile-vxa-editor-fix.zip --runtime-patch build/lunetile-vxa-speed-fix.zip
           if ($LASTEXITCODE -ne 0) { throw 'VX Ace template packaging failed' }
           New-Item -ItemType Directory dist | Out-Null
           Compress-Archive -Path build/lunetile-template-xp-windows-x86 -DestinationPath dist/lunetile-template-xp-windows-x86.zip
           Compress-Archive -Path build/lunetile-template-xp-diagnostics -DestinationPath dist/lunetile-template-xp-diagnostics.zip
           Compress-Archive -Path build/lunetile-template-vxa-windows-x86 -DestinationPath dist/lunetile-template-vxa-windows-x86.zip
           Compress-Archive -Path build/lunetile-template-vxa-diagnostics -DestinationPath dist/lunetile-template-vxa-diagnostics.zip
-          Copy-Item build/lunetile-vxa-editor-fix.zip dist/
-          $checksums = foreach ($asset in @('lunetile-template-xp-windows-x86.zip','lunetile-template-xp-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip')) {
+          Copy-Item build/lunetile-vxa-editor-fix.zip,build/lunetile-vxa-speed-fix.zip dist/
+          $checksums = foreach ($asset in @('lunetile-template-xp-windows-x86.zip','lunetile-template-xp-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip','lunetile-vxa-speed-fix.zip')) {
             $hash = (Get-FileHash (Join-Path dist $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $asset"
           }
@@ -123,6 +123,10 @@ jobs:
 
           Source commit: $SOURCE_COMMIT
 
+          Fixes slow game logic under heavy rendering at 120Hz by skipping overdue output frames. Actual 120FPS rendering is not guaranteed.
+          Existing VX Ace projects: close the game and editor, back up your project, then replace only LunetileVXA.dll beside Game.exe using lunetile-vxa-speed-fix.zip. Data, Saves and Game.ini are not included in this patch.
+          Local stock VX Ace movement measured 11.25 tiles in approximately 3.02 seconds at each 40/60/120FPS setting after the fix; the previous 120FPS setting took 8.32 seconds. These local measurements are separate from CI results.
+
           XP template naming now matches VX Ace: source template-xp/, game lunetile-template-xp-windows-x86.zip, diagnostics lunetile-template-xp-diagnostics.zip.
           Download lunetile-template-xp-windows-x86.zip for the converted game project, Game.exe, the newly built Lunetile.dll, a short README and license notices.
           Game.ini selects Library=Lunetile.dll. The original RGSS DLL is not included; RGSS exports and save paths remain compatible.
@@ -134,7 +138,7 @@ jobs:
           New VX Ace saves use Saves/LunetileVXA and imported saves use Saves/Import. The original RGSS301.dll, personal saves and logs are excluded.
           Editor-save fix: the Main bootstrap restores Library=LunetileVXA.dll and relaunches once if the editor selects its original runtime. Both the INI reset and original DLL overwrite were reproduced with the installed editor.
           Existing alpha.9 projects: download lunetile-vxa-editor-fix.zip and follow README.txt to insert the recovery script immediately above Main. Do not overwrite your Data or Saves with the full template.
-          SHA256SUMS.txt verifies all five ZIPs. Development documents and historical records remain in the source repository.
+          SHA256SUMS.txt verifies all six ZIPs. Development documents and historical records remain in the source repository.
           Uses a 1280x720 widescreen canvas with adapted stock maps, menus, dialogue and battle UI.
           Resize/maximize the window or use Alt+Enter for aspect-preserving full screen.
           Runs stock game logic at 120Hz with default 60FPS output. Choose 40/60/120FPS in the in-game display settings.
@@ -149,5 +153,5 @@ jobs:
           Extract XP to an ASCII path on English Windows. VX Ace supports Unicode extraction paths. Full gameplay, rendering, audio, and endurance acceptance were not run for this CI build.
           The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
           EOF
-          gh release create "$RELEASE_TAG" lunetile-template-xp-windows-x86.zip lunetile-template-xp-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip lunetile-vxa-editor-fix.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" lunetile-template-xp-windows-x86.zip lunetile-template-xp-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip lunetile-vxa-editor-fix.zip lunetile-vxa-speed-fix.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest=false

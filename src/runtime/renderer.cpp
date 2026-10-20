@@ -412,6 +412,12 @@ VALUE should_render(VALUE){
     if(GetCurrentThreadId()!=renderer.owner)rb_raise(rb_eThreadError,"Graphics requires the game thread");
     auto& r=renderer;if(!r.refresh.high())return Qtrue;
     if(!r.refresh.next())return Qfalse;
+    // Catch up simulation ticks before spending more time on an overdue frame.
+    LARGE_INTEGER now{};QueryPerformanceCounter(&now);
+    if(r.frequency.QuadPart && now.QuadPart-r.deadline.QuadPart >= r.frequency.QuadPart/r.rate){
+        ++r.refresh.dropped;
+        return Qfalse;
+    }
     char failure[256]{};bool ready=false;
     {try{r.initialize();ready=WaitForSingleObject(r.frame_latency,0)==WAIT_OBJECT_0;}catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}}
     if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);
