@@ -61,3 +61,27 @@ The map and data tests run the pinned Ruby executable when available; otherwise 
 The native harness records current DLL checks in `verification-vxa.json`; XP results and historical evidence do not certify a new VXA build.
 Passing the harness does not by itself prove a complete gameplay campaign, every stock event, movie playback, visual/audio parity or arbitrary plugin compatibility.
 See [VALIDATION.md](VALIDATION.md) and the generated report for performed checks and remaining limitations.
+
+## Rendering performance
+
+VXA Table objects track an instance identity, revision and the latest 64 cell changes without changing their Marshal bytes. Each Tilemap uses a native ring cache bounded by the visible tile range and 32 MiB. Pixel scrolling changes only the origin; tile scrolling refreshes entering rows/columns. Cell edits refresh affected tiles and table-edge dependents; history overflow, resized/replaced tables and flags changes refresh the visible range. A1 animation refreshes geometry without rereading map cells.
+
+Tile geometry and sheet slots stay numeric: no Bitmap or GPU pointer is retained in the cache. Lower/upper batches expand directly to native draws using current bitmap contents and dimensions, preserving order and the 100,000-expanded-command limit. Sprites/windows keep their existing commands. Nonstandard Table/readers, bitmap subclasses and unsupported geometry use the previous Ruby tile path. Fully transparent Plane bitmaps skip drawing, and bitmap edits invalidate the transparency cache.
+
+VXA native tile draws use 32-byte position/UV instances, uploaded with one WRITE_DISCARD per output frame. Only consecutive quads with the same bitmap, clip and blend within one lower/upper command share a DrawInstanced call. Textures are never sorted. Ordinary drawing restores the original shader/input layout. CPU/GPU instance stores each hold at most 100,000 instances (3,200,000 bytes); F12 resets usage and shutdown releases resources. XP retains its existing drawing path.
+
+`Graphics.__timings` retains its existing fields. Internal diagnostic `Graphics.__render_parts` returns `[command_parse_ms, d3d_submit_ms]` for the last submitted frame; GPU timing remains asynchronous. These diagnostics measure successful DXGI submissions, not physical display scan-out.
+
+VXA-only `Graphics.__tile_batches` returns `[tile_quads, tile_draws, regular_draws, constant_maps, instance_maps, capacity_bytes_each, before_present_ms, present_ms]` for the last render attempt. Draw/map counts are actual API calls, capacity is logical CPU/GPU storage rather than driver residency, and the two time intervals sum to the existing render_ms. These internal diagnostics are not supported RGSS APIs.
+
+For sequential local comparison with the retained pre-cache DLL:
+
+```powershell
+python -X utf8 -B scripts/benchmark_runtime_vxa.py build/vxa-render-performance --baseline PATH_TO_BASELINE_LUNETILEVXA_DLL
+```
+
+The benchmark uses a disposable 40×23 starting map, idle/moving 30-second runs repeated three times per DLL, and 40/60FPS checks. It requires at least 118 submitted FPS at the 120FPS setting, 119–121Hz logic, no more than 2% missing output frames and command generation p95 at most 4ms. It also requires at least 30% lower mean command-generation-plus-parse time and 50% fewer Ruby allocations per presented frame, separately for idle and moving runs. GC time and cache reads/builds/bytes are recorded. This hardware-dependent performance gate is separate from CI correctness checks. See VALIDATION.md for the measured build and hashes.
+
+For D3D submission changes, use `--profile tile-d3d` with the retained pre-instancing DLL. The default remains `tile-cache` with its original gates. The D3D profile requires 30% lower mean submission time, 10% lower mean generation+parse+submission time, at most 5% higher total p95 for every paired repeat, at least 90% fewer tile draws and no more than 5% additional Ruby allocations per output frame. It also compares three 10-second alternating-texture runs per DLL; their total mean and paired p95 must not regress by more than 5%. GPU samples are counted once per valid unique sequence and are never added to CPU time.
+
+To update an existing alpha.10-or-later converted project, close the game and editor, back up the project, then replace only LunetileVXA.dll beside Game.exe using lunetile-vxa-speed-fix.zip. Data, Saves and Game.ini are not included in that patch.

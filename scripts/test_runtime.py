@@ -102,6 +102,7 @@ def main():
  reports.append(run(exe,dll,out/'refresh','',(ROOT/'tests/runtime_refresh.rb').read_bytes(),timeout=60,timing_profile='stock120'))
  for rate in (40,60,120):
   reports.append(run(exe,dll,out/f'render-timing-{rate}','',(ROOT/'tests/runtime_render_timing.rb').read_bytes(),timing_profile='stock120',render_rate=rate))
+ reports.append(run(exe,dll,out/'plane-transparency','',(ROOT/'tests/runtime_plane_transparency.rb').read_bytes()))
  from migrate_project import transform
  from rxdata import read
  entries=read((ROOT/'template-xp/Data/Scripts.rxdata').read_bytes())

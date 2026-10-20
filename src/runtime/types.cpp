@@ -3,13 +3,16 @@
 #include <cstring>
 #include <limits>
 #include <ruby.h>
+#include "table_data.h"
 
 namespace {
-struct TableData {
-    int dimensions, x, y, z;
-    size_t count;
-    int16_t* cells;
-};
+#ifdef RGSS_VXA
+uint64_t next_table_identity=0;
+void table_changed(TableData* table,int x=-1,int y=-1,int z=-1) {
+    ++table->revision;
+    table->history[table->revision%64]={table->revision,x,y,z,x<0};
+}
+#endif
 void table_free(void* pointer) {
     auto* table = static_cast<TableData*>(pointer);
     ruby_xfree(table->cells);
@@ -25,7 +28,11 @@ TableData* get_table(VALUE object) {
     return table;
 }
 VALUE table_alloc(VALUE klass) {
-    return TypedData_Wrap_Struct(klass, &table_type, ruby_xcalloc(1, sizeof(TableData)));
+    auto* data=static_cast<TableData*>(ruby_xcalloc(1, sizeof(TableData)));
+#ifdef RGSS_VXA
+    data->identity=++next_table_identity;
+#endif
+    return TypedData_Wrap_Struct(klass, &table_type, data);
 }
 size_t count_cells(int x, int y, int z) {
     if (x < 0 || y < 0 || z < 0) rb_raise(rb_eArgError, "Negative Table dimension");
@@ -51,7 +58,10 @@ VALUE table_resize(int argc, VALUE* argv, VALUE self) {
                    table->cells + (static_cast<size_t>(k) * table->y + j) * table->x,
                    std::min(x, table->x) * sizeof(int16_t));
     ruby_xfree(table->cells);
-    *table = {argc, x, y, z, count, cells};
+    table->dimensions=argc;table->x=x;table->y=y;table->z=z;table->count=count;table->cells=cells;
+#ifdef RGSS_VXA
+    table_changed(table);
+#endif
     return self;
 }
 VALUE table_copy(VALUE self, VALUE other) {
@@ -62,8 +72,11 @@ VALUE table_copy(VALUE self, VALUE other) {
     auto* cells = static_cast<int16_t*>(ruby_xcalloc(source->count ? source->count : 1, sizeof(int16_t)));
     memcpy(cells, source->cells, source->count * sizeof(int16_t));
     ruby_xfree(target->cells);
-    *target = *source;
+    target->dimensions=source->dimensions;target->x=source->x;target->y=source->y;target->z=source->z;target->count=source->count;
     target->cells = cells;
+#ifdef RGSS_VXA
+    table_changed(target);
+#endif
     return self;
 }
 bool cell_offset(TableData* table, int argc, VALUE* argv, size_t& index) {
@@ -85,6 +98,12 @@ VALUE table_set(int argc, VALUE* argv, VALUE self) {
     size_t index;
     if (!cell_offset(table, argc - 1, argv, index)) return Qnil;
     int value = NUM2INT(argv[argc - 1]);
+#ifdef RGSS_VXA
+    if(table->cells[index]!=static_cast<int16_t>(static_cast<uint16_t>(value))) {
+        int x=static_cast<int>(index%table->x),y=static_cast<int>(index/table->x%table->y),z=static_cast<int>(index/(static_cast<size_t>(table->x)*table->y));
+        table_changed(table,x,y,z);
+    }
+#endif
     table->cells[index] = static_cast<int16_t>(static_cast<uint16_t>(value));
     return argv[argc - 1];
 }
@@ -120,6 +139,11 @@ VALUE table_load(VALUE klass, VALUE bytes) {
 }
 }
 
+#ifdef RGSS_VXA
+const TableData* vxa_table_view(VALUE object) {
+    return rb_typeddata_is_kind_of(object,&table_type)?get_table(object):nullptr;
+}
+#endif
 void init_rgss_types() {
     VALUE table = rb_define_class("Table", rb_cObject);
     rb_define_alloc_func(table, table_alloc);

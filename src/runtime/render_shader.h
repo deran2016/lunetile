@@ -16,6 +16,13 @@ Vertex vs(uint id:SV_VertexID){
  Vertex v;v.position=float4((position.x+rotated.x)*2/resolution.x-1,1-(position.y+rotated.y)*2/resolution.y,0,1);
  v.uv=source.xy+float2(extra.y>0?1-base.x:base.x,base.y)*source.zw;v.local=base*position.zw;return v;
 }
+Vertex vs_tiles(uint id:SV_VertexID,float4 tile_position:TILE_POSITION,float4 tile_source:TILE_SOURCE){
+ float2 corners[6]={float2(0,0),float2(1,0),float2(0,1),float2(0,1),float2(1,0),float2(1,1)};
+ float2 base=corners[id];float2 local=(base*tile_position.zw-origin.xy)*transform.xy;
+ float2 rotated=float2(local.x*transform.z-local.y*transform.w,local.x*transform.w+local.y*transform.z);
+ Vertex v;v.position=float4((tile_position.x+rotated.x)*2/resolution.x-1,1-(tile_position.y+rotated.y)*2/resolution.y,0,1);
+ v.uv=tile_source.xy+float2(extra.y>0?1-base.x:base.x,base.y)*tile_source.zw;v.local=base*tile_position.zw;return v;
+}
 float4 ps(Vertex v):SV_TARGET{
  if(extra.x==3)return color;
  float4 value=image.Sample(nearest,v.uv);

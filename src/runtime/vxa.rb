@@ -9,6 +9,7 @@ def rgss_main
       break
     rescue RGSSReset
       RGSSXP.reset_display
+      Graphics.__reset
       Audio.bgm_stop
       Audio.bgs_stop
       Audio.me_stop

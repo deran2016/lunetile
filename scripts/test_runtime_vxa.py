@@ -8,7 +8,7 @@ from rxdata import read
 
 ROOT=Path(__file__).resolve().parents[1]
 
-def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout=90,saves=None):
+def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout=90,saves=None,data=None):
  output=output.resolve();output.mkdir(parents=True,exist_ok=False)
  dll=dll or ROOT/'build/runtime-native/bin/Release/LunetileVXA.dll'
  artifact=inspect(dll,engine='vxa')
@@ -19,7 +19,7 @@ def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout
  if high:ini+=f'TimingProfile=stock120\nRenderRate={rate}\n'
  if wide:ini+='Width=1280\nHeight=720\n'
  (output/'Game.ini').write_text(ini,encoding='utf-8')
- if rtp:shutil.copytree(ROOT/'template-vxa/Data',output/'Data')
+ if rtp:shutil.copytree(data or ROOT/'template-vxa/Data',output/'Data')
  if saves:shutil.copytree(saves,output/'Saves')
  environment=os.environ.copy();environment['LUNETILE_TEST_BACKGROUND']='1'
  process=subprocess.Popen([str(output/'Game.exe')],cwd=output,env=environment)
@@ -60,6 +60,11 @@ File.write('runtime-complete.txt','VXA wide refresh')
 """,high=True,wide=True,rate=rate)
  run(out/'한글-경로',smoke)
  run(out/'features',(ROOT/'tests/runtime_vxa_features.rb').read_bytes())
+ run(out/'tilemap',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_tilemap.rb').read_bytes(),timeout=180)
+ run(out/'native-cache',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_cache.rb').read_bytes())
+ run(out/'tile-d3d',(ROOT/'tests/runtime_vxa_d3d.rb').read_bytes(),timeout=180)
+ run(out/'plane',(ROOT/'tests/runtime_plane_transparency.rb').read_bytes())
+ run(out/'render-reset',(ROOT/'tests/runtime_vxa_render_reset.rb').read_bytes())
  for rate in (40,60,120):
   run(out/f'render-timing-{rate}',(ROOT/'tests/runtime_render_timing.rb').read_bytes(),high=True,wide=True,rate=rate)
  if args.stock:
@@ -81,7 +86,12 @@ File.write('runtime-complete.txt','save restored in new process')
   run(out/'movement-60',movement,rtp=True)
   for rate in (40,60,120):run(out/f'movement-120-{rate}',movement,rtp=True,wide=True,high=True,rate=rate)
  artifact=inspect(ROOT/'build/runtime-native/bin/Release/LunetileVXA.dll',engine='vxa')
- report={'passed':True,'runtime_sha256':artifact['sha256'],'scope':'Original Unicode launcher, independent DLL load, basic rendering, 544x416 and 1280x720, 120Hz logic and 40/60/120FPS output, archive and graphics API regression; no full campaign or pixel/audio parity certification','cases':['basic','wide-40','wide-60','wide-120','한글-경로','features']}
+ report={'passed':True,'runtime_sha256':artifact['sha256'],'scope':'Original Unicode launcher, independent DLL load, basic rendering, 544x416 and 1280x720, 120Hz logic and 40/60/120FPS output, archive and graphics API regression; no full campaign or pixel/audio parity certification','cases':['basic','wide-40','wide-60','wide-120','한글-경로','features','tilemap','plane','render-reset']}
+ report['tilemap_parity']=json.loads((out/'tilemap/tilemap-result.json').read_text())
+ report['native_cache']=json.loads((out/'native-cache/cache-result.json').read_text())
+ report['cases'].append('native-cache')
+ report['tile_d3d']=json.loads((out/'tile-d3d/d3d-result.json').read_text())
+ report['cases'].append('tile-d3d')
  if args.stock:
   report['stock_scenarios']=[json.loads((out/name/'vxa-stock-result.json').read_text(encoding='utf-8')) for name in ['stock-60','stock-120-40','stock-120-60','stock-120-120']]
   report['process_restart_save_load']=True

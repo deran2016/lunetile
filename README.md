@@ -55,6 +55,8 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 | XP | `template-xp/` | `lunetile-template-xp-windows-x86.zip` | `lunetile-template-xp-diagnostics.zip` |
 | VX Ace | `template-vxa/` | `lunetile-template-vxa-windows-x86.zip` | `lunetile-template-vxa-diagnostics.zip` |
 
+**VX Ace 렌더링 최적화:** [v0.1.0-alpha.13](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.13)에 로컬 검증을 통과한 DLL 교체 ZIP·전체 VXA 템플릿·진단 ZIP을 제공합니다. 기존 변환본은 백업 후 `lunetile-vxa-speed-fix.zip`의 `LunetileVXA.dll`만 `Game.exe` 옆에 교체하세요. 표시 범위 캐시와 D3D 인스턴싱을 적용했으며, 기본 맵의 타일 Draw는 3,936회에서 1회로 줄었습니다. 비교 기준·실측값·한계는 [검증 기록](docs/VALIDATION.md)과 [릴리스 설명](docs/releases/v0.1.0-alpha.13.md)에 있습니다.
+
 [GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-template-xp-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP을 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 `Data`, `Game.ini`, 프로젝트 파일과 새 Lunetile DLL이 들어 있으므로 Python 설치나 수동 변환이 필요하지 않습니다.
 
 **필수 설치:** Windows 11 x64, Microsoft Visual C++ x86 런타임, **RPG Maker XP Standard RTP**. 제공된 템플릿의 Graphics·Audio 폴더는 비어 있으며 `RTP1=Standard`를 사용합니다. RTP는 ZIP에 포함하지 않습니다. 영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지로 표현할 수 없는 경로를 읽지 못합니다.

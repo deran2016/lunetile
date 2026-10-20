@@ -371,12 +371,41 @@ Canvas* canvas_get(VALUE object) {
     if (canvas->disposed || !canvas->pixels) rb_raise(graphics_error, "disposed bitmap");
     return canvas;
 }
+#ifdef RGSS_VXA
+Canvas* canvas_optional(VALUE object) {
+    if(NIL_P(object))return nullptr;
+    auto* canvas=raw_canvas(object);
+    return canvas->disposed?nullptr:canvas_get(object);
+}
+namespace {
+VALUE canvas_pixel_bytes(VALUE self) {
+    auto* c=canvas_get(self);
+    VALUE result=rb_str_new(reinterpret_cast<const char*>(c->pixels),static_cast<long>(static_cast<size_t>(c->width)*c->height*4));
+    RB_GC_GUARD(self);return result;
+}
+}
+#endif
 void canvas_changed(Canvas* canvas, int left, int top, int right, int bottom) {
     if (left >= right || top >= bottom) return;
+    canvas->transparency_known=false;
     RECT rect{left,top,right,bottom};
     if (!canvas->dirty) canvas->changed=rect;
     else UnionRect(&canvas->changed,&canvas->changed,&rect);
     canvas->dirty=true;
+}
+namespace {
+VALUE canvas_transparent(VALUE self) {
+    auto* canvas = canvas_get(self);
+    if (!canvas->transparency_known) {
+        canvas->transparent = true;
+        size_t bytes = static_cast<size_t>(canvas->width) * canvas->height * 4;
+        for (size_t i = 3; i < bytes; i += 4) {
+            if (canvas->pixels[i]) { canvas->transparent = false; break; }
+        }
+        canvas->transparency_known = true;
+    }
+    return canvas->transparent ? Qtrue : Qfalse;
+}
 }
 void init_bitmap() {
     graphics_error = rb_define_class("RGSSError",rb_eStandardError);
@@ -396,8 +425,10 @@ void init_bitmap() {
     rb_define_method(bitmap_class,"set_pixel",RUBY_METHOD_FUNC(canvas_set_pixel),3);
     rb_define_method(bitmap_class,"dispose",RUBY_METHOD_FUNC(canvas_dispose),0);
     rb_define_method(bitmap_class,"disposed?",RUBY_METHOD_FUNC(canvas_disposed),0);
+    rb_define_method(bitmap_class,"__transparent?",RUBY_METHOD_FUNC(canvas_transparent),0);
     rb_define_method(bitmap_class,"hue_change",RUBY_METHOD_FUNC(canvas_hue),1);
 #ifdef RGSS_VXA
+    rb_define_method(bitmap_class,"__pixel_bytes",RUBY_METHOD_FUNC(canvas_pixel_bytes),0);
     rb_define_method(bitmap_class,"__blur",RUBY_METHOD_FUNC(vxa_blur),0);
     rb_define_method(bitmap_class,"__radial_blur",RUBY_METHOD_FUNC(vxa_radial_blur),2);
     rb_define_singleton_method(rb_define_class("Font",rb_cObject),"exist?",RUBY_METHOD_FUNC(font_exists),1);

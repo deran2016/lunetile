@@ -30,6 +30,14 @@ class VXAPackageTests(unittest.TestCase):
    self.assertEqual(set(zipped.namelist()),{'LunetileVXA.dll','LICENSE','licenses/notice.txt','README.txt'})
    self.assertEqual(zipped.read('LunetileVXA.dll'),b'fixture')
    self.assertIn(digest(self.source/'LunetileVXA.dll'),zipped.read('README.txt').decode('utf-8'))
+ def test_performance_report_must_match_verified_dll(self):
+  (self.runtime/'LunetileVXA.dll').write_bytes(b'runtime')
+  expected=digest(self.runtime/'LunetileVXA.dll')
+  (self.runtime/'verification-vxa.json').write_text(json.dumps({'passed':True,'runtime_sha256':expected}))
+  performance=self.root/'performance.json'
+  for report in ({'passed':True,'candidate_sha256':'wrong'},{'passed':False,'candidate_sha256':expected}):
+   performance.write_text(json.dumps(report))
+   with self.assertRaisesRegex(ValueError,'Performance report'):package(self.source,self.runtime,self.root/'out',self.root/'diag',performance=performance)
  def test_packaging_excludes_private_files_and_checks_zip(self):
   for name in ('Game.exe','Game.ini','Game.rvproj2','Save01.rvdata2','RGSS301.dll','private.log'):(self.source/name).write_bytes(b'source')
   (self.source/'Data').mkdir();(self.source/'Data/Scripts.rvdata2').write_bytes(b'scripts')
@@ -42,11 +50,14 @@ class VXAPackageTests(unittest.TestCase):
    shutil.copytree(source,target);shutil.copy2(dll,target/'LunetileVXA.dll')
    (target/'migration').mkdir();(target/'migration/manifest.json').write_text('{}')
   output,diag=self.root/'out',self.root/'diag'
+  performance=self.root/'performance.json'
+  performance.write_text(json.dumps({'passed':True,'candidate_sha256':digest(self.runtime/'LunetileVXA.dll')}))
   with patch('package_template_vxa.migrate',side_effect=convert),patch('package_template_vxa.expand_map',return_value={'size_after':[40,23,4]}):
-   hashes=package(self.source,self.runtime,output,diag)
+   hashes=package(self.source,self.runtime,output,diag,performance=performance)
   self.assertEqual(before,{p.relative_to(self.source):p.read_bytes() for p in self.source.rglob('*') if p.is_file()})
   self.assertNotIn('Save01.rvdata2',hashes);self.assertNotIn('RGSS301.dll',hashes)
   self.assertEqual(json.loads((diag/'SHA256SUMS.json').read_text()),hashes)
+  self.assertEqual((diag/'render-performance.json').read_bytes(),performance.read_bytes())
   archive(output,self.root/'game.zip')
   with zipfile.ZipFile(self.root/'game.zip') as zipped:self.assertEqual(set(zipped.namelist()),set(hashes))
   with self.assertRaises(ValueError):archive(output,self.root/'game.zip')

@@ -16,7 +16,7 @@ def expand_map(project,ruby,staging):
  map_id,x,y,nx,ny,sx,sy=json.loads(result.stdout);name=f'Map{map_id:03d}.rvdata2'
  return {'map':'Data/'+name,'size_before':[x,y,4],'size_after':[nx,ny,4],'start':[map_id,sx,sy],'sha256_before':before[name],'sha256_after':digest(project/'Data'/name)}
 
-def package(source,runtime,output,diagnostics):
+def package(source,runtime,output,diagnostics,*,performance=None):
  source,runtime,output,diagnostics=[Path(p).resolve() for p in (source,runtime,output,diagnostics)]
  for target in (output,diagnostics):
   if target.exists():raise ValueError('Output already exists; refusing to overwrite')
@@ -25,6 +25,9 @@ def package(source,runtime,output,diagnostics):
  dll=runtime/'LunetileVXA.dll'
  report=json.loads((runtime/'verification-vxa.json').read_text(encoding='utf-8'))
  if report.get('passed') is not True or report.get('runtime_sha256')!=digest(dll):raise ValueError('VX Ace runtime does not match passed verification')
+ if performance:
+  measured=json.loads(Path(performance).read_text(encoding='utf-8'))
+  if measured.get('passed') is not True or measured.get('candidate_sha256')!=digest(dll):raise ValueError('Performance report does not match passed runtime')
  selected=[source/name for name in ('Game.exe','Game.ini','Game.rvproj2')]
  for folder,extensions in ASSETS.items():selected.extend(p for p in (source/folder).rglob('*') if p.is_file() and p.suffix.lower() in extensions)
  for path in selected:
@@ -40,6 +43,7 @@ def package(source,runtime,output,diagnostics):
   diagnostic=staging/'diagnostics';diagnostic.mkdir()
   shutil.move(str(converted/'migration'),diagnostic/'migration')
   shutil.copy2(runtime/'verification-vxa.json',diagnostic/'verification-vxa.json')
+  if performance:shutil.copy2(performance,diagnostic/'render-performance.json')
   for name in ('abi_vxa.json','ruby.lock.json','dependencies.lock.json'):
    shutil.copy2(ROOT/'src/runtime'/name,diagnostic/name)
   shutil.copy2(ROOT/'LICENSE',converted/'LICENSE');shutil.copytree(ROOT/'licenses',converted/'licenses')
@@ -70,11 +74,12 @@ def runtime_patch_archive(project,path):
   for name in ('LunetileVXA.dll','LICENSE'):shutil.copy2(project/name,directory/name)
   shutil.copytree(project/'licenses',directory/'licenses')
   (directory/'README.txt').write_text(
-   'Lunetile VX Ace 120Hz speed fix\n\n'
+   'Lunetile VX Ace rendering and 120Hz speed fix\n\n'
    '게임과 편집기를 종료하고 변환본을 백업하세요.\n'
    'LunetileVXA.dll을 기존 Game.exe 옆에 복사하여 교체하세요.\n'
    'Data, Saves, Game.ini는 변경하지 않습니다. 전체 템플릿으로 기존 프로젝트를 덮어쓰지 마세요.\n'
-   'alpha.10/alpha.11 변환본에 적용할 수 있습니다. 이전 버전은 편집기 복구 스크립트도 적용하세요.\n'
+   'alpha.10 이상 변환본에 적용할 수 있습니다. 이전 버전은 편집기 복구 스크립트도 적용하세요.\n'
+   '타일 순회 캐시와 네이티브 D3D 인스턴스 배치로 CPU 처리와 Ruby 객체 할당을 줄였습니다.\n'
    '렌더링이 늦으면 출력 프레임을 건너뛰어 120Hz 게임 로직을 따라잡습니다. 실제 120FPS 출력을 보장하지 않습니다.\n'
    'DLL SHA256: '+digest(directory/'LunetileVXA.dll')+'\n',encoding='utf-8')
   archive(directory,path)
@@ -100,7 +105,8 @@ if __name__=='__main__':
  ap.add_argument('--zip',action='store_true')
  ap.add_argument('--editor-fix',type=Path)
  ap.add_argument('--runtime-patch',type=Path)
- args=ap.parse_args();package(args.source,args.runtime,args.output,args.diagnostics)
+ ap.add_argument('--performance-report',type=Path)
+ args=ap.parse_args();package(args.source,args.runtime,args.output,args.diagnostics,performance=args.performance_report)
  if args.zip:
   archive(args.output,args.output.parent/'lunetile-template-vxa-windows-x86.zip')
   archive(args.diagnostics,args.diagnostics.parent/'lunetile-template-vxa-diagnostics.zip')

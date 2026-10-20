@@ -6,12 +6,15 @@
 struct Canvas {
     int width, height;
     unsigned char* pixels;
-    bool disposed, dirty;
+    bool disposed, dirty, transparency_known, transparent;
     RECT changed;
     ID3D11Texture2D* texture;
     ID3D11ShaderResourceView* view;
 };
 Canvas* canvas_get(VALUE object);
+#ifdef RGSS_VXA
+Canvas* canvas_optional(VALUE object);
+#endif
 void canvas_changed(Canvas* canvas, int left, int top, int right, int bottom);
 void init_bitmap();
 void init_graphics();
