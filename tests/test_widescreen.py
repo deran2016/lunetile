@@ -6,7 +6,7 @@ from rxdata import read,write
 
 class WidescreenTests(unittest.TestCase):
  def setUp(self):
-  self.raw=(Path(__file__).resolve().parents[1]/'template/Data/Scripts.rxdata').read_bytes()
+  self.raw=(Path(__file__).resolve().parents[1]/'template-xp/Data/Scripts.rxdata').read_bytes()
   self.entries=read(self.raw)
 
  def test_stock_layout_is_opt_in_and_preserves_script_identity(self):

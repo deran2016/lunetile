@@ -31,7 +31,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 - UTF-8·CP949·CP932 프로젝트 데이터 처리와 기존 세이브 가져오기
 - 원본 보존을 전제로 한 프로젝트 변환, ABI 검사 및 회귀 검증 도구
 
-저장소의 `template/`에는 배포용으로 제공된 기본 게임 프로젝트가 있습니다. 원본 RGSS DLL과 개인 세이브는 포함하지 않습니다. 다른 게임을 변환하려면 사용 권한이 있는 원본 프로젝트를 별도로 준비해야 합니다. 기존 RGSSFramePacing 보조 DLL 구현, 실행기 시작 패치, 이벤트 인덱스 최적화도 포함하지 않습니다.
+저장소의 `template-xp/`에는 배포용으로 제공된 기본 게임 프로젝트가 있습니다. 원본 RGSS DLL과 개인 세이브는 포함하지 않습니다. 다른 게임을 변환하려면 사용 권한이 있는 원본 프로젝트를 별도로 준비해야 합니다. 기존 RGSSFramePacing 보조 DLL 구현, 실행기 시작 패치, 이벤트 인덱스 최적화도 포함하지 않습니다.
 
 ## 준비 사항
 
@@ -50,16 +50,21 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 
 ## 게임 프로젝트 다운로드와 자동 릴리스
 
-[GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-template-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP을 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 `Data`, `Game.ini`, 프로젝트 파일과 새 Lunetile DLL이 들어 있으므로 Python 설치나 수동 변환이 필요하지 않습니다.
+| 엔진 | 원본 템플릿 | 실행용 ZIP | 진단 ZIP |
+| --- | --- | --- | --- |
+| XP | `template-xp/` | `lunetile-template-xp-windows-x86.zip` | `lunetile-template-xp-diagnostics.zip` |
+| VX Ace | `template-vxa/` | `lunetile-template-vxa-windows-x86.zip` | `lunetile-template-vxa-diagnostics.zip` |
+
+[GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-template-xp-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP을 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 `Data`, `Game.ini`, 프로젝트 파일과 새 Lunetile DLL이 들어 있으므로 Python 설치나 수동 변환이 필요하지 않습니다.
 
 **필수 설치:** Windows 11 x64, Microsoft Visual C++ x86 런타임, **RPG Maker XP Standard RTP**. 제공된 템플릿의 Graphics·Audio 폴더는 비어 있으며 `RTP1=Standard`를 사용합니다. RTP는 ZIP에 포함하지 않습니다. 영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지로 표현할 수 없는 경로를 읽지 못합니다.
 
-- 원본 `template/`는 보존하고 별도 복사본만 변환합니다.
+- 원본 `template-xp/`는 보존하고 별도 복사본만 변환합니다.
 - 개인 세이브·로그·원본 RGSS DLL은 배포하지 않습니다. 새 저장은 `Saves/RGSSXP/`에 생성됩니다.
 - 게임 ZIP에는 프로젝트 파일·새 DLL·짧은 실행 안내·라이선스 고지만 포함합니다. 시작 맵은 원본의 지형과 시작 위치를 유지하며 **40×23칸(1280×736픽셀)**으로 확장됩니다.
-- 검증 결과·DLL 정보·변환 및 맵 확장 기록·파일별 해시·의존성 정보와 Ruby 패치는 별도 **`lunetile-template-diagnostics.zip`**에 있습니다. 게임 실행에는 필요하지 않습니다. 개발 문서와 과거 기록은 이 저장소에서 제공합니다.
-- `SHA256SUMS.txt`에는 두 ZIP의 해시가 있습니다. 템플릿 파일에 엔진의 MIT 라이선스가 새로 적용되는 것은 아닙니다.
-- `Get-FileHash lunetile-template-windows-x86.zip -Algorithm SHA256`으로 다운로드 해시를 비교할 수 있습니다.
+- 검증 결과·DLL 정보·변환 및 맵 확장 기록·파일별 해시·의존성 정보와 Ruby 패치는 별도 **`lunetile-template-xp-diagnostics.zip`**에 있습니다. 게임 실행에는 필요하지 않습니다. 개발 문서와 과거 기록은 이 저장소에서 제공합니다.
+- `SHA256SUMS.txt`에는 XP·VX Ace 실행/진단 ZIP 및 VX Ace 편집기 복구 ZIP의 해시가 있습니다. 템플릿 파일에 엔진의 MIT 라이선스가 새로 적용되는 것은 아닙니다.
+- `Get-FileHash lunetile-template-xp-windows-x86.zip -Algorithm SHA256`으로 다운로드 해시를 비교할 수 있습니다.
 
 [Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.
 
@@ -214,7 +219,7 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 ## 저장소 구조와 문서
 
 ```text
-template/      배포용 원본 게임 프로젝트 (변환 전)
+template-xp/      배포용 원본 게임 프로젝트 (변환 전)
 template-vxa/  배포용 VX Ace 원본 프로젝트 (변환 전)
 src/runtime/   C++·Ruby 엔진, ABI 정의, 의존성 lock 및 패치
 scripts/       빌드·변환·검사·성능 측정 도구
@@ -240,10 +245,10 @@ licenses/      외부 라이브러리 라이선스 고지
 
 기여 절차와 코드 규칙은 [AGENTS.md](AGENTS.md)를 확인하세요. 버그 제보에는 실행 환경, 재현 순서, 사용한 DLL의 SHA-256과 오류 내용을 포함해 주세요. 렌더링 문제에는 권리상 공유 가능한 화면을 첨부하면 도움이 됩니다.
 
-PR에는 변경 이유, 영향 범위와 수행한 검사를 적어 주세요. 승인된 `template/` 입력 외의 게임 원본·에셋·세이브·비밀 키는 첨부하거나 커밋하지 마세요. 호환성 변경에는 해당 동작을 검증하는 회귀 검사를 포함합니다.
+PR에는 변경 이유, 영향 범위와 수행한 검사를 적어 주세요. 승인된 `template-xp/` 입력 외의 게임 원본·에셋·세이브·비밀 키는 첨부하거나 커밋하지 마세요. 호환성 변경에는 해당 동작을 검증하는 회귀 검사를 포함합니다.
 
 ## 라이선스
 
 자체 코드는 [MIT 라이선스](LICENSE)입니다. Ruby 4.0.7과 내장 JSON 2.18.0, zlib 1.3.2, libogg 1.3.6, libvorbis 1.3.7은 각각의 라이선스를 따르며, 고지 원문은 `licenses/`에 있습니다. Windows API는 Windows SDK를 통해 사용합니다.
 
-승인된 `template/` 입력을 제외한 빌드 결과, 실행 파일, 게임 데이터·에셋·세이브, 원시 추적과 덤프는 `.gitignore`로 제외합니다. 게임 실행기와 리소스의 사용·배포 권한은 별도로 확인해야 합니다.
+승인된 `template-xp/` 입력을 제외한 빌드 결과, 실행 파일, 게임 데이터·에셋·세이브, 원시 추적과 덤프는 `.gitignore`로 제외합니다. 게임 실행기와 리소스의 사용·배포 권한은 별도로 확인해야 합니다.

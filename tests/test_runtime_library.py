@@ -17,7 +17,7 @@ class RuntimeLibraryTests(unittest.TestCase):
   staging=ROOT/'build/test-runtime-library';staging.mkdir(parents=True,exist_ok=True)
   with tempfile.TemporaryDirectory(dir=staging) as folder:
    root=Path(folder);source=root/'original';output=root/'converted'
-   shutil.copytree(ROOT/'template',source,ignore=shutil.ignore_patterns('*.dll','Saves','*.log'))
+   shutil.copytree(ROOT/'template-xp',source,ignore=shutil.ignore_patterns('*.dll','Saves','*.log'))
    for name in ('RGSS104E.dll','Lunetile.dll'):(source/name).write_bytes(b'unchanged source engine fixture')
    before={p.relative_to(source):hashlib.sha256(p.read_bytes()).hexdigest() for p in source.rglob('*') if p.is_file()}
    manifest=migrate(source,output,DLL,RUBY,data_encoding='UTF-8')

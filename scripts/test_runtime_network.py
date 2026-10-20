@@ -123,6 +123,6 @@ def verify(output,dll,exe,profiles=('stock120',None)):
 if __name__=='__main__':
  parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('output',type=Path)
  parser.add_argument('--dll',type=Path,default=ROOT/'build/runtime-native/bin/Release/Lunetile.dll')
- parser.add_argument('--exe',type=Path,default=ROOT/'template/Game.exe')
+ parser.add_argument('--exe',type=Path,default=ROOT/'template-xp/Game.exe')
  args=parser.parse_args();result=verify(args.output.resolve(),args.dll.resolve(),args.exe.resolve())
  print('REST/TCP/TLS actual-launcher fixture tests PASS; trusted TLS success tested='+str(result['trusted_tls_test']))

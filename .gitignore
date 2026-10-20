@@ -40,15 +40,15 @@ __pycache__/
 *.key
 
 # User-supplied release template; keep the original RGSS DLL and saves excluded.
-!template/Game.exe
-!template/Game.rxproj
-!template/Data/*.rxdata
-!template/Graphics/**/*.png
-!template/Graphics/**/*.jpg
-!template/Audio/**/*.wav
-!template/Audio/**/*.ogg
-!template/Audio/**/*.mp3
-!template/Audio/**/*.mid
+!template-xp/Game.exe
+!template-xp/Game.rxproj
+!template-xp/Data/*.rxdata
+!template-xp/Graphics/**/*.png
+!template-xp/Graphics/**/*.jpg
+!template-xp/Audio/**/*.wav
+!template-xp/Audio/**/*.ogg
+!template-xp/Audio/**/*.mp3
+!template-xp/Audio/**/*.mid
 
 # User-supplied VX Ace project; no original engine, personal saves or logs.
 !template-vxa/Game.exe

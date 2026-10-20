@@ -57,7 +57,7 @@ Template packaging expands only the converted `Map001.rxdata` from 20×15 to
 40×23 tiles (1280×736 pixels). Existing tiles and the starting position (9,7)
 are preserved. Added cells use the same ground tile 384 and empty upper layers.
 The wide viewport fills 1280×720; the camera has no horizontal travel and up to
-16 pixels of vertical travel. The original `template/` and ordinary project
+16 pixels of vertical travel. The original `template-xp/` and ordinary project
 conversion are unchanged.
 
 The converted system data version increases once so stock loading refreshes
@@ -71,7 +71,7 @@ The engine is named `Lunetile.dll`; the converted `Game.ini` selects it with
 `Game.exe` and use the converted INI; renaming a DLL alone does not update that
 setting. RGSS function names, project/save formats and save paths are unchanged.
 Reports, migration/map records, source/game hashes, dependency locks and the Ruby
-patch are in `lunetile-template-diagnostics.zip`, which is optional for playing.
+patch are in `lunetile-template-xp-diagnostics.zip`, which is optional for playing.
 `SHA256SUMS.txt` is a separate Release attachment covering both ZIPs. Development
 documentation and historical records remain in the repository.
 

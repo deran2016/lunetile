@@ -11,7 +11,7 @@ class TemplateMapTests(unittest.TestCase):
   root=ROOT/'build/test-template-map';root.mkdir(parents=True,exist_ok=True)
   self.temp=tempfile.TemporaryDirectory(dir=root);self.addCleanup(self.temp.cleanup)
   self.staging=Path(self.temp.name);self.project=self.staging/'project';(self.project/'Data').mkdir(parents=True)
-  for name in ('Map001','System'):shutil.copy2(ROOT/f'template/Data/{name}.rxdata',self.project/f'Data/{name}.rxdata')
+  for name in ('Map001','System'):shutil.copy2(ROOT/f'template-xp/Data/{name}.rxdata',self.project/f'Data/{name}.rxdata')
   self.declarations=['module RPG; end']
   for name,fields in json.loads((ROOT/'src/runtime/rpg_schema.json').read_text()).items():
    self.declarations.append('class '+name+'; attr_accessor '+','.join(':'+field for field in fields)+'; end')

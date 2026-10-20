@@ -59,11 +59,11 @@ def package(source,runtime,output,diagnostics):
   shutil.copy2(runtime/'LICENSE',game/'LICENSE')
   shutil.copytree(runtime/'licenses',game/'licenses')
   (game/'README.txt').write_text(
-   'Lunetile - converted template project\n\n'
+   'Lunetile XP - converted template project\n\n'
    '실행: 이 폴더를 풀고 Game.exe를 실행하세요. Python이나 별도 변환은 필요하지 않습니다.\n'
    '엔진: Lunetile.dll (Game.ini의 Library 설정으로 선택). 원본 RGSS DLL은 포함하지 않습니다.\n'
    '필수: Windows 11 x64, Microsoft Visual C++ x86 런타임, RPG Maker XP Standard RTP.\n'
-   '원본 template은 RTP 리소스를 사용합니다. RTP는 이 ZIP에 포함하지 않습니다.\n'
+   '원본 template-xp는 RTP 리소스를 사용합니다. RTP는 이 ZIP에 포함하지 않습니다.\n'
    '영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지 밖의 경로를 지원하지 않습니다.\n'
    '화면: 1280x720 와이드, 시작 맵 40x23칸. 창 크기 조절/최대화, Alt+Enter 전체 화면.\n'
    '출력: 기본 60FPS. 게임 메뉴 끝의 화면 설정에서 40/60/120FPS를 선택하고 저장할 수 있습니다. 로직은 120Hz입니다.\n'
@@ -72,7 +72,7 @@ def package(source,runtime,output,diagnostics):
    'Game.rxproj와 Data는 변환된 프로젝트이며 기본 XP 스크립트를 덮어쓰면 호환 처리가 사라질 수 있습니다.\n\n'
    '개발용 통신 API: REST/JSON 및 TCP/TLS. 스크립트가 명시적으로 호출하기 전에는 서버에 접속하지 않습니다.\n'
    '사용법: https://github.com/deran2016/lunetile/blob/main/docs/NETWORKING.md\n\n'
-   '검증 결과·변환 기록·파일 해시: 같은 Release의 lunetile-template-diagnostics.zip (실행에는 불필요).\n'
+   '검증 결과·변환 기록·파일 해시: 같은 Release의 lunetile-template-xp-diagnostics.zip (실행에는 불필요).\n'
    '개발 문서·소스: https://github.com/deran2016/lunetile\n'
    'Experimental build; full gameplay/rendering/audio acceptance is not certified.\n'
    'Lunetile code: MIT. Template game files are not relicensed by the engine license.\n'

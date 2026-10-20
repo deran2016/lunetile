@@ -18,7 +18,7 @@ def verify(output):
    ('unit',[sys.executable,'-X','utf8','-B','-m','unittest','discover','-s','tests','-v']),
    ('interpreter',[str(ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe'),'--disable-gems','tests/runtime_ruby.rb']),
    ('display-geometry',[str(ROOT/'build/runtime-native/bin/Release/display_geometry_test.exe')]),
-   ('launcher',[sys.executable,'-X','utf8','-B','scripts/test_runtime.py','template/Game.exe',str(ROOT/'build/runtime-native/bin/Release/Lunetile.dll'),str(output/'launcher-smoke')]),
+   ('launcher',[sys.executable,'-X','utf8','-B','scripts/test_runtime.py','template-xp/Game.exe',str(ROOT/'build/runtime-native/bin/Release/Lunetile.dll'),str(output/'launcher-smoke')]),
    ('network',[sys.executable,'-X','utf8','-B','scripts/test_runtime_network.py',str(output/'network')]),
   ]
   for name,command in steps:

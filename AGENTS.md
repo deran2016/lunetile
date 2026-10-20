@@ -11,7 +11,7 @@ Lunetile is the public project name; retain legacy RGSSXP identifiers where requ
 - `docs/VALIDATION.md`: independent-build evidence; `docs/history/`: earlier implementation and acceptance records.
 - `licenses/`: upstream notices. `build/`: ignored downloads, binaries, and local verification outputs.
 
-`template/` is the user-supplied release project. Its launcher, project file, data, and game assets are the explicit exception to ignored game inputs. Never commit its original RGSS DLL, personal saves, logs, or unrelated proprietary files. Preserve template inputs; package only converted copies.
+`template-xp/` is the user-supplied release project. Its launcher, project file, data, and game assets are the explicit exception to ignored game inputs. Never commit its original RGSS DLL, personal saves, logs, or unrelated proprietary files. Preserve template inputs; package only converted copies.
 
 ## Build, Test, and Development Commands
 

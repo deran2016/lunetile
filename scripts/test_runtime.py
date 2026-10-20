@@ -102,13 +102,13 @@ def main():
  reports.append(run(exe,dll,out/'refresh','',(ROOT/'tests/runtime_refresh.rb').read_bytes(),timeout=60,timing_profile='stock120'))
  from migrate_project import transform
  from rxdata import read
- entries=read((ROOT/'template/Data/Scripts.rxdata').read_bytes())
+ entries=read((ROOT/'template-xp/Data/Scripts.rxdata').read_bytes())
  for high in (False,True):
   replacements,_=transform(entries,high_refresh=high)
   definitions=b'\n'.join(replacements.get(i,e.source()) for i,e in enumerate(entries) if e.name!=b'Main')
   helper=(ROOT/'src/runtime/stock_timing.rb').read_bytes() if high else b''
   timing_source=definitions+b'\n'+helper+b'\n'+(ROOT/'tests/runtime_timing_compare.rb').read_bytes()
-  reports.append(run(exe,dll,out/('timing-120' if high else 'timing-40'),'',timing_source,data=ROOT/'template/Data',timeout=40,timing_profile='stock120' if high else None))
+  reports.append(run(exe,dll,out/('timing-120' if high else 'timing-40'),'',timing_source,data=ROOT/'template-xp/Data',timeout=40,timing_profile='stock120' if high else None))
  reports.append(run(exe,dll,out/'input-errors','',(ROOT/'tests/runtime_input_errors.rb').read_bytes()))
  for encoding in ('UTF-8','CP949','CP932'):
   reports.append(run(exe,dll,out/('text-'+encoding),'',(ROOT/'tests/runtime_text.rb').read_bytes()+source,data_encoding=encoding))

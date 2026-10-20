@@ -51,17 +51,17 @@ jobs:
         run: |
           python -X utf8 -B scripts/package_runtime.py build/ci-verification build/lunetile-windows-x86
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
-          python -X utf8 -B scripts/package_template.py template build/lunetile-windows-x86 build/lunetile-template-windows-x86 build/lunetile-template-diagnostics
+          python -X utf8 -B scripts/package_template.py template-xp build/lunetile-windows-x86 build/lunetile-template-xp-windows-x86 build/lunetile-template-xp-diagnostics
           if ($LASTEXITCODE -ne 0) { throw 'Template packaging failed' }
           python -X utf8 -B scripts/package_template_vxa.py template-vxa build/runtime-native/bin/Release build/lunetile-template-vxa-windows-x86 build/lunetile-template-vxa-diagnostics --editor-fix build/lunetile-vxa-editor-fix.zip
           if ($LASTEXITCODE -ne 0) { throw 'VX Ace template packaging failed' }
           New-Item -ItemType Directory dist | Out-Null
-          Compress-Archive -Path build/lunetile-template-windows-x86 -DestinationPath dist/lunetile-template-windows-x86.zip
-          Compress-Archive -Path build/lunetile-template-diagnostics -DestinationPath dist/lunetile-template-diagnostics.zip
+          Compress-Archive -Path build/lunetile-template-xp-windows-x86 -DestinationPath dist/lunetile-template-xp-windows-x86.zip
+          Compress-Archive -Path build/lunetile-template-xp-diagnostics -DestinationPath dist/lunetile-template-xp-diagnostics.zip
           Compress-Archive -Path build/lunetile-template-vxa-windows-x86 -DestinationPath dist/lunetile-template-vxa-windows-x86.zip
           Compress-Archive -Path build/lunetile-template-vxa-diagnostics -DestinationPath dist/lunetile-template-vxa-diagnostics.zip
           Copy-Item build/lunetile-vxa-editor-fix.zip dist/
-          $checksums = foreach ($asset in @('lunetile-template-windows-x86.zip','lunetile-template-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip')) {
+          $checksums = foreach ($asset in @('lunetile-template-xp-windows-x86.zip','lunetile-template-xp-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip')) {
             $hash = (Get-FileHash (Join-Path dist $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $asset"
           }
@@ -69,7 +69,7 @@ jobs:
       - name: Upload release assets
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: lunetile-template-windows-x86
+          name: lunetile-release-assets
           path: dist/*
           if-no-files-found: error
       - name: Upload build diagnostics
@@ -107,7 +107,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: lunetile-template-windows-x86
+          name: lunetile-release-assets
           path: dist
       - name: Publish experimental binaries
         env:
@@ -123,11 +123,12 @@ jobs:
 
           Source commit: $SOURCE_COMMIT
 
-          Download lunetile-template-windows-x86.zip for the converted game project, Game.exe, the newly built Lunetile.dll, a short README and license notices.
+          XP template naming now matches VX Ace: source template-xp/, game lunetile-template-xp-windows-x86.zip, diagnostics lunetile-template-xp-diagnostics.zip.
+          Download lunetile-template-xp-windows-x86.zip for the converted game project, Game.exe, the newly built Lunetile.dll, a short README and license notices.
           Game.ini selects Library=Lunetile.dll. The original RGSS DLL is not included; RGSS exports and save paths remain compatible.
           Extract this game ZIP and run Game.exe. No Python, manual migration or diagnostics ZIP is required.
           The starting map is expanded to 40x23 tiles (1280x736 pixels), filling the 1280x720 canvas.
-          Optional lunetile-template-diagnostics.zip contains verification, DLL information, migration/map changes, source/game file hashes, dependency locks and the Ruby port patch.
+          Optional lunetile-template-xp-diagnostics.zip contains verification, DLL information, migration/map changes, source/game file hashes, dependency locks and the Ruby port patch.
           VX Ace: lunetile-template-vxa-windows-x86.zip contains the separate LunetileVXA.dll and converted template-vxa project. It requires RPG Maker VX Ace RTP, which is not bundled.
           VX Ace diagnostics are in lunetile-template-vxa-diagnostics.zip; its verification-vxa.json records the actual checks for this DLL. XP test results do not certify VX Ace gameplay.
           New VX Ace saves use Saves/LunetileVXA and imported saves use Saves/Import. The original RGSS301.dll, personal saves and logs are excluded.
@@ -148,5 +149,5 @@ jobs:
           Extract XP to an ASCII path on English Windows. VX Ace supports Unicode extraction paths. Full gameplay, rendering, audio, and endurance acceptance were not run for this CI build.
           The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
           EOF
-          gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip lunetile-template-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip lunetile-vxa-editor-fix.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" lunetile-template-xp-windows-x86.zip lunetile-template-xp-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip lunetile-vxa-editor-fix.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest=false
