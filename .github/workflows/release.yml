@@ -53,14 +53,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
           python -X utf8 -B scripts/package_template.py template build/lunetile-windows-x86 build/lunetile-template-windows-x86 build/lunetile-template-diagnostics
           if ($LASTEXITCODE -ne 0) { throw 'Template packaging failed' }
-          python -X utf8 -B scripts/package_template_vxa.py template-vxa build/runtime-native/bin/Release build/lunetile-template-vxa-windows-x86 build/lunetile-template-vxa-diagnostics
+          python -X utf8 -B scripts/package_template_vxa.py template-vxa build/runtime-native/bin/Release build/lunetile-template-vxa-windows-x86 build/lunetile-template-vxa-diagnostics --editor-fix build/lunetile-vxa-editor-fix.zip
           if ($LASTEXITCODE -ne 0) { throw 'VX Ace template packaging failed' }
           New-Item -ItemType Directory dist | Out-Null
           Compress-Archive -Path build/lunetile-template-windows-x86 -DestinationPath dist/lunetile-template-windows-x86.zip
           Compress-Archive -Path build/lunetile-template-diagnostics -DestinationPath dist/lunetile-template-diagnostics.zip
           Compress-Archive -Path build/lunetile-template-vxa-windows-x86 -DestinationPath dist/lunetile-template-vxa-windows-x86.zip
           Compress-Archive -Path build/lunetile-template-vxa-diagnostics -DestinationPath dist/lunetile-template-vxa-diagnostics.zip
-          $checksums = foreach ($asset in @('lunetile-template-windows-x86.zip','lunetile-template-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip')) {
+          Copy-Item build/lunetile-vxa-editor-fix.zip dist/
+          $checksums = foreach ($asset in @('lunetile-template-windows-x86.zip','lunetile-template-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip')) {
             $hash = (Get-FileHash (Join-Path dist $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $asset"
           }
@@ -130,7 +131,9 @@ jobs:
           VX Ace: lunetile-template-vxa-windows-x86.zip contains the separate LunetileVXA.dll and converted template-vxa project. It requires RPG Maker VX Ace RTP, which is not bundled.
           VX Ace diagnostics are in lunetile-template-vxa-diagnostics.zip; its verification-vxa.json records the actual checks for this DLL. XP test results do not certify VX Ace gameplay.
           New VX Ace saves use Saves/LunetileVXA and imported saves use Saves/Import. The original RGSS301.dll, personal saves and logs are excluded.
-          SHA256SUMS.txt verifies all four ZIPs. Development documents and historical records remain in the source repository.
+          Editor-save fix: the Main bootstrap restores Library=LunetileVXA.dll and relaunches once if the editor selects its original runtime. Both the INI reset and original DLL overwrite were reproduced with the installed editor.
+          Existing alpha.9 projects: download lunetile-vxa-editor-fix.zip and follow README.txt to insert the recovery script immediately above Main. Do not overwrite your Data or Saves with the full template.
+          SHA256SUMS.txt verifies all five ZIPs. Development documents and historical records remain in the source repository.
           Uses a 1280x720 widescreen canvas with adapted stock maps, menus, dialogue and battle UI.
           Resize/maximize the window or use Alt+Enter for aspect-preserving full screen.
           Runs stock game logic at 120Hz with default 60FPS output. Choose 40/60/120FPS in the in-game display settings.
@@ -145,5 +148,5 @@ jobs:
           Extract XP to an ASCII path on English Windows. VX Ace supports Unicode extraction paths. Full gameplay, rendering, audio, and endurance acceptance were not run for this CI build.
           The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
           EOF
-          gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip lunetile-template-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" lunetile-template-windows-x86.zip lunetile-template-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip lunetile-vxa-editor-fix.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest=false

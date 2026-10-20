@@ -47,6 +47,8 @@ Outputs:
 
 Extract the game ZIP and run `Game.exe`. Install RPG Maker VX Ace RTP and the Microsoft Visual C++ x86 runtime separately.
 RTP, original engine DLLs, personal saves, logs and raw analysis artifacts are not distributed.
+The VX Ace editor restores both `Library=System\RGSS301.dll` and its original DLL on save. The Main entry bootstrap detects that runtime, restores `Library=LunetileVXA.dll`, starts `Game.exe` once with the original test/battle-test flag, and exits the original process. The original editor-supplied DLL is neither modified nor distributed. A missing Lunetile DLL or a failed INI write/restart produces an explicit error.
+For an existing alpha.9 project, back it up and download `lunetile-vxa-editor-fix.zip`. Insert its `LunetileEditorFix.rb` text into a new script entry immediately above Main using the VX Ace script editor (F11), then save. Keep `LunetileVXA.dll` beside `Game.exe`. The repair archive does not auto-install or contain Data/Saves; do not overwrite your edited project with the full template. Copying a DLL into System alone does not survive another editor save.
 The supplied VX Ace launcher uses Unicode paths; Korean extraction paths are included in the native checks.
 
 OGV playback includes a statically linked Theora decoder and Vorbis audio support, without a system codec installation.

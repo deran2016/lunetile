@@ -1,4 +1,7 @@
 # Installed before Main only after validating the complete VX Ace stock collection.
+unless defined?(RGSSXP::Timing) && Graphics.respond_to?(:__refresh_stats)
+  raise 'LunetileVXA.dll is required. Set Game.ini Library=LunetileVXA.dll; do not use the original RGSS301.dll.'
+end
 module LunetileVXA
   SAVE_ROOT = 'Saves/LunetileVXA'
   SAVE_MAGIC = "LUNETILE\0VXA\0".b + [1].pack('V')

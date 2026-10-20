@@ -1,5 +1,13 @@
 # 독립 저장소 분리 검증
 
+## VX Ace 편집기 저장 후 런타임 복구 검증
+
+- 설치된 VX Ace 편집기로 검증 복사본의 rvproj2를 직접 열고 Ctrl+S를 수행했습니다. Library를 System\RGSS301.dll로 바꾸면서 해당 DLL도 원본으로 덮어쓰는 것을 확인했습니다. DLL 복사만 하는 이전 로컬 패치는 폐기했고 게시하지 않습니다.
+- Main 앞의 Ruby 1.9 호환 진입 코드가 원본 런타임을 감지하면 Library를 LunetileVXA.dll로 복원하고 Game.exe를 한 번 재실행한 후 종료합니다. 원본 DLL과 게임 실행기는 변경하지 않습니다.
+- 실제 편집기 저장→Game.exe 실행을 두 차례 반복했습니다. 타이틀과 새 게임 맵을 확인했고, 재실행 후 게임 프로세스가 하나이며 LunetileVXA.dll만 로드한 것을 모듈 목록으로 확인했습니다. 1280×720과 stock120 설정도 편집기 저장 후 보존됩니다. 로컬 기록: build/vxa-editor-ui-validation.json.
+- 기존 alpha.9 사용자는 복구 ZIP의 스크립트를 Main 바로 위에 삽입합니다. 데이터/저장 파일이나 DLL을 덮어쓰는 패치가 아닙니다. 새 전체 템플릿은 Main에 이 코드가 포함되어 있습니다.
+- Python 78개 검사 통과: 진입 코드의 누락 DLL·INI 쓰기 실패·실행 실패·test/btest 인자, 복구 ZIP 내용과 원본 보존을 포함합니다.
+
 ## 2026-10-20 VX Ace 네이티브 구현 검증
 
 - `LunetileVXA.dll` SHA-256: `677d2f1f882fb9bc1ee325e95ff170facd64631c50f0c765625682cca818c7df`.

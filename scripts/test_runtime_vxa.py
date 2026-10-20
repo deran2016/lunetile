@@ -63,7 +63,7 @@ File.write('runtime-complete.txt','VXA wide refresh')
  if args.stock:
   entries=read((ROOT/'template-vxa/Data/Scripts.rvdata2').read_bytes())
   definitions=b'\n'.join(e.source().replace(b'\r\r\n',b'\n') for e in entries if e.name!=b'Main')
-  stock=definitions+b'\n'+(ROOT/'src/runtime/vxa_stock.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_stock.rb').read_bytes()
+  stock=definitions+b'\n'+(ROOT/'src/runtime/vxa_entry.rb').read_bytes()+b'\n'+(ROOT/'src/runtime/vxa_stock.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_stock.rb').read_bytes()
   run(out/'stock-60',stock,rtp=True,timeout=180)
   for rate in (40,60,120):run(out/f'stock-120-{rate}',stock,rtp=True,wide=True,high=True,rate=rate,timeout=180)
   reload=definitions+b'\n'+(ROOT/'src/runtime/vxa_stock.rb').read_bytes()+b"""

@@ -1,4 +1,4 @@
-import json,shutil,struct,sys,tempfile,unittest,zlib
+import json,shutil,struct,subprocess,sys,tempfile,unittest,zlib
 from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
@@ -6,7 +6,7 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from rxdata import read,write,integer,string,Reader
 from rgssad import Archive
 from migrate_project import detect_engine,MigrationError
-from migrate_vxa import transform,inspect_data
+from migrate_vxa import transform,inspect_data,migrate
 
 def pack_v3(entries):
  seed=17;key=seed*9+3
@@ -25,6 +25,55 @@ def pack_v3(entries):
 
 class VXAMigrationTests(unittest.TestCase):
  def setUp(self):(ROOT/'build').mkdir(exist_ok=True)
+ @unittest.skipUnless((ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe').is_file(),'Pinned Ruby helper is required')
+ def test_entry_recovery_errors_and_test_flags(self):
+  script=r"""
+entry = File.read(ARGV.fetch(0))
+class File
+  def self.file?(path); ENV['CASE'] != 'missing'; end
+end
+class Win32API
+  def initialize(dll,name,*args); @name=name; end
+  def call(*args)
+    if @name == 'WritePrivateProfileStringW'
+      raise 'wrong Library' unless args[2].force_encoding('UTF-16LE').encode('UTF-8') == "LunetileVXA.dll\0"
+      return ENV['CASE'] == 'write-fail' ? 0 : 1
+    end
+    expected = ENV['CASE'] == 'battle' ? 'btest' : (ENV['CASE'] == 'test' ? 'test' : '')
+    raise 'wrong flags' unless args[3].force_encoding('UTF-16LE').encode('UTF-8') == expected+"\0"
+    ENV['CASE'] == 'launch-fail' ? 31 : 33
+  end
+end
+$TEST = ENV['CASE'] == 'test'
+$BTEST = ENV['CASE'] == 'battle'
+begin
+  eval(entry)
+  abort 'entry unexpectedly returned'
+rescue SystemExit
+  raise unless ['normal','test','battle'].include?(ENV['CASE'])
+rescue RuntimeError => error
+  expected={'missing'=>'missing','write-fail'=>'Cannot restore','launch-fail'=>'Cannot restart'}[ENV['CASE']]
+  raise unless expected && error.message.include?(expected)
+end
+"""
+  import os
+  for case in ('normal','test','battle','missing','write-fail','launch-fail'):
+   result=subprocess.run([str(ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe'),'--disable-gems','-e',script,str(ROOT/'src/runtime/vxa_entry.rb')],env={**os.environ,'CASE':case},capture_output=True,text=True)
+   self.assertEqual(result.returncode,0,(case,result.stderr))
+ @unittest.skipUnless((ROOT/'build/runtime-native/bin/Release/LunetileVXA.dll').is_file(),'Built VX Ace runtime is required')
+ def test_editor_recovery_is_injected_and_original_is_preserved(self):
+  with tempfile.TemporaryDirectory(dir=ROOT/'build') as tmp:
+   source=Path(tmp)/'source';shutil.copytree(ROOT/'template-vxa',source)
+   (source/'System').mkdir(exist_ok=True)
+   original=b'original engine sentinel';(source/'System/RGSS301.dll').write_bytes(original)
+   runtime=ROOT/'build/runtime-native/bin/Release'
+   output=Path(tmp)/'converted'
+   migrate(source,output,runtime/'LunetileVXA.dll',runtime/'rgssxp-ruby.exe')
+   self.assertEqual((source/'System/RGSS301.dll').read_bytes(),original)
+   self.assertFalse((output/'System/RGSS301.dll').exists())
+   self.assertEqual((output/'LunetileVXA.dll').read_bytes(),(runtime/'LunetileVXA.dll').read_bytes())
+   main=next(e.source() for e in read((output/'Data/Scripts.rvdata2').read_bytes()) if e.name==b'Main')
+   self.assertTrue(main.startswith((ROOT/'src/runtime/vxa_entry.rb').read_bytes()))
  def test_metadata_and_symbol_links_survive_edit(self):
   raw=b'\x04\x08['+integer(2)
   for i in range(2):

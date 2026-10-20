@@ -43,7 +43,7 @@ def package(source,runtime,output,diagnostics):
   for name in ('abi_vxa.json','ruby.lock.json','dependencies.lock.json'):
    shutil.copy2(ROOT/'src/runtime'/name,diagnostic/name)
   shutil.copy2(ROOT/'LICENSE',converted/'LICENSE');shutil.copytree(ROOT/'licenses',converted/'licenses')
-  (converted/'README.txt').write_text('Lunetile VX Ace template\n\nGame.exe 실행. RPG Maker VX Ace RTP 및 Visual C++ x86 런타임 필요.\n1280x720, 120Hz 로직. 출력 40/60/120FPS.\n새 저장: Saves/LunetileVXA. RTP와 원본 RGSS301.dll은 포함하지 않습니다.\n전체 게임 및 사용자 스크립트 호환은 인증하지 않았습니다.\n',encoding='utf-8')
+  (converted/'README.txt').write_text('Lunetile VX Ace template\n\nGame.exe 실행. RPG Maker VX Ace RTP 및 Visual C++ x86 런타임 필요.\n1280x720, 120Hz 로직. 출력 40/60/120FPS.\n새 저장: Saves/LunetileVXA. RTP와 원본 RGSS301.dll은 포함하지 않습니다.\n편집기 저장으로 런타임 경로가 바뀌면 Main의 복구 코드가 LunetileVXA.dll을 선택하고 게임을 한 번 다시 시작합니다.\n전체 게임 및 사용자 스크립트 호환은 인증하지 않았습니다.\n',encoding='utf-8')
   if before!={p.relative_to(source).as_posix():digest(p) for p in selected}:raise ValueError('Template inputs changed during packaging')
   hashes={p.relative_to(converted).as_posix():digest(p) for p in sorted(converted.rglob('*')) if p.is_file()}
   for name,value in (('template-source.json',before),('template-map.json',changes),('SHA256SUMS.json',hashes)):
@@ -64,11 +64,28 @@ def archive(directory,path):
   for item in result.namelist():
    if sha(result.read(item))!=digest(directory/item):raise ValueError('ZIP content mismatch')
 
+def editor_fix_archive(path):
+ with tempfile.TemporaryDirectory(prefix='vxa-editor-fix-',dir=path.parent) as tmp:
+  directory=Path(tmp)
+  shutil.copy2(ROOT/'src/runtime/vxa_entry.rb',directory/'LunetileEditorFix.rb')
+  (directory/'README.txt').write_text(
+   'Lunetile VX Ace editor-save fix (existing alpha.9 projects)\n\n'
+   '프로젝트를 먼저 백업하세요. DLL 복사만으로는 편집기 저장 후 오류를 막을 수 없습니다.\n'
+   'VX Ace 스크립트 편집기(F11)에서 Main 바로 위에 빈 항목을 추가하고,\n'
+   'LunetileEditorFix.rb 내용을 붙여 넣은 뒤 저장하세요. Game.exe 옆의 LunetileVXA.dll은 유지하세요.\n'
+   '맵, 기존 스크립트와 Saves를 덮어쓰지 마세요. 이 ZIP은 자동 설치되지 않습니다.\n'
+   '편집기가 원본 런타임을 선택하면 이 스크립트가 Game.ini의 Library를 복원하고 Game.exe를 한 번 재시작합니다.\n'
+   '새 전체 템플릿 ZIP에는 이미 포함되어 있어 별도로 설치할 필요가 없습니다.\n',
+   encoding='utf-8')
+  archive(directory,path)
+
 if __name__=='__main__':
  ap=argparse.ArgumentParser(description=__doc__)
  for name in ('source','runtime','output','diagnostics'):ap.add_argument(name,type=Path)
  ap.add_argument('--zip',action='store_true')
+ ap.add_argument('--editor-fix',type=Path)
  args=ap.parse_args();package(args.source,args.runtime,args.output,args.diagnostics)
  if args.zip:
   archive(args.output,args.output.parent/'lunetile-template-vxa-windows-x86.zip')
   archive(args.diagnostics,args.diagnostics.parent/'lunetile-template-vxa-diagnostics.zip')
+ if args.editor_fix:editor_fix_archive(args.editor_fix)

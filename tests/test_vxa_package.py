@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
-from package_template_vxa import package,expand_map,archive,digest
+from package_template_vxa import package,expand_map,archive,digest,editor_fix_archive
 
 RUBY=ROOT/'build/runtime-native/bin/Release/rgssxp-ruby.exe'
 class VXAPackageTests(unittest.TestCase):
@@ -12,6 +12,11 @@ class VXAPackageTests(unittest.TestCase):
   self.tmp=tempfile.TemporaryDirectory(dir=ROOT/'build');self.addCleanup(self.tmp.cleanup)
   self.root=Path(self.tmp.name);self.source=self.root/'source';self.runtime=self.root/'runtime'
   self.source.mkdir();self.runtime.mkdir()
+ def test_editor_fix_contains_only_entry_script_and_instructions(self):
+  target=self.root/'fix.zip';editor_fix_archive(target)
+  with zipfile.ZipFile(target) as zipped:
+   self.assertEqual(set(zipped.namelist()),{'LunetileEditorFix.rb','README.txt'})
+   self.assertEqual(zipped.read('LunetileEditorFix.rb'),(ROOT/'src/runtime/vxa_entry.rb').read_bytes())
  def test_verification_gate(self):
   (self.runtime/'LunetileVXA.dll').write_bytes(b'runtime')
   (self.runtime/'verification-vxa.json').write_text(json.dumps({'passed':True,'runtime_sha256':'wrong'}))
