@@ -1,6 +1,7 @@
 #include <windows.h>
 #include "graphics.h"
 #include "refresh_clock.h"
+#include "ui_input.h"
 #include <Xinput.h>
 #include <array>
 #include <ruby.h>
@@ -35,6 +36,7 @@ VALUE update(VALUE){
     for(int i=25;i<=29;++i)state[i]=any({VK_F5+i-25});
     for(int i=0;i<30;++i){auto& b=buttons[i];b.trigger=state[i]&&!b.held;b.held=state[i];b.duration=state[i]?b.duration+1:0;b.repeat=b.trigger||(rgss_refresh::repeat_due(b.duration,graphics_time_scale()));}
     for(auto& value:pressed)value=false;
+    ui_input_update();
     return Qnil;
 }
 int button(VALUE value){
@@ -56,7 +58,7 @@ VALUE dir8(VALUE){int x=(buttons[6].held?1:0)-(buttons[4].held?1:0),y=(buttons[2
 }
 void input_attach(HWND window){game_window=window;}
 bool input_take_reset(){bool requested=reset_requested;reset_requested=false;return requested;}
-void input_reset(){for(auto& button:buttons)button=Button{};bool f12=down[VK_F12];for(auto& value:down)value=false;down[VK_F12]=f12;for(auto& value:pressed)value=false;reset_requested=false;suppress_return=false;}
+void input_reset(){ui_input_reset();for(auto& button:buttons)button=Button{};bool f12=down[VK_F12];for(auto& value:down)value=false;down[VK_F12]=f12;for(auto& value:pressed)value=false;reset_requested=false;suppress_return=false;}
 void input_message(UINT message,WPARAM keycode){
     if(message==WM_KEYDOWN&&keycode==VK_F12&&!down[VK_F12])reset_requested=true;
     if(message==WM_SYSKEYDOWN&&keycode==VK_RETURN){suppress_return=true;down[VK_RETURN]=pressed[VK_RETURN]=false;}
@@ -65,6 +67,7 @@ void input_message(UINT message,WPARAM keycode){
     else if(message==WM_KILLFOCUS){for(auto& value:down)value=false;for(auto& value:pressed)value=false;suppress_return=false;reset_requested=false;}
 }
 void init_input(){
+    init_ui_input();
     VALUE input=rb_define_module("Input");
     const char* names[]={"DOWN","LEFT","RIGHT","UP","A","B","C","X","Y","Z","L","R","SHIFT","CTRL","ALT","F5","F6","F7","F8","F9"};
     int ids[]={2,4,6,8,11,12,13,14,15,16,17,18,21,22,23,25,26,27,28,29};

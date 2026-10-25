@@ -27,6 +27,7 @@
 #undef send
 #undef recv
 #undef getsockopt
+#undef setsockopt
 #undef ioctlsocket
 
 namespace {
@@ -414,6 +415,8 @@ struct TcpJob : Job {
         auto deadline = started + std::chrono::milliseconds(timeout);
         SocketHandle socket;
         connect_socket(socket, deadline);
+        const BOOL no_delay = TRUE;
+        if (setsockopt(socket.value, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&no_delay), sizeof(no_delay))) fail("connect", WSAGetLastError());
         TlsContext security;
         std::vector<char> cipher;
         if (tls) security.handshake(*this, socket.value, host, cipher, deadline);
@@ -481,7 +484,8 @@ struct TcpJob : Job {
             }
             WSAPOLLFD descriptor{socket.value, static_cast<short>((can_receive ? POLLRDNORM : 0) | (!pending.empty() ? POLLWRNORM : 0)), 0};
             if (!descriptor.events) { std::this_thread::sleep_for(std::chrono::milliseconds(20)); continue; }
-            int polled = WSAPoll(&descriptor, 1, 20);
+            // Keep queued writes responsive while the socket is waiting for inbound data.
+            int polled = WSAPoll(&descriptor, 1, 5);
             if (polled == SOCKET_ERROR) fail("io", WSAGetLastError());
             if (polled > 0 && can_receive && (descriptor.revents & (POLLRDNORM | POLLHUP | POLLERR))) {
                 char buffer[16384];

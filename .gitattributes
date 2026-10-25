@@ -4,11 +4,14 @@
 *.s text eol=lf
 *.rb text eol=lf
 *.py text eol=lf
+*.rs text eol=lf
+*.toml text eol=lf
 *.md text eol=lf
 *.ps1 text eol=crlf
 
 # Preserve upstream license notices verbatim, including their whitespace.
 licenses/* -text -whitespace
+example/server/licenses/** -text -whitespace
 template-xp/Data/*.rxdata -text
 template-xp/Game.exe -text
 template-xp/Game.rxproj -text

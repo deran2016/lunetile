@@ -11,6 +11,7 @@
 #include <string>
 #include <ruby.h>
 #include "graphics.h"
+#include "ui_input.h"
 #include "output_color.h"
 #include "render_shader.h"
 #include "display_geometry.h"
@@ -75,7 +76,7 @@ struct Renderer {
     double gpu_ms=-1;
     UINT64 gpu_valid=0,gpu_invalid=0;
     UINT64 sequence=0,gpu_sequence=0,cpu_begin=0,last_cpu=0;
-    bool frozen_valid=false,close=false,ready=false,test_background=false;
+    bool frozen_valid=false,close=false,ready=false,test_background=false,background_update=false;
     LARGE_INTEGER frequency{},deadline{},last_end{};
     int rate=engine_rate,frame=0;
     int remainder=0;
@@ -267,6 +268,7 @@ struct Renderer {
 };
 Renderer renderer;
 LRESULT CALLBACK window_proc(HWND window,UINT message,WPARAM wparam,LPARAM lparam){
+    if(ui_input_message(window,message,wparam,lparam))return 0;
     input_message(message,wparam);
     if(message==WM_SYSKEYDOWN&&wparam==VK_RETURN&&(lparam&(1<<29))&&!(lparam&(1<<30))){
         auto& r=renderer;
@@ -463,7 +465,7 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
     return Qnil;
 }
 bool pump(){
-    MSG message{};while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){if(message.message==WM_QUIT)renderer.close=true;TranslateMessage(&message);DispatchMessageW(&message);}
+    MSG message{};while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){if(message.message==WM_QUIT)renderer.close=true;ui_input_pretranslate(message);TranslateMessage(&message);DispatchMessageW(&message);}
     if(renderer.close||!IsWindow(renderer.window))return false;
     if(input_take_reset()){
         ID name=rb_intern("Reset");VALUE klass=rb_const_defined_at(rb_cObject,name)?rb_const_get_at(rb_cObject,name):rb_define_class("Reset",rb_eException);
@@ -476,7 +478,7 @@ VALUE tick(VALUE){
     if(GetCurrentThreadId()!=r.owner)rb_raise(rb_eThreadError,"Graphics requires the game thread");
     if(!pump())rb_exit(0);
     r.focus_pause_ms=0;
-    if(!r.test_background&&GetForegroundWindow()!=r.window){
+    if(!r.test_background&&!r.background_update&&GetForegroundWindow()!=r.window){
         LARGE_INTEGER paused{},resumed{};QueryPerformanceCounter(&paused);
         do{MsgWaitForMultipleObjectsEx(0,nullptr,100,QS_ALLINPUT,MWMO_INPUTAVAILABLE);if(!pump())rb_exit(0);}while(GetForegroundWindow()!=r.window);
         QueryPerformanceCounter(&resumed);
@@ -579,6 +581,8 @@ VALUE should_render(VALUE){
 }
 VALUE refresh_stats(VALUE){auto& c=renderer.refresh;return rb_ary_new_from_args(4,ULL2NUM(c.due),ULL2NUM(c.presented),ULL2NUM(c.dropped),ULL2NUM(c.late));}
 VALUE frame_rate(VALUE){return INT2NUM(renderer.rate);}
+VALUE background_update(VALUE){return renderer.background_update?Qtrue:Qfalse;}
+VALUE set_background_update(VALUE,VALUE enabled){renderer.background_update=RTEST(enabled);return enabled;}
 VALUE set_frame_rate(VALUE,VALUE rate){int value=NUM2INT(rate);if(renderer.refresh.high()&&value!=120)rb_raise(rb_eArgError,"stock120 logic rate is fixed at 120");if(value<10||value>120)rb_raise(rb_eArgError,"Frame rate must be 10..120");renderer.rate=value;renderer.remainder=0;QueryPerformanceCounter(&renderer.deadline);return rate;}
 VALUE reset_deadline(VALUE){QueryPerformanceCounter(&renderer.deadline);renderer.remainder=0;renderer.refresh.reset();return Qnil;}
 VALUE begin_frame(VALUE){renderer.cpu_begin=thread_cpu();renderer.script_cpu_ms=renderer.last_cpu?(renderer.cpu_begin-renderer.last_cpu)/10000.0:0;return Qnil;}
@@ -689,6 +693,8 @@ void init_graphics(){
     rb_define_singleton_method(graphics,"__should_render",RUBY_METHOD_FUNC(should_render),0);
     rb_define_singleton_method(graphics,"__refresh_stats",RUBY_METHOD_FUNC(refresh_stats),0);
     rb_define_singleton_method(graphics,"frame_rate",RUBY_METHOD_FUNC(frame_rate),0);
+    rb_define_singleton_method(graphics,"background_update",RUBY_METHOD_FUNC(background_update),0);
+    rb_define_singleton_method(graphics,"background_update=",RUBY_METHOD_FUNC(set_background_update),1);
     rb_define_singleton_method(graphics,"frame_rate=",RUBY_METHOD_FUNC(set_frame_rate),1);
     rb_define_singleton_method(graphics,"frame_reset",RUBY_METHOD_FUNC(reset_deadline),0);
     rb_define_singleton_method(graphics,"__timings",RUBY_METHOD_FUNC(stats),0);
@@ -704,3 +710,4 @@ void init_graphics(){
 }
 
 int graphics_time_scale(){return renderer.refresh.high()?120/engine_rate:1;}
+void graphics_input_size(int& width,int& height){width=renderer.width;height=renderer.height;}

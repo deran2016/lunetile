@@ -4,6 +4,11 @@
 #include <iostream>
 
 int main() {
+    int x=0,y=0;
+    if(!rgss_display::locate(1280,720,1920,1200,960,600,x,y)||x!=640||y!=360)return EXIT_FAILURE;
+    if(rgss_display::locate(1280,720,1920,1200,960,20,x,y))return EXIT_FAILURE;
+    if(!rgss_display::locate(1280,720,2560,1440,1920,1080,x,y)||x!=960||y!=540)return EXIT_FAILURE;
+    if(rgss_display::locate(1280,720,0,0,0,0,x,y))return EXIT_FAILURE;
     for (auto output : {1920,2560,3840}) {
         auto fit=rgss_display::fit(1280,720,static_cast<float>(output),output*9.0f/16);
         if(fit.x!=0 || fit.y!=0 || fit.width!=output || fit.height!=output*9.0f/16)return EXIT_FAILURE;

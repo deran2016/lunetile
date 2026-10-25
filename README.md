@@ -204,7 +204,7 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 @connection = Lunetile::TCP.connect("game.example.com", 4433) # 비동기 TCP/TLS 연결
 ```
 
-요청 취소, HTTP 상태·헤더·본문, TCP 바이트 송수신과 길이 접두사 JSON 예제는 [통신 API 문서](docs/NETWORKING.md)를 참고하세요. 요청·연결 객체는 저장 파일에 넣지 않습니다. 별도 서버와 계정 시스템은 포함하지 않습니다.
+요청 취소, HTTP 상태·헤더·본문, TCP 바이트 송수신과 길이 접두사 JSON 예제는 [통신 API 문서](docs/NETWORKING.md)를 참고하세요. 요청·연결 객체는 저장 파일에 넣지 않습니다. 변환된 XP 프로젝트에 연결하는 **Windows Rust 서버·파일 DB·온라인 클라이언트 예제**는 [example 안내](example/README.md)와 [MMORPG 기초 설계](example/DESIGN.md)를 참고하세요. 반투명 MMORPG GUI·한글 채팅·레벨 1~30·4계열 전직·퀘스트·장비·강화·상점·창고·거래·파티·길드를 제공하며 월드와 성장 정의를 JSON으로 관리합니다. 별도 DB 설치 없이 실행합니다. 마우스·IME API는 [UIInput 문서](docs/UI_INPUT.md)에 있습니다.
 
 ## 문제 해결
 

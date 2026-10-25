@@ -128,4 +128,6 @@ python -X utf8 -B scripts/test_runtime_network.py build/network-verification
 
 검사는 로컬 HTTP·TCP·TLS 서버와 실제 Game.exe를 사용합니다. 개발 PC의 인증서 저장소를 변경하지 않습니다. 일회용 GitHub Actions 러너의 LocalMachine 루트 저장소에만 테스트 CA를 임시 등록해 TLS 성공과 잘못된 호스트명·만료 검사를 수행하고 종료 시 제거합니다. 테스트 키·인증서는 Release에 포함하지 않습니다.
 
-별도 서버·로그인 UI·자동 토큰 갱신·WebSocket·UDP·C API·리소스 암호화는 포함하지 않습니다. 운영 서버 연동과 장시간 연결 안정성은 별도 검증 대상입니다. 평문 HTTP/TCP의 내용은 암호화되지 않습니다.
+런타임 API 자체에는 서버·로그인 UI·자동 토큰 갱신·WebSocket·UDP·C API·리소스 암호화가 포함되지 않습니다. 별도 [XP 온라인 예제](../example/README.md)는 이 API를 사용한 Windows Rust 서버, JSON 파일 DB, MMORPG HUD·한글 채팅·NPC·인벤토리·사냥·성장을 제공합니다. GUI 입력은 [UIInput](UI_INPUT.md)을 참고하세요. 운영 서버 연동과 장시간 연결 안정성은 별도 검증 대상입니다. 평문 HTTP/TCP의 내용은 암호화되지 않습니다.
+
+TCP 소켓은 연결 직후 TCP_NODELAY를 켭니다. 작은 게임 입력 패킷도 Nagle 대기 없이 전송하며 Ruby API·TLS 검증·송수신 한도는 유지합니다. 호출 측에서 한 로직 갱신의 메시지를 묶어 write하는 방법은 그대로 사용할 수 있습니다.

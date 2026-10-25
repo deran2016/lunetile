@@ -1,0 +1,15 @@
+# Operator databases and private persistent state are never versioned.
+/server/data/
+/server/accounts/
+/server/players/
+/server/transactions/
+/server/backups/
+/server/server.lock
+/server/metrics*.jsonl
+/server/*.json.tmp
+
+# Build/test outputs and complete local distributions.
+/server/target/
+/server/*.exe
+/client/Game/
+/output/
