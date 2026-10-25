@@ -1,0 +1,4 @@
+html,body{margin:0;font:18px "Segoe UI",sans-serif;background:#20a060;color:white}
+main{padding:24px}h1{font-size:26px}input,button{font:inherit;padding:8px}
+a{color:white}section{margin:20px 0;padding:16px;background:#197649}
+.long{height:900px;background:linear-gradient(#197649,#164070)}

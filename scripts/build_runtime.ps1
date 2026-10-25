@@ -13,6 +13,15 @@ if (!(Test-Path (Join-Path $deps "zlib-$($zlib.version)"))) {
     if ($LASTEXITCODE -ne 0) { throw 'zlib extraction failed' }
 }
 $native = Join-Path $repo 'build/runtime-native'
+$webview = $lock.webview2
+$webviewArchive = Join-Path $deps "microsoft.web.webview2.$($webview.version).nupkg"
+$webviewSource = Join-Path $deps "webview2-$($webview.version)"
+if (!(Test-Path $webviewArchive)) { Invoke-WebRequest -Uri $webview.url -OutFile $webviewArchive }
+if ((Get-FileHash $webviewArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $webview.sha256) { throw 'WebView2 SDK hash mismatch' }
+if (!(Test-Path (Join-Path $webviewSource 'build/native/include/WebView2.h'))) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($webviewArchive, $webviewSource)
+}
 foreach ($name in @('ogg', 'vorbis', 'theora')) {
     $dependency = $lock.$name
     $source = Join-Path $deps "lib$name-$($dependency.version)"

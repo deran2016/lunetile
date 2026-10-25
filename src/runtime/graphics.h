@@ -12,11 +12,10 @@ struct Canvas {
     ID3D11ShaderResourceView* view;
 };
 Canvas* canvas_get(VALUE object);
-#ifdef RGSS_VXA
 Canvas* canvas_optional(VALUE object);
-#endif
 void canvas_changed(Canvas* canvas, int left, int top, int right, int bottom);
 void init_bitmap();
+void bitmap_capture_text_methods();
 void bitmap_text_cache_invalidate();
 void bitmap_text_cache_clear(bool account=true);
 void init_graphics();
@@ -25,9 +24,11 @@ void graphics_attach(HWND window);
 void graphics_shutdown();
 void graphics_reset();
 void input_reset();
+void input_browser_release();
 bool input_take_reset();
 void init_input();
 void input_attach(HWND window);
-void input_message(UINT message, WPARAM keycode);
+void input_message(UINT message, WPARAM keycode, LPARAM flags);
+bool input_pretranslate(const MSG& message);
 
 int graphics_time_scale();

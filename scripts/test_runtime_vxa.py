@@ -8,7 +8,7 @@ from rxdata import read
 
 ROOT=Path(__file__).resolve().parents[1]
 
-def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout=90,saves=None,data=None):
+def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout=90,saves=None,data=None,on_start=None):
  output=output.resolve();output.mkdir(parents=True,exist_ok=False)
  dll=dll or ROOT/'build/runtime-native/bin/Release/LunetileVXA.dll'
  artifact=inspect(dll,engine='vxa')
@@ -25,6 +25,7 @@ def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout
  process=subprocess.Popen([str(output/'Game.exe')],cwd=output,env=environment)
  modules=set();deadline=time.monotonic()+timeout
  try:
+  if on_start:on_start(process,output)
   while process.poll() is None:
    if time.monotonic()>deadline:raise TimeoutError(f'VX Ace runtime timed out: {output}')
    try:modules.update(str(Path(m.path).resolve()) for m in psutil.Process(process.pid).memory_maps())
@@ -63,8 +64,9 @@ File.write('runtime-complete.txt','VXA wide refresh')
  run(out/'tilemap',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_tilemap.rb').read_bytes(),timeout=180)
  run(out/'native-cache',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_cache.rb').read_bytes())
  run(out/'tile-d3d',(ROOT/'tests/runtime_vxa_d3d.rb').read_bytes(),timeout=180)
+ run(out/'text-guard',(ROOT/'tests/runtime_vxa_text_guard.rb').read_bytes())
  run(out/'plane',(ROOT/'tests/runtime_plane_transparency.rb').read_bytes())
- for name in ('display_commands','text_cache'):
+ for name in ('display_commands','text_cache','tile_parser_gc'):
   run(out/name.replace('_','-'),(ROOT/f'tests/runtime_{name}.rb').read_bytes(),timeout=180)
  run(out/'render-reset',(ROOT/'tests/runtime_vxa_render_reset.rb').read_bytes())
  for rate in (40,60,120):
@@ -94,6 +96,12 @@ File.write('runtime-complete.txt','save restored in new process')
  report['cases'].append('native-cache')
  report['tile_d3d']=json.loads((out/'tile-d3d/d3d-result.json').read_text())
  report['cases'].append('tile-d3d')
+ report['cases']+=['display-commands','text-cache','tile-parser-gc']
+ report['display']=json.loads((out/'display-commands/display-result.json').read_text())
+ report['text_cache']=json.loads((out/'text-cache/text-cache-result.json').read_text())
+ report['parser_gc']=True
+ report['text_guard']=json.loads((out/'text-guard/text-guard.json').read_text())
+ report['cases'].append('text-guard')
  if args.stock:
   report['stock_scenarios']=[json.loads((out/name/'vxa-stock-result.json').read_text(encoding='utf-8')) for name in ['stock-60','stock-120-40','stock-120-60','stock-120-120']]
   report['process_restart_save_load']=True

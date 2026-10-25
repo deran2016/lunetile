@@ -17,6 +17,8 @@
 #include <stdexcept>
 #include <string>
 #include "movie.h"
+#include "browser.h"
+#include "graphics.h"
 
 namespace {
 using Microsoft::WRL::ComPtr;
@@ -40,9 +42,11 @@ int messages(){
     MSG message{};
     while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){
         if(message.message==WM_QUIT)return 1;
+        if(browser_pretranslate(message)||input_pretranslate(message))continue;
         if(message.message==WM_KEYDOWN&&message.wParam==VK_F12)return 2;
         TranslateMessage(&message);DispatchMessageW(&message);
     }
+    browser_pump();
     return IsWindow(owner)?0:1;
 }
 struct OggPages {
@@ -184,10 +188,12 @@ int run(const std::wstring& path){
         }
         MSG message{};
         while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){
+            if(browser_pretranslate(message)||input_pretranslate(message))continue;
             if(message.message==WM_QUIT)return 1;
             if(message.message==WM_KEYDOWN&&message.wParam==VK_F12)return 2;
             TranslateMessage(&message);DispatchMessageW(&message);
         }
+        browser_pump();
         if(!IsWindow(owner))return 1;
         MsgWaitForMultipleObjectsEx(0,nullptr,15,QS_ALLINPUT,MWMO_INPUTAVAILABLE);
     }

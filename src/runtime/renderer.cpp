@@ -13,14 +13,17 @@
 #include <ruby.h>
 #include "graphics.h"
 #include "ui_input.h"
+#include "browser.h"
 #include "output_color.h"
 #include "render_shader.h"
 #include "display_geometry.h"
 #include "refresh_clock.h"
 #include "engine_profile.h"
-#ifdef RGSS_VXA
 #include <memory>
+#ifdef RGSS_VXA
 #include "vxa_tile_cache.h"
+#else
+#include "xp_tile_cache.h"
 #endif
 
 namespace {
@@ -57,7 +60,6 @@ struct Renderer {
     ComPtr<ID3D11VertexShader> vertex;
     ComPtr<ID3D11PixelShader> pixel;
     ComPtr<ID3D11Buffer> constants;
-#ifdef RGSS_VXA
     struct TileInstance { float position[4],source[4]; };
     static_assert(sizeof(TileInstance)==32,"Tile instance ABI");
     struct BatchStats { UINT quads=0,tile_draws=0,regular_draws=0,constant_maps=0,instance_maps=0;double scene_ms=0,present_ms=0; } batches;
@@ -65,9 +67,8 @@ struct Renderer {
     ComPtr<ID3D11InputLayout> tile_layout;
     ComPtr<ID3D11Buffer> tile_buffer;
     std::unique_ptr<TileInstance[]> tile_data;
-    UINT tile_capacity=0;
+    UINT tile_capacity=0,tile_cpu_capacity=0;
     bool tile_active=false;
-#endif
     ComPtr<ID3D11SamplerState> sampler;
     ComPtr<ID3D11RasterizerState> raster;
     ComPtr<ID3D11BlendState> blend[3],replace;
@@ -81,7 +82,8 @@ struct Renderer {
     LARGE_INTEGER frequency{},deadline{},last_end{};
     int rate=engine_rate,frame=0;
     int remainder=0;
-    double wait_ms=0,render_ms=0,parse_ms=0;
+    double wait_ms=0,render_ms=0,parse_ms=0,scene_ms=0,present_ms=0;
+    size_t scratch_used=0,scratch_reserved=0,tile_scratch_used=0,tile_scratch_reserved=0,expanded=0;
     double script_cpu_ms=0,render_cpu_ms=0,wait_cpu_ms=0;
     double focus_pause_ms=0;
     uint64_t upload_rects=0,upload_bytes=0,texture_creations=0;
@@ -133,7 +135,6 @@ struct Renderer {
         checked(D3DCompile(shader,sizeof(shader)-1,nullptr,nullptr,nullptr,"ps","ps_4_0",D3DCOMPILE_OPTIMIZATION_LEVEL3,0,&ps,&error),"Compile pixel shader");
         checked(device->CreateVertexShader(vs->GetBufferPointer(),vs->GetBufferSize(),nullptr,&vertex),"Create vertex shader");
         checked(device->CreatePixelShader(ps->GetBufferPointer(),ps->GetBufferSize(),nullptr,&pixel),"Create pixel shader");
-#ifdef RGSS_VXA
         ComPtr<ID3DBlob> tiles;
         checked(D3DCompile(shader,sizeof(shader)-1,nullptr,nullptr,nullptr,"vs_tiles","vs_4_0",D3DCOMPILE_OPTIMIZATION_LEVEL3,0,&tiles,&error),"Compile tile vertex shader");
         checked(device->CreateVertexShader(tiles->GetBufferPointer(),tiles->GetBufferSize(),nullptr,&tile_vertex),"Create tile vertex shader");
@@ -141,7 +142,6 @@ struct Renderer {
             {"TILE_POSITION",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,0,D3D11_INPUT_PER_INSTANCE_DATA,1},
             {"TILE_SOURCE",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,16,D3D11_INPUT_PER_INSTANCE_DATA,1}};
         checked(device->CreateInputLayout(elements,2,tiles->GetBufferPointer(),tiles->GetBufferSize(),&tile_layout),"Create tile input layout");
-#endif
         D3D11_BUFFER_DESC buffer_desc{};buffer_desc.ByteWidth=sizeof(Constants);buffer_desc.Usage=D3D11_USAGE_DYNAMIC;
         buffer_desc.BindFlags=D3D11_BIND_CONSTANT_BUFFER;buffer_desc.CPUAccessFlags=D3D11_CPU_ACCESS_WRITE;
         checked(device->CreateBuffer(&buffer_desc,nullptr,&constants),"Create quad constants");
@@ -207,18 +207,21 @@ struct Renderer {
         checked(device->CreateRenderTargetView(buffer.Get(),nullptr,&back),"Resized window target");
         back_width=output_width;back_height=output_height;
     }
-#ifdef RGSS_VXA
-    void ensure_tiles(UINT count){
+    void ensure_tile_cpu(UINT count){
         if(count>100000)throw std::length_error("Too many tile instances");
-        if(count<=tile_capacity)return;
-        UINT capacity=tile_capacity?tile_capacity:1024;
+        if(count<=tile_cpu_capacity)return;
+        UINT capacity=tile_cpu_capacity?tile_cpu_capacity:1024;
         while(capacity<count)capacity=std::min<UINT>(100000,capacity*2);
         auto data=std::make_unique<TileInstance[]>(capacity);
+        tile_data=std::move(data);tile_cpu_capacity=capacity;
+    }
+    void ensure_tiles(UINT count){
+        if(count<=tile_capacity)return;
+        UINT capacity=tile_cpu_capacity;
         D3D11_BUFFER_DESC desc{};desc.ByteWidth=capacity*sizeof(TileInstance);desc.Usage=D3D11_USAGE_DYNAMIC;
         desc.BindFlags=D3D11_BIND_VERTEX_BUFFER;desc.CPUAccessFlags=D3D11_CPU_ACCESS_WRITE;
         ComPtr<ID3D11Buffer> buffer;checked(device->CreateBuffer(&desc,nullptr,&buffer),"Create tile instance buffer");
-        tile_data=std::move(data);tile_buffer=std::move(buffer);tile_capacity=capacity;
-        tile_active=false;
+        tile_buffer=std::move(buffer);tile_capacity=capacity;tile_active=false;
     }
     void upload_tiles(UINT count){
         if(!count)return;
@@ -227,13 +230,7 @@ struct Renderer {
         memcpy(mapped.pData,tile_data.get(),count*sizeof(TileInstance));context->Unmap(tile_buffer.Get(),0);
         ++batches.instance_maps;
     }
-#endif
-    void draw(ID3D11ShaderResourceView* image,Constants& values,const RECT& clip,int blend_mode=0,bool copy=false
-#ifdef RGSS_VXA
-        ,UINT instances=0,UINT first_instance=0
-#endif
-    ){
-#ifdef RGSS_VXA
+    void draw(ID3D11ShaderResourceView* image,Constants& values,const RECT& clip,int blend_mode=0,bool copy=false,UINT instances=0,UINT first_instance=0){
         if(instances&&!tile_active){
             context->VSSetShader(tile_vertex.Get(),nullptr,0);context->IASetInputLayout(tile_layout.Get());
             UINT stride=sizeof(TileInstance),offset=0;context->IASetVertexBuffers(0,1,tile_buffer.GetAddressOf(),&stride,&offset);
@@ -242,19 +239,14 @@ struct Renderer {
             context->VSSetShader(vertex.Get(),nullptr,0);context->IASetInputLayout(nullptr);tile_active=false;
         }
         ++batches.constant_maps;
-#endif
         D3D11_MAPPED_SUBRESOURCE mapped{};
         checked(context->Map(constants.Get(),0,D3D11_MAP_WRITE_DISCARD,0,&mapped),"Map quad constants");
         memcpy(mapped.pData,&values,sizeof(values));context->Unmap(constants.Get(),0);
         context->VSSetConstantBuffers(0,1,constants.GetAddressOf());context->PSSetConstantBuffers(0,1,constants.GetAddressOf());
         context->PSSetShaderResources(0,1,&image);context->RSSetScissorRects(1,&clip);
         context->OMSetBlendState(copy?replace.Get():blend[blend_mode].Get(),nullptr,0xffffffff);
-#ifdef RGSS_VXA
         if(instances){context->DrawInstanced(6,instances,0,first_instance);++batches.tile_draws;}
         else{context->Draw(6,0);++batches.regular_draws;}
-#else
-        context->Draw(6,0);
-#endif
     }
     void query_result(Query& q){
         if(!q.pending)return;
@@ -272,9 +264,11 @@ struct Renderer {
 };
 Renderer renderer;
 LRESULT CALLBACK window_proc(HWND window,UINT message,WPARAM wparam,LPARAM lparam){
+    if(message==WM_SIZE||message==WM_MOVE||message==WM_WINDOWPOSCHANGED||message==WM_DPICHANGED)browser_layout();
+    if((message==WM_LBUTTONDOWN||message==WM_RBUTTONDOWN)&&browser_input_blocked())SetFocus(window);
     if(message==WM_DPICHANGED||message==WM_FONTCHANGE||message==WM_SETTINGCHANGE)bitmap_text_cache_invalidate();
     if(ui_input_message(window,message,wparam,lparam))return 0;
-    input_message(message,wparam);
+    input_message(message,wparam,lparam);
     if(message==WM_SYSKEYDOWN&&wparam==VK_RETURN&&(lparam&(1<<29))&&!(lparam&(1<<30))){
         auto& r=renderer;
         if(!r.fullscreen){
@@ -331,50 +325,88 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
     Check_Type(commands,T_ARRAY);
     if(GetCurrentThreadId()!=renderer.owner)rb_raise(rb_eThreadError,"Graphics requires the game thread");
     // Parse Ruby objects before C++ resources are acquired; no exception crosses a C++ owner.
-    struct Draw {int kind;Canvas* bitmap;Constants state;RECT clip;int blend;
+    struct Draw {int kind;Canvas* bitmap;Constants state;RECT clip;int blend;};
+    struct Node {int kind;long index;};
+    struct Run {Canvas* bitmap;RECT clip;UINT first,count;};
 #ifdef RGSS_VXA
-        long batch;
+    constexpr int tile_kind=3;
+#else
+    constexpr int tile_kind=4;
 #endif
-    };
-    long top_count=RARRAY_LEN(commands),count=top_count;
+    long top_count=RARRAY_LEN(commands),count=0,regular_count=0,tile_count=0;
     if(top_count>100000)rb_raise(rb_eArgError,"Too many rendering commands");
-#ifdef RGSS_VXA
-    count=0;
     for(long i=0;i<top_count;++i){
         VALUE command=rb_ary_entry(commands,i);Check_Type(command,T_ARRAY);
-        size_t additional=1;
-        if(NUM2INT(rb_ary_entry(command,0))==3)additional=vxa_batch_count(command);
+        int kind=NUM2INT(rb_ary_entry(command,0));size_t additional=1,flashes=0;
+        if(kind==tile_kind){
+#ifdef RGSS_VXA
+            additional=vxa_batch_count(command);
+#else
+            additional=xp_batch_count(command,&flashes);
+#endif
+        }
         if(additional>static_cast<size_t>(100000-count))rb_raise(rb_eArgError,"Too many rendering commands");
+        if(kind==tile_kind){tile_count+=static_cast<long>(additional-flashes);regular_count+=static_cast<long>(flashes);}else ++regular_count;
         count+=static_cast<long>(additional);
     }
-#endif
-    VALUE storage=rb_str_new(nullptr,count*sizeof(Draw));
+    char allocation_error[192]{};
+    try{renderer.ensure_tile_cpu(static_cast<UINT>(tile_count));}catch(const std::exception& e){strncpy_s(allocation_error,e.what(),_TRUNCATE);}
+    if(*allocation_error)rb_raise(rb_path2class("RGSSError"),"%s",allocation_error);
+    VALUE storage=rb_str_new(nullptr,regular_count*sizeof(Draw));
+    VALUE order_storage=rb_str_new(nullptr,std::max<long>(64,count*sizeof(Node)));
+    VALUE run_storage=rb_str_new(nullptr,std::max<long>(64,tile_count*sizeof(Run)));
+    auto* nodes=reinterpret_cast<Node*>(RSTRING_PTR(order_storage));
+    auto* runs=reinterpret_cast<Run*>(RSTRING_PTR(run_storage));
+    long node_count=0,run_count=0;UINT tile_used=0;
+    VALUE bitmap_roots=rb_ary_new();
     auto* draws=reinterpret_cast<Draw*>(RSTRING_PTR(storage));
     RECT viewport{0,0,static_cast<LONG>(renderer.width),static_cast<LONG>(renderer.height)};
     long used=0;
+    struct Sink {
+        Node* nodes;Run* runs;long nodes_used,runs_used;UINT used,capacity;RECT clip;Renderer::TileInstance* instances;bool boundary;
+        static void emit(void* pointer,Canvas* bitmap,double x,double y,int sx,int sy,int w,int h){
+            auto& out=*static_cast<Sink*>(pointer);
+            if(out.used>=out.capacity)rb_raise(rb_eArgError,"Tile batch changed while parsing");
+            auto& d=out.instances[out.used];
+            d.position[0]=static_cast<float>(x);d.position[1]=static_cast<float>(y);d.position[2]=static_cast<float>(w);d.position[3]=static_cast<float>(h);
+            d.source[0]=static_cast<float>(sx)/bitmap->width;d.source[1]=static_cast<float>(sy)/bitmap->height;
+            d.source[2]=static_cast<float>(w)/bitmap->width;d.source[3]=static_cast<float>(h)/bitmap->height;
+            if(out.boundary||out.runs[out.runs_used-1].bitmap!=bitmap){
+                out.runs[out.runs_used]={bitmap,out.clip,out.used,0};out.nodes[out.nodes_used++]={3,out.runs_used++};out.boundary=false;
+            }
+            ++out.runs[out.runs_used-1].count;++out.used;
+        }
+    };
     for(long i=0;i<top_count;++i){
         VALUE command=rb_ary_entry(commands,i);Check_Type(command,T_ARRAY);
         int kind=NUM2INT(rb_ary_entry(command,0));
+        if(kind==tile_kind){
+            rb_ary_concat(bitmap_roots,rb_ary_entry(command,3));
+            Sink sink{nodes,runs,node_count,run_count,tile_used,static_cast<UINT>(tile_count),viewport,renderer.tile_data.get(),true};
 #ifdef RGSS_VXA
-        if(kind==3){
-            struct Sink { Draw* draws;long used,capacity,batch;RECT clip; } sink{draws,used,count,i,viewport};
-            vxa_batch_expand(command,&sink,[](void* pointer,Canvas* bitmap,double x,double y,int sx,int sy,int w,int h){
-                auto& out=*static_cast<Sink*>(pointer);
-                if(out.used>=out.capacity)rb_raise(rb_eArgError,"Tile batch changed while parsing");
-                Draw& d=out.draws[out.used++];memset(&d,0,sizeof(d));d.kind=3;d.batch=out.batch;d.bitmap=bitmap;d.state=screen();d.clip=out.clip;
-                d.state.position[0]=static_cast<float>(x);d.state.position[1]=static_cast<float>(y);
-                d.state.position[2]=static_cast<float>(w);d.state.position[3]=static_cast<float>(h);
-                d.state.source[0]=static_cast<float>(sx)/bitmap->width;d.state.source[1]=static_cast<float>(sy)/bitmap->height;
-                d.state.source[2]=static_cast<float>(w)/bitmap->width;d.state.source[3]=static_cast<float>(h)/bitmap->height;
-            });
-            used=sink.used;continue;
-        }
+            vxa_batch_expand(command,&sink,Sink::emit);
+#else
+            struct XPSink {Sink* tiles;Draw* draws;long used,capacity;} xp{&sink,draws,used,regular_count};
+            xp_batch_expand(command,&xp,[](void* pointer,Canvas* bitmap,double x,double y,int sx,int sy,int w,int h,int flash,int opacity){
+                auto& out=*static_cast<XPSink*>(pointer);
+                if(!flash){Sink::emit(out.tiles,bitmap,x,y,sx,sy,w,h);return;}
+                if(out.used>=out.capacity)rb_raise(rb_eArgError,"Flash batch changed while parsing");
+                out.tiles->nodes[out.tiles->nodes_used++]={0,out.used};out.tiles->boundary=true;
+                Draw& d=out.draws[out.used++];memset(&d,0,sizeof(d));d.kind=0;d.bitmap=bitmap;d.state=screen();d.clip=out.tiles->clip;
+                d.state.position[0]=static_cast<float>(x);d.state.position[1]=static_cast<float>(y);d.state.position[2]=static_cast<float>(w);d.state.position[3]=static_cast<float>(h);
+                d.state.source[0]=static_cast<float>(sx)/bitmap->width;d.state.source[1]=static_cast<float>(sy)/bitmap->height;d.state.source[2]=static_cast<float>(w)/bitmap->width;d.state.source[3]=static_cast<float>(h)/bitmap->height;
+                d.blend=1;d.state.origin[2]=opacity/255.0f;d.state.color[0]=(flash>>8&15)/15.0f;d.state.color[1]=(flash>>4&15)/15.0f;d.state.color[2]=(flash&15)/15.0f;d.state.color[3]=1;
+            });used=xp.used;
 #endif
-        if(used>=count)rb_raise(rb_eArgError,"Rendering commands changed while parsing");
+            node_count=sink.nodes_used;run_count=sink.runs_used;tile_used=sink.used;continue;
+        }
+        if(used>=regular_count||node_count>=count)rb_raise(rb_eArgError,"Rendering commands changed while parsing");
+        nodes[node_count++]={kind,used};
         Draw& d=draws[used++];memset(&d,0,sizeof(d));d.kind=kind;d.state=screen();d.clip=viewport;
         if(d.kind==0){
             if(RARRAY_LEN(command)!=22)rb_raise(rb_eArgError,"Invalid quad command");
-            d.bitmap=canvas_get(rb_ary_entry(command,1));
+            VALUE bitmap=rb_ary_entry(command,1);rb_ary_push(bitmap_roots,bitmap);
+            d.bitmap=canvas_get(bitmap);
             d.state.position[0]=number(command,2);d.state.position[1]=number(command,3);d.state.position[2]=number(command,4);d.state.position[3]=number(command,5);
             d.state.source[0]=number(command,6)/d.bitmap->width;d.state.source[1]=number(command,7)/d.bitmap->height;
             d.state.source[2]=number(command,8)/d.bitmap->width;d.state.source[3]=number(command,9)/d.bitmap->height;
@@ -390,26 +422,25 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
         else if(d.kind==2){effect(d.state,rb_ary_entry(command,2),rb_ary_entry(command,3));d.state.extra[0]=1;d.clip=viewport;viewport={0,0,static_cast<LONG>(renderer.width),static_cast<LONG>(renderer.height)};}
         else rb_raise(rb_eArgError,"Unknown rendering command");
     }
+    renderer.expanded=count;
+    renderer.tile_scratch_used=run_count*(sizeof(Run)+sizeof(Node));
+    renderer.tile_scratch_reserved=tile_count?RSTRING_LEN(run_storage)+RSTRING_LEN(order_storage)-regular_count*sizeof(Node):0;
+    renderer.scratch_used=used*sizeof(Draw)+node_count*sizeof(Node)+run_count*sizeof(Run);
+    renderer.scratch_reserved=RSTRING_LEN(storage)+RSTRING_LEN(order_storage)+RSTRING_LEN(run_storage);
     Canvas* mask=NIL_P(mask_value)?nullptr:canvas_get(mask_value);
     float fade=static_cast<float>(NUM2DBL(progress)),fuzz=static_cast<float>(NUM2DBL(vague));
+    // Ruby color/rectangle hooks may dispose a bitmap parsed earlier in this frame.
+    for(long i=0;i<used;++i)if(draws[i].bitmap&&(draws[i].bitmap->disposed||!draws[i].bitmap->pixels))rb_raise(rb_path2class("RGSSError"),"disposed bitmap while parsing");
+    for(long i=0;i<run_count;++i)if(runs[i].bitmap->disposed||!runs[i].bitmap->pixels)rb_raise(rb_path2class("RGSSError"),"disposed tile bitmap while parsing");
+    if(mask&&(mask->disposed||!mask->pixels))rb_raise(rb_path2class("RGSSError"),"disposed transition bitmap while parsing");
     char failure[256]{};
     {
         try{
             auto& r=renderer;r.initialize();LARGE_INTEGER start{};QueryPerformanceCounter(&start);
             r.parse_ms=1000.0*(start.QuadPart-parse_start.QuadPart)/r.frequency.QuadPart;r.resize_back();
-#ifdef RGSS_VXA
-            r.batches={};
-            for(long i=0;i<used;++i)if(draws[i].kind==3)++r.batches.quads;
-            r.ensure_tiles(r.batches.quads);
-            UINT tile_index=0;
-            for(long i=0;i<used;++i)if(draws[i].kind==3){
-                auto& instance=r.tile_data[tile_index++];
-                memcpy(instance.position,draws[i].state.position,sizeof(instance.position));
-                memcpy(instance.source,draws[i].state.source,sizeof(instance.source));
-            }
-            r.upload_tiles(r.batches.quads);tile_index=0;
+            r.batches={};r.batches.quads=tile_used;
+            r.ensure_tiles(tile_used);r.upload_tiles(tile_used);
             Constants tile_state=screen();r.tile_active=false;
-#endif
             HMONITOR monitor=MonitorFromWindow(r.window,MONITOR_DEFAULTTONEAREST);ULONGLONG now=GetTickCount64();
             if(monitor!=r.color_monitor||now-r.color_checked>=1000){r.white_scale=output_white_scale(monitor);r.color_monitor=monitor;r.color_checked=now;}
             r.query_result(r.queries[r.query_index]);auto& q=r.queries[r.query_index];bool queried=!q.pending;
@@ -419,17 +450,10 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
             r.context->PSSetSamplers(0,1,r.sampler.GetAddressOf());r.context->RSSetState(r.raster.Get());
             D3D11_VIEWPORT full{0,0,static_cast<float>(r.width),static_cast<float>(r.height),0,1};r.context->RSSetViewports(1,&full);
             r.target(r.scene.target.Get());const float black[4]={0,0,0,1};r.context->ClearRenderTargetView(r.scene.target.Get(),black);
-            for(long i=0;i<used;++i){auto& d=draws[i];
-#ifdef RGSS_VXA
-                if(d.kind==3){
-                    long end=i+1;
-                    while(end<used&&draws[end].kind==3&&draws[end].batch==d.batch&&draws[end].bitmap==d.bitmap&&
-                        draws[end].blend==d.blend&&EqualRect(&draws[end].clip,&d.clip))++end;
-                    UINT instances=static_cast<UINT>(end-i);
-                    r.upload(d.bitmap);r.draw(d.bitmap->view,tile_state,d.clip,d.blend,false,instances,tile_index);
-                    tile_index+=instances;i=end-1;continue;
-                }
-#endif
+            for(long i=0;i<node_count;++i){
+                auto node=nodes[i];
+                if(node.kind==3){auto& run=runs[node.index];r.upload(run.bitmap);r.draw(run.bitmap->view,tile_state,run.clip,0,false,run.count,run.first);continue;}
+                auto& d=draws[node.index];
                 if(d.kind==0){r.upload(d.bitmap);r.draw(d.bitmap->view,d.state,d.clip,d.blend);}
                 else if(d.kind==1){r.target(r.group.target.Get());const float clear[4]{};r.context->ClearRenderTargetView(r.group.target.Get(),clear);}
                 else{
@@ -449,28 +473,28 @@ VALUE present(VALUE,VALUE commands,VALUE progress,VALUE mask_value,VALUE vague){
             r.draw(r.scene.view.Get(),copy,clip,0,true);
             if(queried){r.context->End(q.end.Get());r.context->End(q.disjoint.Get());q.pending=true;}
             r.query_index=(r.query_index+1)%r.queries.size();
-#ifdef RGSS_VXA
             LARGE_INTEGER before_present{};QueryPerformanceCounter(&before_present);
-            r.batches.scene_ms=1000.0*(before_present.QuadPart-start.QuadPart)/r.frequency.QuadPart;
-#endif
+            r.scene_ms=1000.0*(before_present.QuadPart-start.QuadPart)/r.frequency.QuadPart;
+            r.batches.scene_ms=r.scene_ms;
             HRESULT displayed=r.swap->Present(0,r.refresh.high()?DXGI_PRESENT_DO_NOT_WAIT:0);
             if(displayed==DXGI_ERROR_WAS_STILL_DRAWING||displayed==DXGI_STATUS_OCCLUDED)++r.refresh.dropped;
             else{checked(displayed,"Present");++r.refresh.presented;}
             LARGE_INTEGER end{};QueryPerformanceCounter(&end);
-#ifdef RGSS_VXA
-            r.batches.present_ms=1000.0*(end.QuadPart-before_present.QuadPart)/r.frequency.QuadPart;
-#endif
+            r.present_ms=1000.0*(end.QuadPart-before_present.QuadPart)/r.frequency.QuadPart;
+            r.batches.present_ms=r.present_ms;
             r.render_ms=1000.0*(end.QuadPart-start.QuadPart)/r.frequency.QuadPart;
             r.render_cpu_ms=r.cpu_begin?(thread_cpu()-r.cpu_begin)/10000.0:0;
             ++r.sequence;
         }catch(const std::exception& e){strncpy_s(failure,e.what(),_TRUNCATE);}
     }
-    RB_GC_GUARD(storage);RB_GC_GUARD(commands);RB_GC_GUARD(mask_value);
+    RB_GC_GUARD(order_storage);RB_GC_GUARD(run_storage);
+    RB_GC_GUARD(bitmap_roots);RB_GC_GUARD(storage);RB_GC_GUARD(commands);RB_GC_GUARD(mask_value);
     if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);
     return Qnil;
 }
 bool pump(){
-    MSG message{};while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){if(message.message==WM_QUIT)renderer.close=true;ui_input_pretranslate(message);TranslateMessage(&message);DispatchMessageW(&message);}
+    MSG message{};while(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){if(message.message==WM_QUIT)renderer.close=true;if(browser_pretranslate(message)||input_pretranslate(message))continue;ui_input_pretranslate(message);TranslateMessage(&message);DispatchMessageW(&message);}
+    browser_pump();
     if(renderer.close||!IsWindow(renderer.window))return false;
     if(input_take_reset()){
         ID name=rb_intern("Reset");VALUE klass=rb_const_defined_at(rb_cObject,name)?rb_const_get_at(rb_cObject,name):rb_define_class("Reset",rb_eException);
@@ -539,7 +563,7 @@ VALUE resize_screen(VALUE,VALUE width,VALUE height){
     {
         auto& r=renderer;UINT old_width=r.width,old_height=r.height;
         try{
-            r.width=w;r.height=h;fit_window();
+            r.width=w;r.height=h;fit_window();browser_layout();
             if(r.ready){
                 Surface scene,group,frozen;r.surface(scene);r.surface(group);r.surface(frozen);
                 r.target(nullptr);ID3D11ShaderResourceView* empty[3]{};r.context->PSSetShaderResources(0,3,empty);
@@ -622,8 +646,10 @@ VALUE order_display(VALUE,VALUE nodes){
     for(long i=0;i<count;++i)rb_ary_push(result,rb_ary_entry(nodes,keys[i].index));
     RB_GC_GUARD(storage);RB_GC_GUARD(nodes);return result;
 }
-#ifdef RGSS_VXA
+VALUE tile_parse_stats(VALUE){auto& r=renderer;return rb_ary_new_from_args(7,SIZET2NUM(r.scratch_used),SIZET2NUM(r.scratch_reserved),SIZET2NUM(r.tile_scratch_used),SIZET2NUM(r.tile_scratch_reserved),SIZET2NUM(r.expanded),DBL2NUM(r.scene_ms),DBL2NUM(r.present_ms));}
 VALUE tile_batches(VALUE){auto& r=renderer;auto& b=r.batches;return rb_ary_new_from_args(8,UINT2NUM(b.quads),UINT2NUM(b.tile_draws),UINT2NUM(b.regular_draws),UINT2NUM(b.constant_maps),UINT2NUM(b.instance_maps),UINT2NUM(r.tile_capacity*sizeof(Renderer::TileInstance)),DBL2NUM(b.scene_ms),DBL2NUM(b.present_ms));}
+
+#ifdef RGSS_VXA
 VALUE reset_graphics(VALUE){graphics_reset();return Qnil;}
 #endif
 VALUE scene_pixel(VALUE,VALUE vx,VALUE vy){
@@ -678,6 +704,7 @@ void graphics_prepare(){
 }
 void graphics_attach(HWND window){
     renderer.window=window;renderer.owner=GetCurrentThreadId();
+    browser_attach(window);
     // Background pacing is test-only; normal games retain inactive-window pausing.
     wchar_t background[2]{};renderer.test_background=GetEnvironmentVariableW(L"LUNETILE_TEST_BACKGROUND",background,2)==1&&background[0]==L'1';
     using SetDpi=HANDLE(WINAPI*)(HANDLE);
@@ -701,12 +728,13 @@ void graphics_shutdown(){if(renderer.window&&IsWindow(renderer.window)&&renderer
     if(dpi&&renderer.previous_dpi)dpi(renderer.previous_dpi);
     renderer=Renderer{};}
 void graphics_reset(){
+    browser_reset();
     bitmap_text_cache_clear();
+    renderer.scratch_used=renderer.scratch_reserved=renderer.tile_scratch_used=renderer.tile_scratch_reserved=renderer.expanded=0;
+    renderer.scene_ms=renderer.present_ms=0;
     renderer.upload_rects=renderer.upload_bytes=renderer.texture_creations=0;
     auto& r=renderer;r.rate=r.refresh.high()?120:engine_rate;r.remainder=0;r.refresh.reset();r.frozen_valid=false;QueryPerformanceCounter(&r.deadline);
-#ifdef RGSS_VXA
     r.batches={};r.tile_active=false;
-#endif
     if(r.context){float black[4]={0,0,0,1};if(r.scene.target)r.context->ClearRenderTargetView(r.scene.target.Get(),black);if(r.frozen.target)r.context->ClearRenderTargetView(r.frozen.target.Get(),black);}
     input_reset();
 }
@@ -734,6 +762,8 @@ void init_graphics(){
     rb_define_singleton_method(graphics,"frame_reset",RUBY_METHOD_FUNC(reset_deadline),0);
     rb_define_singleton_method(graphics,"__timings",RUBY_METHOD_FUNC(stats),0);
     rb_define_singleton_method(graphics,"__render_parts",RUBY_METHOD_FUNC(render_parts),0);
+    rb_define_singleton_method(graphics,"__tile_batches",RUBY_METHOD_FUNC(tile_batches),0);
+    rb_define_singleton_method(graphics,"__tile_parse_stats",RUBY_METHOD_FUNC(tile_parse_stats),0);
     rb_define_singleton_method(graphics,"__upload_stats",RUBY_METHOD_FUNC(upload_stats),0);
     rb_define_singleton_method(rb_const_get(rb_cObject,rb_intern("RGSSXP")),"__plain_display_class",RUBY_METHOD_FUNC(plain_display_class),1);
     rb_define_singleton_method(rb_const_get(rb_cObject,rb_intern("RGSSXP")),"__order_display",RUBY_METHOD_FUNC(order_display),1);
@@ -741,9 +771,10 @@ void init_graphics(){
     rb_define_singleton_method(graphics,"__snapshot",RUBY_METHOD_FUNC(snapshot),0);
 #ifdef RGSS_VXA
     init_vxa_tile_cache();
-    rb_define_singleton_method(graphics,"__tile_batches",RUBY_METHOD_FUNC(tile_batches),0);
     rb_define_singleton_method(graphics,"__reset",RUBY_METHOD_FUNC(reset_graphics),0);
     rb_define_singleton_method(rb_define_module("RGSSXP"),"__tile_quads",RUBY_METHOD_FUNC(tile_quads),5);
+#else
+    init_xp_tile_cache();
 #endif
 }
 

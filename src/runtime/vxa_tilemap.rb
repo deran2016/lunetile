@@ -196,6 +196,7 @@ class Tilemap
     ox,oy = @ox+(viewport ? viewport.ox : 0),@oy+(viewport ? viewport.oy : 0)
     return legacy_layers if rect.width<0 || rect.height<0
     @tile_cache ||= RGSSXP::TileCache.new
+    cache_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     keys = @tile_cache.prepare(@map_data,@flags,ox.div(32),oy.div(32),(rect.width+31)/32+1,(rect.height+31)/32+1,@updates/30)
     return legacy_layers unless keys
     keys.each do |key|
@@ -203,6 +204,7 @@ class Tilemap
       @tile_cache.shape(key,sheet,parts)
     end
     @tile_cache.commit
+    @cache_prepare_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC)-cache_started)*1000
     unless @vxa_shadow && !@vxa_shadow.disposed?
       @vxa_shadow = Bitmap.new(16,16)
       @vxa_shadow.fill_rect(0,0,16,16,Color.new(0,0,0,128))

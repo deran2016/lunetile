@@ -39,13 +39,21 @@ advance = lambda do
   scene.update
 end
 120.times { advance.call }
-Graphics.frame_reset
-$command_times.clear
-baseline = Graphics.__refresh_stats
 native,parse,gpu,combined,total = [],[],[],[],[]
 batch_totals = Array.new(5,0)
 batch_frames,capacity = 0,0
 scene_times,present_times = [],[]
+parse_storage = []
+cache_times = []
+tilemaps = RGSSXP.instance_variable_get(:@nodes).keys.grep(Tilemap)
+# Baseline XP emits one Draw per expanded native tile; count outside timed samples.
+tile_reference_quads=tilemaps.sum do |tile|
+ tile.layers.sum { |layer| layer.commands.sum { |c| c[0]==4 ? RGSSXP.__expand_xp_tile_batch(c).size : c[0]==3 ? RGSSXP.__expand_tile_batch(c).size : 0 } }
+end
+GC.start
+Graphics.frame_reset
+$command_times.clear
+baseline = Graphics.__refresh_stats
 sequence = Graphics.__timings[8]
 gpu_sequence = Graphics.__timings[9]
 allocated_before = GC.stat(:total_allocated_objects)
@@ -57,6 +65,7 @@ frames.times do
   timing = Graphics.__timings
   if timing[8] != sequence
     native << timing[0]
+    cache_times << tilemaps.sum { |tile| tile.instance_variable_get(:@cache_prepare_ms).to_f }
     if Graphics.respond_to?(:__render_parts)
       parsed = Graphics.__render_parts[0]
       parse << parsed
@@ -74,6 +83,7 @@ frames.times do
       scene_times << batch[6]; present_times << batch[7]
       batch_frames += 1
     end
+    parse_storage << Graphics.__tile_parse_stats if Graphics.respond_to?(:__tile_parse_stats)
     sequence = timing[8]
   end
 end
@@ -89,8 +99,10 @@ end
 result = {seconds:elapsed,logic_fps:frames/elapsed,present_fps:stats[1]/elapsed,
   missing_fraction:[stats[0]-stats[1],0].max.to_f/stats[0],stats:stats,
   command_ms:summary.call($command_times),parse_ms:summary.call(parse),combined_ms:summary.call(combined),total_ms:summary.call(total),submit_ms:summary.call(native),gpu_ms:summary.call(gpu),gpu_samples:gpu.size,
+  cache_prepare_ms:summary.call(cache_times),tile_reference_quads:tile_reference_quads,
   allocated_per_present:allocated.to_f/stats[1],gc_ms:gc_ms,
-  tile_caches:RGSSXP.instance_variable_get(:@nodes).keys.grep(Tilemap).filter_map { |tile| tile.instance_variable_get(:@tile_cache)&.stats },
+  tile_caches:RGSSXP.instance_variable_get(:@nodes).keys.grep(Tilemap).filter_map { |tile| (tile.instance_variable_get(:@tile_cache)||tile.instance_variable_get(:@xp_tile_cache))&.stats },
+  parse_storage:parse_storage.empty? ? nil : {used_bytes:parse_storage.map { |v| v[0] }.max,reserved_bytes:parse_storage.map { |v| v[1] }.max,tile_used_bytes:parse_storage.map { |v| v[2] }.max,tile_reserved_bytes:parse_storage.map { |v| v[3] }.max,expanded:parse_storage.map { |v| v[4] }.max,scene_ms:summary.call(parse_storage.map { |v| v[5] }),present_ms:summary.call(parse_storage.map { |v| v[6] })},
   map_size:[$game_map.width,$game_map.height],moving:FPS_MOVING,render_rate:Graphics.render_rate}
 if batch_frames > 0
   result[:batches] = {frames:batch_frames,

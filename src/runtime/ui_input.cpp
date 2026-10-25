@@ -8,6 +8,7 @@
 #include "display_geometry.h"
 #include "direction_input.h"
 #include "text_submit.h"
+#include "browser.h"
 
 namespace {
 HWND target=nullptr;
@@ -55,22 +56,23 @@ int code(VALUE value){
 }
 VALUE key_trigger(VALUE,VALUE key){
     int k=code(key);
+    if(browser_input_blocked())return Qfalse;
     // Korean IME may commit/end composition before forwarding its confirming key.
     if(editing&&last_ime_message&&GetTickCount64()-last_ime_message<75&&(k==VK_RETURN||k==VK_BACK||k==VK_DELETE))return Qfalse;
     return triggered[k]?Qtrue:Qfalse;
 }
-VALUE key_press(VALUE,VALUE key){return held[code(key)]?Qtrue:Qfalse;}
-VALUE direction4(VALUE){return INT2NUM(directions.direction4());}
-VALUE direction_trigger(VALUE){return INT2NUM(directions.trigger);}
+VALUE key_press(VALUE,VALUE key){int k=code(key);return !browser_input_blocked()&&held[k]?Qtrue:Qfalse;}
+VALUE direction4(VALUE){return INT2NUM(browser_input_blocked()?0:directions.direction4());}
+VALUE direction_trigger(VALUE){return INT2NUM(browser_input_blocked()?0:directions.trigger);}
 VALUE mouse_position(VALUE){
-    if(!target||GetForegroundWindow()!=target)return Qnil;
+    if(!target||GetForegroundWindow()!=target||browser_input_blocked())return Qnil;
     POINT p{};if(!GetCursorPos(&p)||!ScreenToClient(target,&p))return Qnil;
     RECT r{};GetClientRect(target,&r);int w,h,x,y;graphics_input_size(w,h);
     if(!rgss_display::locate(w,h,r.right,r.bottom,p.x,p.y,x,y))return Qnil;
     return rb_ary_new_from_args(2,INT2NUM(x),INT2NUM(y));
 }
 VALUE mouse_press_position(VALUE){
-    if(!pressed_position||!target||GetForegroundWindow()!=target)return Qnil;
+    if(!pressed_position||!target||GetForegroundWindow()!=target||browser_input_blocked())return Qnil;
     RECT r{};GetClientRect(target,&r);int w,h,x,y;graphics_input_size(w,h);
     if(!rgss_display::locate(w,h,r.right,r.bottom,press_point.x,press_point.y,x,y))return Qnil;
     return rb_ary_new_from_args(2,INT2NUM(x),INT2NUM(y));
@@ -79,16 +81,16 @@ VALUE mouse_trigger(VALUE self,VALUE button){
     ID id=SYM2ID(rb_to_symbol(button));int key=id==rb_intern("left")?VK_LBUTTON:id==rb_intern("right")?VK_RBUTTON:0;
     if(!key)rb_raise(rb_eArgError,"Mouse button must be left or right");return key_trigger(self,INT2NUM(key));
 }
-VALUE wheel_delta(VALUE){return INT2NUM(wheel);}
+VALUE wheel_delta(VALUE){return INT2NUM(browser_input_blocked()?0:wheel);}
 VALUE text_value(const std::wstring& value){
     int size=WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,value.data(),int(value.size()),nullptr,0,nullptr,nullptr);
     std::string bytes(size,'\0');if(size)WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,value.data(),int(value.size()),bytes.data(),size,nullptr,nullptr);
     return rb_utf8_str_new(bytes.data(),size);
 }
-VALUE text(VALUE){VALUE value=text_value(committed);committed.clear();return value;}
-VALUE composing_text(VALUE){return text_value(composition);}
-VALUE composing_now(VALUE){return composing?Qtrue:Qfalse;}
-VALUE text_submit(VALUE){return submit.triggered?Qtrue:Qfalse;}
+VALUE text(VALUE){if(browser_input_blocked())return rb_utf8_str_new("",0);VALUE value=text_value(committed);committed.clear();return value;}
+VALUE composing_text(VALUE){if(browser_input_blocked())return rb_utf8_str_new("",0);return text_value(composition);}
+VALUE composing_now(VALUE){return !browser_input_blocked()&&composing?Qtrue:Qfalse;}
+VALUE text_submit(VALUE){return !browser_input_blocked()&&submit.triggered?Qtrue:Qfalse;}
 VALUE ime_open(VALUE){if(ime_owned&&!editing)return saved_open&&(saved_conversion&IME_CMODE_NATIVE)?Qtrue:Qfalse;HIMC context=target?ImmGetContext(target):nullptr;if(!context)return Qfalse;DWORD mode=0,sentence=0;ImmGetConversionStatus(context,&mode,&sentence);BOOL open=ImmGetOpenStatus(context);ImmReleaseContext(target,context);return open&&(mode&IME_CMODE_NATIVE)?Qtrue:Qfalse;}
 VALUE set_ime_open(VALUE,VALUE value){
     if(!editing||!target)return Qfalse;
@@ -105,6 +107,7 @@ VALUE debug_stats(VALUE){
         target&&IsWindowUnicode(target)?Qtrue:Qfalse,ULONG2NUM(LOWORD(reinterpret_cast<ULONG_PTR>(GetKeyboardLayout(0)))),context?Qtrue:Qfalse,opened?Qtrue:Qfalse);
 }
 VALUE text_mode(VALUE,VALUE value){
+    if(browser_input_blocked())return Qfalse;
     bool enabled=RTEST(value),first=!ime_owned;
     if(enabled&&target&&GetForegroundWindow()!=target)return value;
     if(first&&target){HIMC context=ImmGetContext(target);if(context){saved_open=ImmGetOpenStatus(context);ImmGetConversionStatus(context,&saved_conversion,&saved_sentence);ImmReleaseContext(target,context);}ime_owned=true;}

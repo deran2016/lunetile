@@ -2,6 +2,7 @@
 import argparse,hashlib,json,shutil,subprocess,tempfile
 from pathlib import Path
 from migrate_project import migrate
+from optimize_template_scripts import optimize
 
 ASSETS={'Data':{'.rxdata'},'Graphics':{'.png','.jpg','.jpeg','.bmp'},'Audio':{'.ogg','.wav','.mp3','.wma','.mid','.midi'}}
 ROOT=Path(__file__).resolve().parents[1]
@@ -44,6 +45,7 @@ def package(source,runtime,output,diagnostics):
    target=clean/p.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
   converted=staging/'converted'
   migrate(clean,converted,runtime/'Lunetile.dll',runtime/'rgssxp-ruby.exe',data_encoding='UTF-8',widescreen=True,high_refresh=True)
+  optimize(converted,'xp',runtime/'rgssxp-ruby.exe')
   map_changes=expand_map(converted,runtime/'rgssxp-ruby.exe',staging)
   game=staging/'game';game.mkdir()
   diagnostic_files=staging/'diagnostics';diagnostic_files.mkdir()
@@ -54,6 +56,7 @@ def package(source,runtime,output,diagnostics):
    else:(game/folder).mkdir()
   (diagnostic_files/'migration').mkdir()
   shutil.copy2(converted/'migration/manifest.json',diagnostic_files/'migration/manifest.json')
+  shutil.copy2(converted/'migration/stock-performance.rb',diagnostic_files/'migration/stock-performance.rb')
   for name in ('artifact.json','verification.json','ruby.lock.json','dependencies.lock.json','ruby-msvc32-size-fetch-add.patch'):
    shutil.copy2(runtime/name,diagnostic_files/name)
   shutil.copy2(runtime/'LICENSE',game/'LICENSE')
@@ -70,6 +73,8 @@ def package(source,runtime,output,diagnostics):
    '고주기 저장은 버전 2입니다. 기존 저장은 읽을 수 있지만 새 저장은 이전 런타임에서 읽을 수 없습니다.\n'
    '새 저장: Saves/RGSSXP. 원본 프로젝트나 기존 세이브를 덮어쓰지 마세요.\n'
    'Game.rxproj와 Data는 변환된 프로젝트이며 기본 XP 스크립트를 덮어쓰면 호환 처리가 사라질 수 있습니다.\n\n'
+   '기본 스크립트: 캐릭터 표시·이동과 32개 이상 이벤트의 좌표 조회를 최적화했습니다.\n'
+   '이벤트/이동 경로의 Script 실행 시 재시작 전까지 기존 처리로 돌아갑니다. 기존 게임용 패치가 아닙니다.\n\n'
    '개발용 통신 API: REST/JSON 및 TCP/TLS. 스크립트가 명시적으로 호출하기 전에는 서버에 접속하지 않습니다.\n'
    '사용법: https://github.com/deran2016/lunetile/blob/main/docs/NETWORKING.md\n\n'
    '검증 결과·변환 기록·파일 해시: 같은 Release의 lunetile-template-xp-diagnostics.zip (실행에는 불필요).\n'

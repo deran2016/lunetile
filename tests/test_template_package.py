@@ -21,6 +21,8 @@ class TemplatePackageTests(unittest.TestCase):
   (self.runtime/'verification.json').write_text(json.dumps({'passed':True,'runtime_sha256':hashlib.sha256(b'new runtime').hexdigest()}))
   self.expansion=patch('package_template.expand_map',return_value={'size_after':[40,23,3]})
   self.expansion.start();self.addCleanup(self.expansion.stop)
+  self.optimization=patch('package_template.optimize',side_effect=lambda project,engine,ruby:(project/'migration/stock-performance.rb').write_bytes(b'optimized helper'))
+  self.optimize=self.optimization.start();self.addCleanup(self.optimization.stop)
 
  def package(self):return package(self.source,self.runtime,self.output,self.diagnostics)
 
@@ -34,6 +36,7 @@ class TemplatePackageTests(unittest.TestCase):
 
  def test_only_project_files_and_verified_runtime_are_shipped(self):
   with patch('package_template.migrate',side_effect=self.migrate):hashes=self.package()
+  self.assertEqual(self.optimize.call_args.args[1],'xp')
   self.assertEqual((self.source/'RGSS104E.dll').read_bytes(),b'original')
   self.assertEqual((self.output/'Lunetile.dll').read_bytes(),b'new runtime')
   self.assertFalse((self.output/'RGSS104E.dll').exists())
@@ -42,7 +45,8 @@ class TemplatePackageTests(unittest.TestCase):
   self.assertFalse((self.output/'rgssxp-ruby.exe').exists())
   self.assertEqual({p.name for p in self.output.iterdir()},{'Game.exe','Game.ini','Game.rxproj','Lunetile.dll','Data','Graphics','Audio','README.txt','LICENSE','licenses'})
   self.assertEqual({p.relative_to(self.diagnostics).as_posix() for p in self.diagnostics.rglob('*') if p.is_file()},
-   {'migration/manifest.json','artifact.json','verification.json','ruby.lock.json','dependencies.lock.json','ruby-msvc32-size-fetch-add.patch','template-source.json','template-map.json','SHA256SUMS.json'})
+   {'migration/manifest.json','migration/stock-performance.rb','artifact.json','verification.json','ruby.lock.json','dependencies.lock.json','ruby-msvc32-size-fetch-add.patch','template-source.json','template-map.json','SHA256SUMS.json'})
+  self.assertEqual((self.diagnostics/'migration/stock-performance.rb').read_bytes(),b'optimized helper')
   self.assertEqual((self.output/'licenses/notice').read_bytes(),b'original notice')
   self.assertEqual(json.loads((self.diagnostics/'SHA256SUMS.json').read_text()),hashes)
   self.assertEqual(json.loads((self.diagnostics/'template-map.json').read_text())['size_after'],[40,23,3])

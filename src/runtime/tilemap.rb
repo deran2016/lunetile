@@ -19,7 +19,7 @@ class Tilemap < RGSSXP::DisplayObject
     super
     @updates += 1 if RGSSXP::Timing.legacy_tick?
   end
-  def layers
+  def legacy_layers
     return [] unless @map_data && @map_data.xsize > 0 && @map_data.ysize > 0 && visible
     rect = viewport ? viewport.rect : Rect.new(0, 0, Graphics.width, Graphics.height)
     vx, vy = viewport ? [viewport.ox, viewport.oy] : [0, 0]
@@ -39,21 +39,14 @@ class Tilemap < RGSSXP::DisplayObject
           commands = groups[depth] ||= []
           if tile_id >= 384
             next unless @tileset
-            source = Rect.new((tile_id - 384) % 8 * 32, (tile_id - 384) / 8 * 32, 32, 32)
-            RGSSXP.quad(commands, @tileset, screen_x, screen_y, source)
           else
-            bitmap = @autotiles[tile_id / 48 - 1]
+            bitmap = @autotiles[tile_id/48-1]
             next unless bitmap && !bitmap.disposed?
-            if bitmap.height == 32
-              frame = @updates / 16 % [bitmap.width / 32, 1].max
-              RGSSXP.quad(commands, bitmap, screen_x, screen_y, Rect.new(frame * 32, 0, 32, 32))
-            else
-              frame = @updates / 16 % [bitmap.width / 96, 1].max
-              RGSSXP::AUTOTILE_QUARTERS[tile_id % 48].each_with_index do |quarter, corner|
-                source = Rect.new(frame * 96 + quarter % 6 * 16, quarter / 6 * 16, 16, 16)
-                RGSSXP.quad(commands, bitmap, screen_x + corner % 2 * 16, screen_y + corner / 2 * 16, source)
-              end
-            end
+          end
+          sheet,parts = tile_shape(tile_id)
+          bitmap = sheet == 0 ? @tileset : @autotiles[sheet-1]
+          parts.each do |dx,dy,sx,sy,w,h|
+            RGSSXP.quad(commands,bitmap,screen_x+dx,screen_y+dy,Rect.new(sx,sy,w,h))
           end
         end
         if @flash_data && (value = @flash_data[map_x, map_y]) && value != 0
@@ -69,7 +62,49 @@ class Tilemap < RGSSXP::DisplayObject
     end
     groups.map { |depth, commands| Layer.new(self, depth, commands) }
   end
+  def tile_shape(id)
+    return [0,[[0,0,(id-384)%8*32,(id-384)/8*32,32,32]]] if id >= 384
+    sheet = id/48
+    bitmap = @autotiles[sheet-1]
+    return [sheet,[]] unless bitmap && !bitmap.disposed?
+    if bitmap.height == 32
+      frame = @updates/16 % [bitmap.width/32,1].max
+      [sheet,[[0,0,frame*32,0,32,32]]]
+    else
+      frame = @updates/16 % [bitmap.width/96,1].max
+      [sheet,RGSSXP::AUTOTILE_QUARTERS[id%48].each_with_index.map { |q,c| [c%2*16,c/2*16,frame*96+q%6*16,q/6*16,16,16] }]
+    end
+  end
+  XP_TABLE_READERS = %i[[] xsize ysize zsize].to_h { |name| [name,Table.instance_method(name)] }.freeze
+  XP_BITMAP_READERS = %i[width height disposed?].to_h { |name| [name,Bitmap.instance_method(name)] }.freeze
+  XP_QUAD = RGSSXP.method(:quad)
+  XP_SHAPE = instance_method(:tile_shape)
+  def layers
+    tables = [@map_data,@priorities,@flash_data]
+    return legacy_layers unless tables.each_with_index.all? { |v,i| (i>0 && v.nil?) || (v.instance_of?(Table) && XP_TABLE_READERS.all? { |n,m| v.method(n).unbind == m }) } &&
+      @autotiles.instance_of?(Array) && @autotiles.size == 7 && RGSSXP.method(:quad) == XP_QUAD && method(:tile_shape).unbind == XP_SHAPE
+    images = [@tileset]+@autotiles
+    return legacy_layers unless images.all? { |v| v.nil? || (v.instance_of?(Bitmap) && XP_BITMAP_READERS.all? { |n,m| v.method(n).unbind == m }) }
+    return [] unless @map_data.xsize>0 && @map_data.ysize>0 && visible
+    rect = viewport ? viewport.rect : Rect.new(0,0,Graphics.width,Graphics.height)
+    ox,oy = @ox+(viewport ? viewport.ox : 0),@oy+(viewport ? viewport.oy : 0)
+    return legacy_layers unless rect.width>=0 && rect.height>=0 && ox.instance_of?(Integer) && oy.instance_of?(Integer)
+    @xp_tile_cache ||= RGSSXP::XPTileCache.new
+    cache_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    keys = @xp_tile_cache.prepare(tables,ox.div(32),oy.div(32),(rect.width+31)/32+1,(rect.height+31)/32+1,@updates/16,images)
+    return legacy_layers unless keys
+    keys.each { |id| @xp_tile_cache.shape(id,*tile_shape(id)) }
+    @xp_tile_cache.commit
+    @cache_prepare_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC)-cache_started)*1000
+    if @flash_data && !@flash_bitmap
+      @flash_bitmap = Bitmap.new(32,32)
+      @flash_bitmap.fill_rect(@flash_bitmap.rect,Color.new(255,255,255))
+    end
+    images << @flash_bitmap
+    @xp_tile_cache.groups(oy).map { |index,depth| Layer.new(self,depth,[[4,@xp_tile_cache,index,images,rect.x-ox,rect.y-oy,(16-@updates%32).abs*8]]) }
+  end
   def dispose
+    @xp_tile_cache.dispose if @xp_tile_cache
     @flash_bitmap.dispose if @flash_bitmap
     super
   end

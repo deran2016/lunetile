@@ -9,6 +9,7 @@
 #include "graphics.h"
 #include "audio.h"
 #include "network.h"
+#include "browser.h"
 #include <ruby.h>
 #include <ruby/encoding.h>
 #include <ruby/version.h>
@@ -118,13 +119,21 @@ VALUE evaluate_bootstrap(VALUE) {
     rb_eval_string(rpg_graphics_support);
     rb_eval_string(display_commands_support);
     init_input();
+    init_browser();
+    rb_eval_string(browser_support);
     init_audio();
     rb_eval_string(audio_support);
 #ifdef RGSS_VXA
     evaluate_vxa();
     init_movie();
 #endif
+#ifndef RGSS_VXA
+    bitmap_capture_text_methods();
+#endif
     rb_funcall(rb_const_get(rb_cObject,rb_intern("RGSSXP")),rb_intern("__capture_display_methods"),0);
+#ifdef RGSS_VXA
+    bitmap_capture_text_methods();
+#endif
     return rb_eval_string(R"RUBY(# encoding: UTF-8
 module RGSSXP
   VERSION = '0.1.0'
@@ -169,6 +178,7 @@ VALUE handle_reset(VALUE error) {
 int finish_ruby(int result) {
     if (!initialized) return result;
     log_line("Ruby finalizing");
+    browser_shutdown();
     network_shutdown(true);
     bitmap_text_cache_clear();
     int status = ruby_cleanup(result);

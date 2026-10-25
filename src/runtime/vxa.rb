@@ -225,6 +225,12 @@ class Bitmap
       args = [rect.x,rect.y,rect.width,rect.height,text,align || 0]
     end
     x,y,w,h,text,align = args
+    if (args.size==5 || args.size==6) && x.instance_of?(Integer) && y.instance_of?(Integer) &&
+        w.instance_of?(Integer) && h.instance_of?(Integer) && (align.nil? || align.instance_of?(Integer)) &&
+        x.between?(-2147483647,2147483646) && y.between?(-2147483647,2147483646) && text.instance_of?(String) &&
+        respond_to?(:__text,true) && method(:__text).unbind==RGSSXP.instance_variable_get(:@display_methods)[Bitmap][:__text]
+      return nil unless __text(text,@font,[x,y,w,h,align || 0,false,true])==false
+    end
     if @font.outline || @font.shadow
       color = @font.color.clone
       begin

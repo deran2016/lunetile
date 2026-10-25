@@ -1,7 +1,9 @@
 #include <windows.h>
+#include <imm.h>
 #include "graphics.h"
 #include "refresh_clock.h"
 #include "ui_input.h"
+#include "browser.h"
 #include <Xinput.h>
 #include <array>
 #include <ruby.h>
@@ -9,14 +11,19 @@
 namespace {
 HWND game_window=nullptr;
 bool down[256]{},pressed[256]{};
+bool browser_blocked=false,suppressed[256]{};
 bool suppress_return=false;
 bool reset_requested=false;
 struct Button{bool held=false,trigger=false,repeat=false;unsigned int duration=0;};
 Button buttons[30];
-bool key(int code){return down[code]||((GetAsyncKeyState(code)&0x8000)!=0);}
+bool key(int code){bool physical=(GetAsyncKeyState(code)&0x8000)!=0;if(suppressed[code]){if(!physical&&!down[code])suppressed[code]=false;return false;}return down[code]||physical;}
 VALUE update(VALUE){
+    bool blocked=browser_input_blocked();
+    if(blocked!=browser_blocked){
+        browser_blocked=blocked;input_browser_release();
+    }
     HWND foreground=GetForegroundWindow();
-    bool active=foreground==game_window;
+    bool active=foreground==game_window&&!blocked;
     XINPUT_STATE pad{};bool connected=active&&XInputGetState(0,&pad)==ERROR_SUCCESS;
     WORD flags=connected?pad.Gamepad.wButtons:0;
     auto any=[&](std::initializer_list<int> keys){bool value=false;for(int k:keys)value=value||key(k)||pressed[k];return active&&value;};
@@ -57,13 +64,30 @@ VALUE dir4(VALUE){bool d=buttons[2].held,u=buttons[8].held,l=buttons[4].held,r=b
 VALUE dir8(VALUE){int x=(buttons[6].held?1:0)-(buttons[4].held?1:0),y=(buttons[2].held?1:0)-(buttons[8].held?1:0);return INT2NUM(!x&&!y?0:5+x-y*3);}
 }
 void input_attach(HWND window){game_window=window;}
+bool input_pretranslate(const MSG& message){
+    if(message.hwnd!=game_window)return false;
+    bool down_event=message.message==WM_KEYDOWN||message.message==WM_SYSKEYDOWN;
+    bool up_event=message.message==WM_KEYUP||message.message==WM_SYSKEYUP;
+    if(!down_event&&!up_event)return false;
+    UINT code=UINT(message.wParam);
+    if(down_event&&code==VK_PROCESSKEY){UINT original=ImmGetVirtualKey(game_window);if(original)code=original;}
+    if(code>=256)return false;
+    if(up_event||!(message.lParam&(1L<<30)))suppressed[code]=false;
+    // Discard held browser keys before TranslateMessage can turn them into game text.
+    return down_event&&suppressed[code];
+}
+void input_browser_release(){
+    for(auto& b:buttons)b=Button{};
+    for(int i=0;i<256;++i){if(i!=VK_F12)down[i]=pressed[i]=false;suppressed[i]=(GetAsyncKeyState(i)&0x8000)!=0;}
+    ui_input_reset();
+}
 bool input_take_reset(){bool requested=reset_requested;reset_requested=false;return requested;}
-void input_reset(){ui_input_reset();for(auto& button:buttons)button=Button{};bool f12=down[VK_F12];for(auto& value:down)value=false;down[VK_F12]=f12;for(auto& value:pressed)value=false;reset_requested=false;suppress_return=false;}
-void input_message(UINT message,WPARAM keycode){
+void input_reset(){ui_input_reset();for(auto& button:buttons)button=Button{};bool f12=down[VK_F12];for(auto& value:down)value=false;down[VK_F12]=f12;for(auto& value:pressed)value=false;for(auto& value:suppressed)value=false;browser_blocked=false;reset_requested=false;suppress_return=false;}
+void input_message(UINT message,WPARAM keycode,LPARAM flags){
     if(message==WM_KEYDOWN&&keycode==VK_F12&&!down[VK_F12])reset_requested=true;
     if(message==WM_SYSKEYDOWN&&keycode==VK_RETURN){suppress_return=true;down[VK_RETURN]=pressed[VK_RETURN]=false;}
-    else if((message==WM_KEYDOWN||message==WM_SYSKEYDOWN)&&keycode<256){if(!down[keycode])pressed[keycode]=true;down[keycode]=true;}
-    else if((message==WM_KEYUP||message==WM_SYSKEYUP)&&keycode<256){down[keycode]=false;if(keycode==VK_RETURN)suppress_return=false;}
+    else if((message==WM_KEYDOWN||message==WM_SYSKEYDOWN)&&keycode<256){if(!(flags&(1L<<30)))suppressed[keycode]=false;if(!down[keycode])pressed[keycode]=true;down[keycode]=true;}
+    else if((message==WM_KEYUP||message==WM_SYSKEYUP)&&keycode<256){down[keycode]=false;suppressed[keycode]=false;if(keycode==VK_RETURN)suppress_return=false;}
     else if(message==WM_KILLFOCUS){for(auto& value:down)value=false;for(auto& value:pressed)value=false;suppress_return=false;reset_requested=false;}
 }
 void init_input(){

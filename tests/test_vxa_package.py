@@ -12,6 +12,7 @@ class VXAPackageTests(unittest.TestCase):
   self.tmp=tempfile.TemporaryDirectory(dir=ROOT/'build');self.addCleanup(self.tmp.cleanup)
   self.root=Path(self.tmp.name);self.source=self.root/'source';self.runtime=self.root/'runtime'
   self.source.mkdir();self.runtime.mkdir()
+  optimization=patch('package_template_vxa.optimize',side_effect=lambda project,engine,ruby:(project/'migration/stock-performance.rb').write_bytes(b'optimized helper'));self.optimize=optimization.start();self.addCleanup(optimization.stop)
  def test_editor_fix_contains_only_entry_script_and_instructions(self):
   target=self.root/'fix.zip';editor_fix_archive(target)
   with zipfile.ZipFile(target) as zipped:
@@ -59,7 +60,9 @@ class VXAPackageTests(unittest.TestCase):
   self.assertNotIn('Save01.rvdata2',hashes);self.assertNotIn('RGSS301.dll',hashes)
   self.assertEqual(json.loads((diag/'SHA256SUMS.json').read_text()),hashes)
   self.assertEqual((diag/'render-performance.json').read_bytes(),performance.read_bytes())
-  self.assertEqual({p.relative_to(diag/'migration').as_posix() for p in (diag/'migration').rglob('*') if p.is_file()},{'manifest.json'})
+  self.assertEqual({p.relative_to(diag/'migration').as_posix() for p in (diag/'migration').rglob('*') if p.is_file()},{'manifest.json','stock-performance.rb'})
+  self.assertEqual(self.optimize.call_args.args[1],'vxa')
+  self.assertEqual((diag/'migration/stock-performance.rb').read_bytes(),b'optimized helper')
   self.assertFalse((output/'migration').exists())
   archive(output,self.root/'game.zip')
   with zipfile.ZipFile(self.root/'game.zip') as zipped:self.assertEqual(set(zipped.namelist()),set(hashes))

@@ -3,6 +3,7 @@ import argparse,json,shutil,subprocess,tempfile,zipfile
 from pathlib import Path
 from migrate_project import ROOT,sha,migrate
 from migrate_vxa import declarations
+from optimize_template_scripts import optimize
 
 ASSETS={'Data':{'.rvdata2'},'Graphics':{'.png','.jpg','.jpeg','.bmp'},'Audio':{'.ogg','.wav','.mp3','.wma','.mid','.midi'},'Movies':{'.ogv'},'Fonts':{'.ttf','.otf'}}
 def digest(path):return sha(path.read_bytes())
@@ -39,10 +40,12 @@ def package(source,runtime,output,diagnostics,*,performance=None):
    target=clean/path.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,target)
   converted=staging/'converted'
   migrate(clean,converted,dll,runtime/'rgssxp-ruby.exe',widescreen=True,high_refresh=True,engine='vxa')
+  optimize(converted,'vxa',runtime/'rgssxp-ruby.exe')
   changes=expand_map(converted,runtime/'rgssxp-ruby.exe',staging)
   diagnostic=staging/'diagnostics';diagnostic.mkdir()
   (diagnostic/'migration').mkdir()
   shutil.copy2(converted/'migration/manifest.json',diagnostic/'migration/manifest.json')
+  shutil.copy2(converted/'migration/stock-performance.rb',diagnostic/'migration/stock-performance.rb')
   working_files=(converted/'migration').resolve()
   if not working_files.is_relative_to(staging.resolve()):raise ValueError('Migration files escaped packaging staging directory')
   shutil.rmtree(working_files)
@@ -51,7 +54,7 @@ def package(source,runtime,output,diagnostics,*,performance=None):
   for name in ('abi_vxa.json','ruby.lock.json','dependencies.lock.json'):
    shutil.copy2(ROOT/'src/runtime'/name,diagnostic/name)
   shutil.copy2(ROOT/'LICENSE',converted/'LICENSE');shutil.copytree(ROOT/'licenses',converted/'licenses')
-  (converted/'README.txt').write_text('Lunetile VX Ace template\n\nGame.exe 실행. RPG Maker VX Ace RTP 및 Visual C++ x86 런타임 필요.\n1280x720, 120Hz 로직. 출력 40/60/120FPS.\n새 저장: Saves/LunetileVXA. RTP와 원본 RGSS301.dll은 포함하지 않습니다.\n편집기 저장으로 런타임 경로가 바뀌면 Main의 복구 코드가 LunetileVXA.dll을 선택하고 게임을 한 번 다시 시작합니다.\n전체 게임 및 사용자 스크립트 호환은 인증하지 않았습니다.\n',encoding='utf-8')
+  (converted/'README.txt').write_text('Lunetile VX Ace template\n\nGame.exe 실행. RPG Maker VX Ace RTP 및 Visual C++ x86 런타임 필요.\n1280x720, 120Hz 로직. 출력 40/60/120FPS.\n새 저장: Saves/LunetileVXA. RTP와 원본 RGSS301.dll은 포함하지 않습니다.\n기본 스크립트의 캐릭터 표시·이동, 32개 이상 이벤트의 좌표 조회, 저장 미리보기를 최적화했습니다.\n이벤트/이동 경로의 Script 실행 시 재시작 전까지 기존 처리로 돌아갑니다. 기존 게임용 패치가 아닙니다.\n편집기 저장으로 런타임 경로가 바뀌면 Main의 복구 코드가 LunetileVXA.dll을 선택하고 게임을 한 번 다시 시작합니다.\n전체 게임 및 사용자 스크립트 호환은 인증하지 않았습니다.\n',encoding='utf-8')
   if before!={p.relative_to(source).as_posix():digest(p) for p in selected}:raise ValueError('Template inputs changed during packaging')
   hashes={p.relative_to(converted).as_posix():digest(p) for p in sorted(converted.rglob('*')) if p.is_file()}
   for name,value in (('template-source.json',before),('template-map.json',changes),('SHA256SUMS.json',hashes)):

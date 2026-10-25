@@ -6,20 +6,29 @@
 #include "table_data.h"
 
 namespace {
-#ifdef RGSS_VXA
 uint64_t next_table_identity=0;
 void table_changed(TableData* table,int x=-1,int y=-1,int z=-1) {
+#ifndef RGSS_VXA
+    if(!table->history)return;
+#endif
     ++table->revision;
     table->history[table->revision%64]={table->revision,x,y,z,x<0};
 }
-#endif
 void table_free(void* pointer) {
     auto* table = static_cast<TableData*>(pointer);
     ruby_xfree(table->cells);
+#ifndef RGSS_VXA
+    ruby_xfree(table->history);
+#endif
     ruby_xfree(table);
 }
 size_t table_size(const void* pointer) {
-    return sizeof(TableData) + static_cast<const TableData*>(pointer)->count * sizeof(int16_t);
+    auto* table=static_cast<const TableData*>(pointer);
+    return sizeof(TableData) + table->count * sizeof(int16_t)
+#ifndef RGSS_VXA
+        + (table->history ? 64*sizeof(TableData::Change) : 0)
+#endif
+        ;
 }
 const rb_data_type_t table_type = {"RGSSXP::Table", {nullptr, table_free, table_size}, nullptr, nullptr, RUBY_TYPED_FREE_IMMEDIATELY};
 TableData* get_table(VALUE object) {
@@ -29,9 +38,7 @@ TableData* get_table(VALUE object) {
 }
 VALUE table_alloc(VALUE klass) {
     auto* data=static_cast<TableData*>(ruby_xcalloc(1, sizeof(TableData)));
-#ifdef RGSS_VXA
     data->identity=++next_table_identity;
-#endif
     return TypedData_Wrap_Struct(klass, &table_type, data);
 }
 size_t count_cells(int x, int y, int z) {
@@ -59,9 +66,7 @@ VALUE table_resize(int argc, VALUE* argv, VALUE self) {
                    std::min(x, table->x) * sizeof(int16_t));
     ruby_xfree(table->cells);
     table->dimensions=argc;table->x=x;table->y=y;table->z=z;table->count=count;table->cells=cells;
-#ifdef RGSS_VXA
     table_changed(table);
-#endif
     return self;
 }
 VALUE table_copy(VALUE self, VALUE other) {
@@ -74,9 +79,7 @@ VALUE table_copy(VALUE self, VALUE other) {
     ruby_xfree(target->cells);
     target->dimensions=source->dimensions;target->x=source->x;target->y=source->y;target->z=source->z;target->count=source->count;
     target->cells = cells;
-#ifdef RGSS_VXA
     table_changed(target);
-#endif
     return self;
 }
 bool cell_offset(TableData* table, int argc, VALUE* argv, size_t& index) {
@@ -98,12 +101,10 @@ VALUE table_set(int argc, VALUE* argv, VALUE self) {
     size_t index;
     if (!cell_offset(table, argc - 1, argv, index)) return Qnil;
     int value = NUM2INT(argv[argc - 1]);
-#ifdef RGSS_VXA
     if(table->cells[index]!=static_cast<int16_t>(static_cast<uint16_t>(value))) {
         int x=static_cast<int>(index%table->x),y=static_cast<int>(index/table->x%table->y),z=static_cast<int>(index/(static_cast<size_t>(table->x)*table->y));
         table_changed(table,x,y,z);
     }
-#endif
     table->cells[index] = static_cast<int16_t>(static_cast<uint16_t>(value));
     return argv[argc - 1];
 }
@@ -139,9 +140,14 @@ VALUE table_load(VALUE klass, VALUE bytes) {
 }
 }
 
-#ifdef RGSS_VXA
-const TableData* vxa_table_view(VALUE object) {
+TableData* native_table_view(VALUE object) {
     return rb_typeddata_is_kind_of(object,&table_type)?get_table(object):nullptr;
+}
+#ifdef RGSS_VXA
+const TableData* vxa_table_view(VALUE object) {return native_table_view(object);}
+#else
+void observe_table(TableData* table) {
+    if(table&&!table->history)table->history=static_cast<TableData::Change*>(ruby_xcalloc(64,sizeof(TableData::Change)));
 }
 #endif
 void init_rgss_types() {

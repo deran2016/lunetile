@@ -15,6 +15,16 @@
 #include <ruby/encoding.h>
 #include "graphics.h"
 
+#ifdef RGSS_VXA
+// Opaque method-entry APIs belong to the pinned Ruby 4.0.7 build; no VM layout is copied.
+extern "C" {
+struct rb_method_entry_struct;
+const rb_method_entry_struct* rb_method_entry(VALUE,ID);
+const rb_method_entry_struct* rb_method_entry_clone(const rb_method_entry_struct*);
+int rb_method_entry_eq(const rb_method_entry_struct*,const rb_method_entry_struct*);
+}
+#endif
+
 namespace {
 VALUE bitmap_class, graphics_error;
 void free_canvas(void* pointer) {
@@ -280,20 +290,40 @@ void paint_text(Canvas* canvas,const TextMask& mask,int x,int y,int w,int h,int 
     int x2=static_cast<int>(std::clamp<int64_t>(left+width,0,canvas->width));
     int y1=static_cast<int>(std::clamp<int64_t>(std::max<int64_t>(top,y),0,canvas->height));
     int y2=static_cast<int>(std::clamp<int64_t>(std::min<int64_t>(top+mask.extent.cy,static_cast<int64_t>(y)+h),0,canvas->height));
-    for(int dy=y1;dy<y2;++dy)for(int dx=x1;dx<x2;++dx){
-        int u=static_cast<int>((dx-left)*mask.extent.cx/width);
-        size_t index=static_cast<size_t>(dy-top)*mask.extent.cx+u;
-        unsigned char pixel[]={color[0],color[1],color[2],static_cast<unsigned char>(mask.alpha[index]*color[3]/255)};
-        over(canvas->pixels+(static_cast<size_t>(dy)*canvas->width+dx)*4,pixel,255);
+    if(x1>=x2||y1>=y2)return;
+    if(width==mask.extent.cx){
+        for(int dy=y1;dy<y2;++dy){
+            const auto* alpha=mask.alpha.data()+static_cast<size_t>(dy-top)*mask.extent.cx+static_cast<size_t>(x1-left);
+            auto* target=canvas->pixels+(static_cast<size_t>(dy)*canvas->width+x1)*4;
+            for(int dx=x1;dx<x2;++dx,++alpha,target+=4){
+                unsigned char pixel[]={color[0],color[1],color[2],static_cast<unsigned char>(*alpha*color[3]/255)};
+                over(target,pixel,255);
+            }
+        }
+    }else{
+        // Quotient/remainder stepping keeps the original floor mapping without per-pixel division.
+        int64_t scaled=(x1-left)*mask.extent.cx;
+        size_t first=static_cast<size_t>(scaled/width),step=mask.extent.cx/width;
+        int64_t first_error=scaled%width,remainder=mask.extent.cx%width;
+        for(int dy=y1;dy<y2;++dy){
+            const auto* alpha=mask.alpha.data()+static_cast<size_t>(dy-top)*mask.extent.cx;
+            auto* target=canvas->pixels+(static_cast<size_t>(dy)*canvas->width+x1)*4;
+            size_t u=first;int64_t error=first_error;
+            for(int dx=x1;dx<x2;++dx,target+=4){
+                unsigned char pixel[]={color[0],color[1],color[2],static_cast<unsigned char>(alpha[u]*color[3]/255)};
+                over(target,pixel,255);
+                u+=step;error+=remainder;if(error>=width){++u;error-=width;}
+            }
+        }
     }
     canvas_changed(canvas,x1,y1,x2,y2);
 }
 
 // The RGSS1 font size is GDI's positive cell height, not a negative em height.
-VALUE canvas_text(VALUE self, VALUE text, VALUE font, VALUE spec) {
+VALUE canvas_text_impl(VALUE self, VALUE text, VALUE font, VALUE spec,bool effects) {
     auto* canvas = canvas_get(self);
     Check_Type(text, T_STRING); Check_Type(spec, T_ARRAY);
-    if (RARRAY_LEN(spec) != 6) rb_raise(rb_eArgError, "Invalid text descriptor");
+    if (RARRAY_LEN(spec) != (effects?7:6)) rb_raise(rb_eArgError, "Invalid text descriptor");
     VALUE name = rb_funcall(font, rb_intern("name"), 0);
     StringValue(name);
     int size = NUM2INT(rb_funcall(font, rb_intern("size"), 0));
@@ -302,6 +332,13 @@ VALUE canvas_text(VALUE self, VALUE text, VALUE font, VALUE spec) {
     int x = NUM2INT(rb_ary_entry(spec, 0)), y = NUM2INT(rb_ary_entry(spec, 1));
     int w = NUM2INT(rb_ary_entry(spec, 2)), h = NUM2INT(rb_ary_entry(spec, 3));
     int align = NUM2INT(rb_ary_entry(spec, 4)); bool measure = RTEST(rb_ary_entry(spec, 5));
+    unsigned char outline_color[4]{};bool outline=false,shadow=false;
+    if(effects){
+        outline=RTEST(rb_funcall(font,rb_intern("outline"),0));shadow=RTEST(rb_funcall(font,rb_intern("shadow"),0));
+        if(outline||shadow)color_bytes(rb_funcall(font,rb_intern("out_color"),0),outline_color);
+        if(measure||x==INT_MIN||x==INT_MAX||y==INT_MIN||y==INT_MAX)rb_raise(rb_eArgError,"Invalid text effect descriptor");
+    }
+
     VALUE utf = rb_str_encode(text, rb_enc_from_encoding(rb_utf8_encoding()), 0, Qnil);
     int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, RSTRING_PTR(utf), static_cast<int>(RSTRING_LEN(utf)), nullptr, 0);
     if (RSTRING_LEN(utf) && !count) rb_raise(rb_eEncodingError, "Invalid UTF-8 text");
@@ -313,6 +350,13 @@ VALUE canvas_text(VALUE self, VALUE text, VALUE font, VALUE spec) {
     MultiByteToWideChar(CP_UTF8, 0, StringValueCStr(utf_name), -1, face, LF_FACESIZE);
 
     canvas=canvas_get(self);
+    auto paint=[&](const TextMask& mask){
+        if(outline){
+            paint_text(canvas,mask,x-1,y,w,h,align,outline_color);paint_text(canvas,mask,x+1,y,w,h,align,outline_color);
+            paint_text(canvas,mask,x,y-1,w,h,align,outline_color);paint_text(canvas,mask,x,y+1,w,h,align,outline_color);
+        }else if(shadow)paint_text(canvas,mask,x+1,y+1,w,h,align,outline_color);
+        paint_text(canvas,mask,x,y,w,h,align,color);
+    };
     SIZE extent{};char failure[192]{};size_t before=text_bytes;
     {
         try{
@@ -330,12 +374,12 @@ VALUE canvas_text(VALUE self, VALUE text, VALUE font, VALUE spec) {
             if(found!=text_masks.end()&&(!need_pixels||found->raster)){
                 ++text_hits;text_masks.splice(text_masks.begin(),text_masks,found);
                 extent=text_masks.front().extent;
-                if(!measure)paint_text(canvas,text_masks.front(),x,y,w,h,align,color);
+                if(!measure)paint(text_masks.front());
             }else{
                 ++text_misses;
                 TextMask result=raster_text(face,size,bold,italic,characters,count,need_pixels);
                 extent=result.extent;
-                if(!measure)paint_text(canvas,result,x,y,w,h,align,color);
+                if(!measure)paint(result);
                 if(found!=text_masks.end()){text_bytes-=found->bytes();text_masks.erase(found);}
                 if(eligible&&result.alpha.size()<=1024*1024){
                     try{
@@ -354,8 +398,59 @@ VALUE canvas_text(VALUE self, VALUE text, VALUE font, VALUE spec) {
     account_text(before);
     RB_GC_GUARD(self);RB_GC_GUARD(utf);RB_GC_GUARD(utf_name);RB_GC_GUARD(wide_text);
     if(*failure)rb_raise(graphics_error,"%s",failure);
-    return rb_ary_new_from_args(2,INT2NUM(extent.cx),INT2NUM(extent.cy));
+    return effects?Qnil:rb_ary_new_from_args(2,INT2NUM(extent.cx),INT2NUM(extent.cy));
 }
+#ifdef RGSS_VXA
+VALUE plain_text(VALUE,VALUE,VALUE);
+#endif
+VALUE canvas_text(VALUE self,VALUE text,VALUE font,VALUE spec){
+#ifdef RGSS_VXA
+    if(RB_TYPE_P(spec,T_ARRAY)&&RARRAY_LEN(spec)==7&&rb_ary_entry(spec,6)==Qtrue){
+        if(!RTEST(plain_text(self,text,font)))return Qfalse;
+        VALUE normalized=rb_funcall(rb_path2class("RGSSXP"),rb_intern("text"),1,rb_funcall(text,rb_intern("to_s"),0));
+        VALUE result=canvas_text_impl(self,normalized,font,spec,true);
+        RB_GC_GUARD(normalized);RB_GC_GUARD(text);return result;
+    }
+#endif
+    return canvas_text_impl(self,text,font,spec,false);
+}
+#ifdef RGSS_VXA
+struct TextMethod {VALUE klass=Qnil,entry=Qnil;ID id=0;};
+TextMethod text_methods[48];size_t text_method_count=0;
+VALUE text_font=Qnil,text_color=Qnil,text_module=Qnil;
+bool text_methods_ready=false;
+VALUE text_guard_root=Qnil;
+void mark_text_methods(void*){
+    rb_gc_mark(text_font);rb_gc_mark(text_color);rb_gc_mark(text_module);
+    for(size_t i=0;i<text_method_count;++i){rb_gc_mark(text_methods[i].klass);rb_gc_mark(text_methods[i].entry);}
+}
+const rb_data_type_t text_guard_type={"Lunetile::TextMethods",{mark_text_methods,nullptr,nullptr},nullptr,nullptr,RUBY_TYPED_FREE_IMMEDIATELY|RUBY_TYPED_WB_PROTECTED};
+
+void remember_text_method(VALUE klass,const char* name){
+    if(text_method_count>=sizeof(text_methods)/sizeof(TextMethod))rb_raise(rb_eRuntimeError,"Text method guard capacity exceeded");
+    ID id=rb_intern(name);auto* original=rb_method_entry(klass,id);
+    if(!original)rb_raise(rb_eRuntimeError,"Missing text method: %s",name);
+    auto& m=text_methods[text_method_count++];m.id=id;
+    RB_OBJ_WRITE(text_guard_root,&m.klass,klass);
+    VALUE entry=reinterpret_cast<VALUE>(rb_method_entry_clone(original));
+    RB_OBJ_WRITE(text_guard_root,&m.entry,entry);
+}
+VALUE plain_text(VALUE self,VALUE text,VALUE font){
+    if(!text_methods_ready||RB_SPECIAL_CONST_P(text)||RB_SPECIAL_CONST_P(font)||
+        RBASIC_CLASS(self)!=bitmap_class||RBASIC_CLASS(text)!=rb_cString||RBASIC_CLASS(font)!=text_font)return Qfalse;
+    VALUE color=rb_ivar_get(font,rb_intern("@color")),out=rb_ivar_get(font,rb_intern("@out_color")),name=rb_ivar_get(font,rb_intern("@name"));
+    for(VALUE value:{color,out,name})if(RB_SPECIAL_CONST_P(value))return Qfalse;
+    if(RBASIC_CLASS(color)!=text_color||RBASIC_CLASS(out)!=text_color||RBASIC_CLASS(name)!=rb_cString||OBJ_FROZEN(color))return Qfalse;
+    if(rb_const_get(rb_cObject,rb_intern("Font"))!=text_font||rb_const_get(rb_cObject,rb_intern("Color"))!=text_color||
+        rb_const_get(rb_cObject,rb_intern("Bitmap"))!=bitmap_class||rb_const_get(rb_cObject,rb_intern("String"))!=rb_cString||
+        rb_const_get(rb_cObject,rb_intern("RGSSXP"))!=text_module)return Qfalse;
+    for(size_t i=0;i<text_method_count;++i){
+        auto& m=text_methods[i];auto* current=rb_method_entry(m.klass,m.id);
+        if(!current||!rb_method_entry_eq(current,reinterpret_cast<const rb_method_entry_struct*>(m.entry)))return Qfalse;
+    }
+    return Qtrue;
+}
+#endif
 VALUE canvas_hue(VALUE self, VALUE angle) {
     auto* canvas = canvas_get(self);
     double shift = std::fmod(NUM2DBL(angle), 360.0) / 60.0;
@@ -447,13 +542,11 @@ Canvas* canvas_get(VALUE object) {
     if (canvas->disposed || !canvas->pixels) rb_raise(graphics_error, "disposed bitmap");
     return canvas;
 }
-#ifdef RGSS_VXA
 Canvas* canvas_optional(VALUE object) {
     if(NIL_P(object))return nullptr;
     auto* canvas=raw_canvas(object);
     return canvas->disposed?nullptr:canvas_get(object);
 }
-#endif
 namespace {
 VALUE canvas_pixel_bytes(VALUE self) {
     auto* c=canvas_get(self);
@@ -519,5 +612,24 @@ void init_bitmap() {
     rb_define_method(bitmap_class,"__blur",RUBY_METHOD_FUNC(vxa_blur),0);
     rb_define_method(bitmap_class,"__radial_blur",RUBY_METHOD_FUNC(vxa_radial_blur),2);
     rb_define_singleton_method(rb_define_class("Font",rb_cObject),"exist?",RUBY_METHOD_FUNC(font_exists),1);
+#endif
+}
+
+void bitmap_capture_text_methods(){
+#ifdef RGSS_VXA
+    if(text_methods_ready)return;
+    text_font=rb_path2class("Font");text_color=rb_path2class("Color");text_module=rb_path2class("RGSSXP");
+    // Immutable after capture; write barriers avoid rescanning the method tree on minor GC.
+    text_guard_root=TypedData_Wrap_Struct(rb_cObject,&text_guard_type,text_methods);
+    rb_global_variable(&text_guard_root);
+    for(const char* name:{"name","size","bold","italic","color","color=","outline","shadow","out_color"})remember_text_method(text_font,name);
+    for(const char* name:{"red","green","blue","alpha","red=","green=","blue=","alpha=","set","vxa_set","clone","initialize_clone","initialize_copy"})remember_text_method(text_color,name);
+    for(const char* name:{"to_s","encode","encoding","valid_encoding?","force_encoding","dup","initialize_dup","initialize_copy"})remember_text_method(rb_cString,name);
+    remember_text_method(rb_singleton_class(rb_cString),"try_convert");remember_text_method(rb_singleton_class(text_module),"text");
+    remember_text_method(bitmap_class,"__text");remember_text_method(bitmap_class,"vxa_draw_text");
+    VALUE reference=rb_funcall(bitmap_class,rb_intern("instance_method"),1,ID2SYM(rb_intern("__text")));
+    VALUE methods=rb_hash_new();rb_hash_aset(methods,ID2SYM(rb_intern("__text")),reference);
+    rb_hash_aset(rb_ivar_get(text_module,rb_intern("@display_methods")),bitmap_class,methods);
+    text_methods_ready=true;
 #endif
 }

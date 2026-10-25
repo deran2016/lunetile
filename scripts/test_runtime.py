@@ -21,7 +21,7 @@ def string(data):return b'"'+integer(len(data))[1:]+data
 def scripts(source):
  return b'\x04\x08['+integer(1)[1:]+b'['+integer(3)[1:]+integer(1)+string(b'Runtime smoke')+string(zlib.compress(source))
 
-def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None,timing_profile=None,render_rate=60,rtp=False):
+def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None,timing_profile=None,render_rate=60,rtp=False,on_start=None):
  if data_encoding not in (None,'UTF-8','CP949','CP932'):raise ValueError('Unsupported test data encoding')
  if data_encoding:source=("raise 'Configured project encoding was not read' unless RGSSXP::DATA_ENCODING == "+repr(data_encoding)+"\n").encode()+source
  out.mkdir(parents=True,exist_ok=False)
@@ -48,6 +48,7 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
  if timeout>20:print(f'Foreground rendering case PID={p.pid} path={out}',flush=True)
  modules={};all_modules={}
  try:
+  if on_start:on_start(p,out)
   deadline=time.monotonic()+timeout
   while p.poll() is None:
    if time.monotonic()>deadline:raise TimeoutError('Runtime did not terminate')
@@ -103,8 +104,10 @@ def main():
  reports.append(run(exe,dll,out/'refresh','',(ROOT/'tests/runtime_refresh.rb').read_bytes(),timeout=60,timing_profile='stock120'))
  for rate in (40,60,120):
   reports.append(run(exe,dll,out/f'render-timing-{rate}','',(ROOT/'tests/runtime_render_timing.rb').read_bytes(),timing_profile='stock120',render_rate=rate))
+ reports.append(run(exe,dll,out/'xp-tile-cache','',(ROOT/'tests/fixtures/xp_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_xp_tile_cache.rb').read_bytes(),timeout=180))
+ reports.append(run(exe,dll,out/'xp-d3d','',(ROOT/'tests/runtime_xp_d3d.rb').read_bytes(),timeout=180))
  reports.append(run(exe,dll,out/'plane-transparency','',(ROOT/'tests/runtime_plane_transparency.rb').read_bytes()))
- for name in ('display_commands','text_cache','text_reset'):
+ for name in ('display_commands','text_cache','text_reset','tile_parser_gc','xp_tile_reset'):
   reports.append(run(exe,dll,out/name.replace('_','-'),'',(ROOT/f'tests/runtime_{name}.rb').read_bytes(),timeout=180))
  from migrate_project import transform
  from rxdata import read
