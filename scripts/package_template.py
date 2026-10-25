@@ -89,9 +89,26 @@ def package(source,runtime,output,diagnostics):
    raise
  return hashes
 
+def runtime_patch_archive(project,path):
+ from package_template_vxa import archive
+ with tempfile.TemporaryDirectory(prefix='xp-runtime-patch-',dir=path.parent) as tmp:
+  directory=Path(tmp)
+  for name in ('Lunetile.dll','LICENSE'):shutil.copy2(project/name,directory/name)
+  shutil.copytree(project/'licenses',directory/'licenses')
+  (directory/'README.txt').write_text(
+   'Lunetile XP runtime update\n\n'
+   '이미 Lunetile로 변환한 프로젝트용입니다. 게임과 편집기를 종료한 뒤 Lunetile.dll만 Game.exe 옆에 교체하세요.\n'
+   'Data, Saves, Game.ini, MMO 계정/프로필/스크립트/서버는 이 ZIP에 포함하지 않습니다.\n'
+   '표시 객체 순회·문자 마스크 재사용·Bitmap 부분 업로드를 개선했습니다.\n'
+   '모든 PC/플러그인의 120FPS를 보장하지 않습니다.\n'
+   'DLL SHA256: '+digest(directory/'Lunetile.dll')+'\n',encoding='utf-8')
+  archive(directory,path)
+
 if __name__=='__main__':
  parser=argparse.ArgumentParser(description=__doc__)
  parser.add_argument('source',type=Path);parser.add_argument('runtime',type=Path);parser.add_argument('output',type=Path);parser.add_argument('diagnostics',type=Path)
+ parser.add_argument('--runtime-patch',type=Path)
  args=parser.parse_args()
  hashes=package(args.source,args.runtime,args.output,args.diagnostics)
+ if args.runtime_patch:runtime_patch_archive(args.output,args.runtime_patch)
  print(f'Converted template package: {args.output} ({len(hashes)} verified files; Standard RTP required)')

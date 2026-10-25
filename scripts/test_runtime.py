@@ -21,7 +21,7 @@ def string(data):return b'"'+integer(len(data))[1:]+data
 def scripts(source):
  return b'\x04\x08['+integer(1)[1:]+b'['+integer(3)[1:]+integer(1)+string(b'Runtime smoke')+string(zlib.compress(source))
 
-def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None,timing_profile=None,render_rate=60):
+def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None,timing_profile=None,render_rate=60,rtp=False):
  if data_encoding not in (None,'UTF-8','CP949','CP932'):raise ValueError('Unsupported test data encoding')
  if data_encoding:source=("raise 'Configured project encoding was not read' unless RGSSXP::DATA_ENCODING == "+repr(data_encoding)+"\n").encode()+source
  out.mkdir(parents=True,exist_ok=False)
@@ -35,6 +35,7 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
  if script_path is None:script_path='Data/Scripts.rxdata' if archive else 'Scripts.rxdata'
  if archive:(out/'Game.rgssad').write_bytes(archive)
  ini=f'[Game]\nLibrary=Lunetile.dll\nScripts={script_path}\nTitle=RGSSXP Runtime Test\nRTP1=\nRTP2=\nRTP3=\n'
+ if rtp:ini=ini.replace('RTP1=\n','RTP1=Standard\n')
  if screen_size or timing_profile:
   ini+='[Lunetile]\n'
   if screen_size:ini+='Width='+str(screen_size[0])+'\nHeight='+str(screen_size[1])+'\n'
@@ -103,6 +104,8 @@ def main():
  for rate in (40,60,120):
   reports.append(run(exe,dll,out/f'render-timing-{rate}','',(ROOT/'tests/runtime_render_timing.rb').read_bytes(),timing_profile='stock120',render_rate=rate))
  reports.append(run(exe,dll,out/'plane-transparency','',(ROOT/'tests/runtime_plane_transparency.rb').read_bytes()))
+ for name in ('display_commands','text_cache','text_reset'):
+  reports.append(run(exe,dll,out/name.replace('_','-'),'',(ROOT/f'tests/runtime_{name}.rb').read_bytes(),timeout=180))
  from migrate_project import transform
  from rxdata import read
  entries=read((ROOT/'template-xp/Data/Scripts.rxdata').read_bytes())

@@ -16,6 +16,10 @@ RPG Maker XP의 기존 32비트 실행기와 RGSS 인터페이스를 대상으�
 
 **VX Ace:** 제공된 `template-vxa/`의 126개 기본 스크립트를 위한 별도 **`LunetileVXA.dll`**도 빌드합니다. 일반 변환은 544×416·60Hz를 유지하고, 배포 템플릿은 1280×720·120Hz 로직과 40/60/120FPS 출력을 사용합니다. VX Ace의 데이터·저장·ABI는 XP와 분리합니다. 변환과 배포 명령, 검증 범위는 [VX Ace 안내](docs/VXA.md)를 참고하세요.
 
+XP·VX Ace 공용 표시 객체 순회와 GDI 문자 마스크 캐시·부분 업로드의 구현, 비교 명령과 성능 판정 기준은 [클라이언트 성능 검증](docs/CLIENT_PERFORMANCE.md)에 있습니다.
+
+이번 배포의 엔진별 DLL 교체·전체 템플릿·진단 ZIP 안내는 [v0.1.0-alpha.14 릴리스 설명](docs/releases/v0.1.0-alpha.14.md)에 있습니다.
+
 > **개발 단계:** 검토된 기본 스크립트 범위의 실험적 런타임입니다. 원본 게임의 백업을 보관하고 별도 복사본에서 사용하세요.
 
 Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·권리자와 제휴하거나 승인을 받은 프로젝트가 아닙니다. 제품명은 호환 대상을 설명하기 위해 사용합니다. 자체 엔진 파일명은 **`Lunetile.dll`**이며 변환본의 `Game.ini`에서 `Library=Lunetile.dll`로 선택합니다. RGSS 함수 이름, 기존 코드명 `RGSSXP`, `rgssxp-ruby.exe`, `Saves/RGSSXP`는 인터페이스·도구·저장 형식의 호환성을 위해 유지합니다.

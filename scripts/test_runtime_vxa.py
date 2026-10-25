@@ -64,6 +64,8 @@ File.write('runtime-complete.txt','VXA wide refresh')
  run(out/'native-cache',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_cache.rb').read_bytes())
  run(out/'tile-d3d',(ROOT/'tests/runtime_vxa_d3d.rb').read_bytes(),timeout=180)
  run(out/'plane',(ROOT/'tests/runtime_plane_transparency.rb').read_bytes())
+ for name in ('display_commands','text_cache'):
+  run(out/name.replace('_','-'),(ROOT/f'tests/runtime_{name}.rb').read_bytes(),timeout=180)
  run(out/'render-reset',(ROOT/'tests/runtime_vxa_render_reset.rb').read_bytes())
  for rate in (40,60,120):
   run(out/f'render-timing-{rate}',(ROOT/'tests/runtime_render_timing.rb').read_bytes(),high=True,wide=True,rate=rate)

@@ -85,19 +85,21 @@ end
 module RGSSXP
   @nodes = ObjectSpace::WeakMap.new
   @serial = 0
+  @viewport_generation = 0
+  QUAD_DEFAULTS = {}.freeze
   def self.register(node)
     @serial += 1
     @nodes[node] = @serial
     @serial
   end
-  def self.quad(commands, bitmap, x, y, source, options = {})
+  def self.quad(commands, bitmap, x, y, source, options = QUAD_DEFAULTS)
     return unless bitmap && !bitmap.disposed? && source.width > 0 && source.height > 0
     commands << [0, bitmap, x, y, source.width, source.height, source.x, source.y, source.width, source.height,
       options.fetch(:zoom_x, 1.0), options.fetch(:zoom_y, 1.0), options.fetch(:angle, 0.0), options.fetch(:ox, 0), options.fetch(:oy, 0),
       options.fetch(:opacity, 255), options.fetch(:blend, 0), options[:color], options[:tone], options.fetch(:bush, 0), options[:clip], options.fetch(:mirror, false)]
   end
-  def self.scene_commands
-    nodes = @nodes.keys.reject(&:disposed?).flat_map { |node| node.is_a?(Tilemap) ? node.layers : [node] }
+  def self.__legacy_scene_commands(snapshot = @nodes.keys)
+    nodes = snapshot.reject(&:disposed?).flat_map { |node| node.is_a?(Tilemap) ? node.layers : [node] }
     roots = nodes.select { |node| node.is_a?(Viewport) || node.viewport.nil? }
     commands = []
     roots.sort_by { |node| [node.z, node.is_a?(Sprite) ? node.y : 0, node.serial] }.each do |node|
@@ -119,6 +121,7 @@ module RGSSXP
     ObjectSpace.each_object(Bitmap) { |bitmap| bitmap.dispose unless bitmap.disposed? }
     @nodes = ObjectSpace::WeakMap.new
     @serial = 0
+    @viewport_generation += 1
     nil
   end
 end
@@ -235,6 +238,11 @@ class Sprite < RGSSXP::DisplayObject
     check_live; @src_rect.set(value.x, value.y, value.width, value.height)
   end
   def emit(commands)
+    if RGSSXP.__fast_sprite_emit?
+      dx = @viewport ? @viewport.rect.x - @viewport.ox : 0
+      dy = @viewport ? @viewport.rect.y - @viewport.oy : 0
+      return RGSSXP.__sprite_quad(commands,@bitmap,@x+dx,@y+dy,@src_rect,@zoom_x,@zoom_y,@angle,@ox,@oy,@opacity,@blend_type,effective_color,@tone,@bush_depth,@mirror)
+    end
     dx, dy = screen_offset
     RGSSXP.quad(commands, @bitmap, @x + dx, @y + dy, @src_rect,
       zoom_x: @zoom_x, zoom_y: @zoom_y, angle: @angle, ox: @ox, oy: @oy, opacity: @opacity,

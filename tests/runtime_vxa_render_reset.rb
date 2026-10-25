@@ -5,11 +5,14 @@ rgss_main do
   entries += 1
   raise 'instance counters survived reset' if entries > 1 && Graphics.__tile_batches[0,5] != [0,0,0,0,0]
   raise 'cache owners survived reset' if previous && previous.any? { |object| !object.disposed? }
+  raise 'text cache survived reset' if entries > 1 && Bitmap.__text_cache_stats[2,2] != [0,0]
   tile = Tilemap.new
   tile.map_data = Table.new(1,1,4)
   tile.map_data[0,0,0] = 2048
   bitmap = Bitmap.new(512,512)
   bitmap.fill_rect(bitmap.rect,Color.new(31,63,127))
+  bitmap.draw_text(0,0,200,32,'reset cache')
+  raise 'text was not cached' unless Bitmap.__text_cache_stats[3] > 0
   tile.bitmaps[0] = bitmap
   plane = Plane.new
   plane.bitmap = Bitmap.new(32,32)

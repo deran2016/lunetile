@@ -24,3 +24,5 @@ module RGSSXP
 AUTOTILE_QUARTERS = @autotile_quarters@
 end
 @tilemap_support@)RGSSXP";
+static const char display_commands_support[] = R"RGSSXP(# encoding: UTF-8
+@display_commands_support@)RGSSXP";

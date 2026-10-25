@@ -41,7 +41,11 @@ def package(source,runtime,output,diagnostics,*,performance=None):
   migrate(clean,converted,dll,runtime/'rgssxp-ruby.exe',widescreen=True,high_refresh=True,engine='vxa')
   changes=expand_map(converted,runtime/'rgssxp-ruby.exe',staging)
   diagnostic=staging/'diagnostics';diagnostic.mkdir()
-  shutil.move(str(converted/'migration'),diagnostic/'migration')
+  (diagnostic/'migration').mkdir()
+  shutil.copy2(converted/'migration/manifest.json',diagnostic/'migration/manifest.json')
+  working_files=(converted/'migration').resolve()
+  if not working_files.is_relative_to(staging.resolve()):raise ValueError('Migration files escaped packaging staging directory')
+  shutil.rmtree(working_files)
   shutil.copy2(runtime/'verification-vxa.json',diagnostic/'verification-vxa.json')
   if performance:shutil.copy2(performance,diagnostic/'render-performance.json')
   for name in ('abi_vxa.json','ruby.lock.json','dependencies.lock.json'):
@@ -80,6 +84,7 @@ def runtime_patch_archive(project,path):
    'Data, Saves, Game.ini는 변경하지 않습니다. 전체 템플릿으로 기존 프로젝트를 덮어쓰지 마세요.\n'
    'alpha.10 이상 변환본에 적용할 수 있습니다. 이전 버전은 편집기 복구 스크립트도 적용하세요.\n'
    '타일 순회 캐시와 네이티브 D3D 인스턴스 배치로 CPU 처리와 Ruby 객체 할당을 줄였습니다.\n'
+   '공용 표시 객체 순회·문자 마스크 재사용·Bitmap 부분 업로드도 개선했습니다.\n'
    '렌더링이 늦으면 출력 프레임을 건너뛰어 120Hz 게임 로직을 따라잡습니다. 실제 120FPS 출력을 보장하지 않습니다.\n'
    'DLL SHA256: '+digest(directory/'LunetileVXA.dll')+'\n',encoding='utf-8')
   archive(directory,path)

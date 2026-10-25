@@ -116,6 +116,7 @@ VALUE evaluate_bootstrap(VALUE) {
     init_graphics();
     rb_eval_string(graphics_support);
     rb_eval_string(rpg_graphics_support);
+    rb_eval_string(display_commands_support);
     init_input();
     init_audio();
     rb_eval_string(audio_support);
@@ -123,6 +124,7 @@ VALUE evaluate_bootstrap(VALUE) {
     evaluate_vxa();
     init_movie();
 #endif
+    rb_funcall(rb_const_get(rb_cObject,rb_intern("RGSSXP")),rb_intern("__capture_display_methods"),0);
     return rb_eval_string(R"RUBY(# encoding: UTF-8
 module RGSSXP
   VERSION = '0.1.0'
@@ -168,6 +170,7 @@ int finish_ruby(int result) {
     if (!initialized) return result;
     log_line("Ruby finalizing");
     network_shutdown(true);
+    bitmap_text_cache_clear();
     int status = ruby_cleanup(result);
     audio_shutdown();
     graphics_shutdown();
@@ -246,7 +249,7 @@ extern "C" void __cdecl RGSSSetupFonts() {
         for (const auto& entry : std::filesystem::directory_iterator(L"Fonts")) {
             if (!entry.is_regular_file()) continue;
             auto path = entry.path().wstring();
-            if (AddFontResourceExW(path.c_str(), FR_PRIVATE, nullptr)) private_fonts.push_back(path);
+            if (AddFontResourceExW(path.c_str(), FR_PRIVATE, nullptr)) {private_fonts.push_back(path);bitmap_text_cache_invalidate();}
         }
     } catch (const std::exception& e) { log_line(e.what()); }
 }

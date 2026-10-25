@@ -8,6 +8,8 @@
 #include <future>
 #include <string>
 #include <vector>
+#include <list>
+#include <stdexcept>
 #include <wrl/client.h>
 #include <ruby.h>
 #include <ruby/encoding.h>
@@ -210,6 +212,83 @@ VALUE canvas_copy(VALUE self, VALUE other) {
     memcpy(target->pixels, source->pixels, static_cast<size_t>(source->width) * source->height * 4);
     return self;
 }
+
+constexpr size_t text_budget=4*1024*1024;
+struct TextMask {
+    std::wstring text,face;
+    int size=0;bool bold=false,italic=false,raster=false;
+    SIZE extent{};
+    std::vector<unsigned char> alpha;
+    size_t bytes()const{return sizeof(*this)+2*sizeof(void*)+(text.capacity()+face.capacity())*sizeof(wchar_t)+alpha.capacity();}
+};
+std::list<TextMask> text_masks;
+size_t text_bytes=0;
+uint64_t text_hits=0,text_misses=0,text_evictions=0,text_rasters=0,text_bypasses=0;
+bool text_pending=false,text_enabled=true;
+void clear_text_masks(){
+    text_masks.clear();text_bytes=0;text_pending=false;
+    text_hits=text_misses=text_evictions=text_rasters=text_bypasses=0;
+}
+void account_text(size_t before){
+    if(before!=text_bytes)rb_gc_adjust_memory_usage(static_cast<ssize_t>(text_bytes)-static_cast<ssize_t>(before));
+}
+struct GdiText {
+    HDC dc=nullptr;HFONT font=nullptr;HBITMAP bitmap=nullptr;HGDIOBJ old_font=nullptr,old_bitmap=nullptr;
+    ~GdiText(){
+        if(old_bitmap&&old_bitmap!=HGDI_ERROR)SelectObject(dc,old_bitmap);
+        if(bitmap)DeleteObject(bitmap);
+        if(old_font&&old_font!=HGDI_ERROR)SelectObject(dc,old_font);
+        if(font)DeleteObject(font);
+        if(dc)DeleteDC(dc);
+    }
+};
+TextMask raster_text(const wchar_t* face,int size,bool bold,bool italic,const wchar_t* characters,int count,bool pixels){
+    GdiText g;
+    g.dc=CreateCompatibleDC(nullptr);
+    g.font=CreateFontW(size,0,0,0,bold?FW_BOLD:FW_NORMAL,italic,FALSE,FALSE,
+        DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY,DEFAULT_PITCH,face);
+    if(!g.dc||!g.font)throw std::runtime_error("GDI font allocation failed");
+    g.old_font=SelectObject(g.dc,g.font);
+    TextMask result;result.size=size;result.bold=bold;result.italic=italic;
+    GetTextExtentPoint32W(g.dc,characters,count,&result.extent);
+    if(!count)result.extent={};
+    auto extent=result.extent;
+    if(pixels&&count&&extent.cx>0&&extent.cy>0&&extent.cx<=32768){
+        uint64_t bytes=static_cast<uint64_t>(extent.cx)*extent.cy;
+        if(bytes>128*1024*1024/4)throw std::runtime_error("GDI text mask allocation failed");
+        BITMAPINFO info{};info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
+        info.bmiHeader.biWidth=extent.cx;info.bmiHeader.biHeight=-extent.cy;
+        info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;info.bmiHeader.biCompression=BI_RGB;
+        void* bits=nullptr;g.bitmap=CreateDIBSection(g.dc,&info,DIB_RGB_COLORS,&bits,nullptr,0);
+        if(!g.bitmap||!bits)throw std::runtime_error("GDI text mask allocation failed");
+        g.old_bitmap=SelectObject(g.dc,g.bitmap);
+        memset(bits,0,static_cast<size_t>(bytes)*4);
+        SetTextColor(g.dc,RGB(255,255,255));SetBkColor(g.dc,RGB(0,0,0));SetBkMode(g.dc,OPAQUE);
+        TextOutW(g.dc,0,0,characters,count);GdiFlush();
+        result.alpha.resize(static_cast<size_t>(bytes));
+        for(size_t i=0;i<result.alpha.size();++i)result.alpha[i]=static_cast<unsigned char*>(bits)[i*4];
+        result.raster=true;++text_rasters;
+    }
+    return result;
+}
+void paint_text(Canvas* canvas,const TextMask& mask,int x,int y,int w,int h,int align,const unsigned char* color){
+    if(!mask.raster||w<=0||h<=0)return;
+    int width=std::min(w,static_cast<int>(mask.extent.cx));
+    int64_t left=static_cast<int64_t>(x)+(align==1?(w-width)/2:align==2?w-width:0);
+    int64_t top=static_cast<int64_t>(y)+(static_cast<int64_t>(h)-mask.extent.cy)/2;
+    int x1=static_cast<int>(std::clamp<int64_t>(left,0,canvas->width));
+    int x2=static_cast<int>(std::clamp<int64_t>(left+width,0,canvas->width));
+    int y1=static_cast<int>(std::clamp<int64_t>(std::max<int64_t>(top,y),0,canvas->height));
+    int y2=static_cast<int>(std::clamp<int64_t>(std::min<int64_t>(top+mask.extent.cy,static_cast<int64_t>(y)+h),0,canvas->height));
+    for(int dy=y1;dy<y2;++dy)for(int dx=x1;dx<x2;++dx){
+        int u=static_cast<int>((dx-left)*mask.extent.cx/width);
+        size_t index=static_cast<size_t>(dy-top)*mask.extent.cx+u;
+        unsigned char pixel[]={color[0],color[1],color[2],static_cast<unsigned char>(mask.alpha[index]*color[3]/255)};
+        over(canvas->pixels+(static_cast<size_t>(dy)*canvas->width+dx)*4,pixel,255);
+    }
+    canvas_changed(canvas,x1,y1,x2,y2);
+}
+
 // The RGSS1 font size is GDI's positive cell height, not a negative em height.
 VALUE canvas_text(VALUE self, VALUE text, VALUE font, VALUE spec) {
     auto* canvas = canvas_get(self);
@@ -232,53 +311,50 @@ VALUE canvas_text(VALUE self, VALUE text, VALUE font, VALUE spec) {
     VALUE utf_name = rb_str_encode(name, rb_enc_from_encoding(rb_utf8_encoding()), 0, Qnil);
     wchar_t face[LF_FACESIZE]{};
     MultiByteToWideChar(CP_UTF8, 0, StringValueCStr(utf_name), -1, face, LF_FACESIZE);
-    SIZE extent{};
-    HDC dc = CreateCompatibleDC(nullptr);
-    HFONT handle = CreateFontW(size, 0, 0, 0, bold ? FW_BOLD : FW_NORMAL, italic, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, face);
-    if (!dc || !handle) { if (dc) DeleteDC(dc); if (handle) DeleteObject(handle); rb_raise(graphics_error, "GDI font allocation failed"); }
-    HGDIOBJ old_font = SelectObject(dc, handle);
-    auto* characters = reinterpret_cast<const wchar_t*>(RSTRING_PTR(wide_text));
-    GetTextExtentPoint32W(dc, characters, count, &extent);
-    if (!count) extent = {};
-    if (!measure && count && w > 0 && h > 0 && extent.cx > 0 && extent.cy > 0 && extent.cx <= 32768) {
-        BITMAPINFO info{}; info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-        info.bmiHeader.biWidth = extent.cx; info.bmiHeader.biHeight = -extent.cy;
-        info.bmiHeader.biPlanes = 1; info.bmiHeader.biBitCount = 32; info.bmiHeader.biCompression = BI_RGB;
-        void* bits = nullptr;
-        HBITMAP mask = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &bits, nullptr, 0);
-        if (!mask || !bits) {
-            if (mask) DeleteObject(mask);
-            SelectObject(dc, old_font); DeleteObject(handle); DeleteDC(dc);
-            rb_raise(graphics_error, "GDI text mask allocation failed");
-        }
-        if (mask) {
-            HGDIOBJ old_bitmap = SelectObject(dc, mask);
-            memset(bits, 0, static_cast<size_t>(extent.cx) * extent.cy * 4);
-            SetTextColor(dc, RGB(255,255,255)); SetBkColor(dc, RGB(0,0,0)); SetBkMode(dc, OPAQUE);
-            TextOutW(dc, 0, 0, characters, count);
-            GdiFlush();
-            int draw_width = std::min(w, static_cast<int>(extent.cx));
-            int left = x + (align == 1 ? (w - draw_width) / 2 : align == 2 ? w - draw_width : 0);
-            int top = y + (h - extent.cy) / 2;
-            for (int j = 0; j < extent.cy; ++j) {
-                int64_t dy = static_cast<int64_t>(top) + j;
-                if (dy < 0 || dy >= canvas->height || dy < y || dy >= static_cast<int64_t>(y) + h) continue;
-                for (int i = 0; i < draw_width; ++i) {
-                    int64_t dx = static_cast<int64_t>(left) + i;
-                    if (dx < 0 || dx >= canvas->width) continue;
-                    int u = static_cast<int>(static_cast<int64_t>(i) * extent.cx / draw_width);
-                    unsigned char pixel[] = {color[0],color[1],color[2],static_cast<unsigned char>(static_cast<unsigned char*>(bits)[(static_cast<size_t>(j)*extent.cx+u)*4] * color[3] / 255)};
-                    over(canvas->pixels + (static_cast<size_t>(dy)*canvas->width+static_cast<size_t>(dx))*4, pixel, 255);
+
+    canvas=canvas_get(self);
+    SIZE extent{};char failure[192]{};size_t before=text_bytes;
+    {
+        try{
+            if(text_pending)clear_text_masks();
+            auto* characters=reinterpret_cast<const wchar_t*>(RSTRING_PTR(wide_text));
+            bool eligible=text_enabled&&count>0&&count<=512;
+            bool need_pixels=!measure&&w>0&&h>0;
+            auto found=text_masks.end();
+            if(eligible)for(auto it=text_masks.begin();it!=text_masks.end();++it){
+                if(it->size==size&&it->bold==bold&&it->italic==italic&&it->face==face&&
+                    it->text.size()==static_cast<size_t>(count)&&!memcmp(it->text.data(),characters,count*sizeof(wchar_t))){
+                    found=it;break;
                 }
             }
-            SelectObject(dc, old_bitmap); DeleteObject(mask);
-            canvas_changed(canvas, 0, 0, canvas->width, canvas->height);
-        }
+            if(found!=text_masks.end()&&(!need_pixels||found->raster)){
+                ++text_hits;text_masks.splice(text_masks.begin(),text_masks,found);
+                extent=text_masks.front().extent;
+                if(!measure)paint_text(canvas,text_masks.front(),x,y,w,h,align,color);
+            }else{
+                ++text_misses;
+                TextMask result=raster_text(face,size,bold,italic,characters,count,need_pixels);
+                extent=result.extent;
+                if(!measure)paint_text(canvas,result,x,y,w,h,align,color);
+                if(found!=text_masks.end()){text_bytes-=found->bytes();text_masks.erase(found);}
+                if(eligible&&result.alpha.size()<=1024*1024){
+                    try{
+                        result.text.assign(characters,count);result.face=face;
+                        size_t bytes=result.bytes();
+                        while(!text_masks.empty()&&(text_masks.size()>=128||text_bytes+bytes>text_budget)){
+                            text_bytes-=text_masks.back().bytes();text_masks.pop_back();++text_evictions;
+                        }
+                        if(bytes<=text_budget){text_masks.push_front(std::move(result));text_bytes+=text_masks.front().bytes();}
+                        else ++text_bypasses;
+                    }catch(const std::bad_alloc&){++text_bypasses;}
+                }else ++text_bypasses;
+            }
+        }catch(const std::exception& error){strncpy_s(failure,error.what(),_TRUNCATE);}
     }
-    SelectObject(dc, old_font); DeleteObject(handle); DeleteDC(dc);
-    RB_GC_GUARD(utf); RB_GC_GUARD(utf_name); RB_GC_GUARD(wide_text);
-    return rb_ary_new_from_args(2, INT2NUM(extent.cx), INT2NUM(extent.cy));
+    account_text(before);
+    RB_GC_GUARD(self);RB_GC_GUARD(utf);RB_GC_GUARD(utf_name);RB_GC_GUARD(wide_text);
+    if(*failure)rb_raise(graphics_error,"%s",failure);
+    return rb_ary_new_from_args(2,INT2NUM(extent.cx),INT2NUM(extent.cy));
 }
 VALUE canvas_hue(VALUE self, VALUE angle) {
     auto* canvas = canvas_get(self);
@@ -377,6 +453,7 @@ Canvas* canvas_optional(VALUE object) {
     auto* canvas=raw_canvas(object);
     return canvas->disposed?nullptr:canvas_get(object);
 }
+#endif
 namespace {
 VALUE canvas_pixel_bytes(VALUE self) {
     auto* c=canvas_get(self);
@@ -384,7 +461,8 @@ VALUE canvas_pixel_bytes(VALUE self) {
     RB_GC_GUARD(self);return result;
 }
 }
-#endif
+void bitmap_text_cache_invalidate(){text_pending=true;}
+void bitmap_text_cache_clear(bool account){size_t before=text_bytes;clear_text_masks();if(account)account_text(before);}
 void canvas_changed(Canvas* canvas, int left, int top, int right, int bottom) {
     if (left >= right || top >= bottom) return;
     canvas->transparency_known=false;
@@ -394,6 +472,12 @@ void canvas_changed(Canvas* canvas, int left, int top, int right, int bottom) {
     canvas->dirty=true;
 }
 namespace {
+VALUE text_cache_stats(VALUE){
+    if(text_pending)bitmap_text_cache_clear();
+    return rb_ary_new_from_args(7,ULL2NUM(text_hits),ULL2NUM(text_misses),SIZET2NUM(text_bytes),SIZET2NUM(text_masks.size()),ULL2NUM(text_evictions),ULL2NUM(text_rasters),ULL2NUM(text_bypasses));
+}
+VALUE text_cache_enabled(VALUE,VALUE value){bitmap_text_cache_clear();text_enabled=RTEST(value);return value;}
+VALUE invalidate_text_cache(VALUE){bitmap_text_cache_invalidate();return Qnil;}
 VALUE canvas_transparent(VALUE self) {
     auto* canvas = canvas_get(self);
     if (!canvas->transparency_known) {
@@ -427,8 +511,11 @@ void init_bitmap() {
     rb_define_method(bitmap_class,"disposed?",RUBY_METHOD_FUNC(canvas_disposed),0);
     rb_define_method(bitmap_class,"__transparent?",RUBY_METHOD_FUNC(canvas_transparent),0);
     rb_define_method(bitmap_class,"hue_change",RUBY_METHOD_FUNC(canvas_hue),1);
-#ifdef RGSS_VXA
     rb_define_method(bitmap_class,"__pixel_bytes",RUBY_METHOD_FUNC(canvas_pixel_bytes),0);
+    rb_define_singleton_method(bitmap_class,"__text_cache_stats",RUBY_METHOD_FUNC(text_cache_stats),0);
+    rb_define_singleton_method(bitmap_class,"__text_cache_enabled=",RUBY_METHOD_FUNC(text_cache_enabled),1);
+    rb_define_singleton_method(bitmap_class,"__invalidate_text_cache",RUBY_METHOD_FUNC(invalidate_text_cache),0);
+#ifdef RGSS_VXA
     rb_define_method(bitmap_class,"__blur",RUBY_METHOD_FUNC(vxa_blur),0);
     rb_define_method(bitmap_class,"__radial_blur",RUBY_METHOD_FUNC(vxa_radial_blur),2);
     rb_define_singleton_method(rb_define_class("Font",rb_cObject),"exist?",RUBY_METHOD_FUNC(font_exists),1);

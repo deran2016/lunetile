@@ -4,6 +4,7 @@
 #include <dxgi1_4.h>
 #include <wrl/client.h>
 #include <array>
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -83,6 +84,7 @@ struct Renderer {
     double wait_ms=0,render_ms=0,parse_ms=0;
     double script_cpu_ms=0,render_cpu_ms=0,wait_cpu_ms=0;
     double focus_pause_ms=0;
+    uint64_t upload_rects=0,upload_bytes=0,texture_creations=0;
     HANDLE timer=nullptr;
     HANDLE frame_latency=nullptr;
     rgss_refresh::Clock refresh;
@@ -182,10 +184,12 @@ struct Renderer {
             D3D11_SUBRESOURCE_DATA initial{canvas->pixels,static_cast<UINT>(canvas->width*4),0};
             checked(device->CreateTexture2D(&desc,&initial,&canvas->texture),"Create bitmap texture");
             checked(device->CreateShaderResourceView(canvas->texture,nullptr,&canvas->view),"Create bitmap view");
+            ++texture_creations;++upload_rects;upload_bytes+=static_cast<uint64_t>(canvas->width)*canvas->height*4;
         }else if(canvas->dirty){
             const auto& r=canvas->changed;
             D3D11_BOX box{static_cast<UINT>(r.left),static_cast<UINT>(r.top),0,static_cast<UINT>(r.right),static_cast<UINT>(r.bottom),1};
             context->UpdateSubresource(canvas->texture,0,&box,canvas->pixels+(static_cast<size_t>(r.top)*canvas->width+r.left)*4,canvas->width*4,0);
+            ++upload_rects;upload_bytes+=static_cast<uint64_t>(r.right-r.left)*(r.bottom-r.top)*4;
         }
         canvas->dirty=false;
     }
@@ -268,6 +272,7 @@ struct Renderer {
 };
 Renderer renderer;
 LRESULT CALLBACK window_proc(HWND window,UINT message,WPARAM wparam,LPARAM lparam){
+    if(message==WM_DPICHANGED||message==WM_FONTCHANGE||message==WM_SETTINGCHANGE)bitmap_text_cache_invalidate();
     if(ui_input_message(window,message,wparam,lparam))return 0;
     input_message(message,wparam);
     if(message==WM_SYSKEYDOWN&&wparam==VK_RETURN&&(lparam&(1<<29))&&!(lparam&(1<<30))){
@@ -588,6 +593,35 @@ VALUE reset_deadline(VALUE){QueryPerformanceCounter(&renderer.deadline);renderer
 VALUE begin_frame(VALUE){renderer.cpu_begin=thread_cpu();renderer.script_cpu_ms=renderer.last_cpu?(renderer.cpu_begin-renderer.last_cpu)/10000.0:0;return Qnil;}
 VALUE stats(VALUE){return rb_ary_new_from_args(11,DBL2NUM(renderer.render_ms),DBL2NUM(renderer.wait_ms),renderer.gpu_ms>=0?DBL2NUM(renderer.gpu_ms):Qnil,ULL2NUM(renderer.gpu_valid),ULL2NUM(renderer.gpu_invalid),DBL2NUM(renderer.script_cpu_ms),DBL2NUM(renderer.render_cpu_ms),DBL2NUM(renderer.wait_cpu_ms),ULL2NUM(renderer.sequence),renderer.gpu_valid?ULL2NUM(renderer.gpu_sequence):Qnil,DBL2NUM(renderer.focus_pause_ms));}
 VALUE render_parts(VALUE){return rb_ary_new_from_args(2,DBL2NUM(renderer.parse_ms),DBL2NUM(renderer.render_ms));}
+VALUE upload_stats(VALUE){return rb_ary_new_from_args(3,ULL2NUM(renderer.upload_rects),ULL2NUM(renderer.upload_bytes),ULL2NUM(renderer.texture_creations));}
+VALUE plain_display_class(VALUE,VALUE object){if(RB_SPECIAL_CONST_P(object))return Qnil;VALUE klass=rb_obj_class(object);return RBASIC_CLASS(object)==klass?klass:Qnil;}
+VALUE order_display(VALUE,VALUE nodes){
+    Check_Type(nodes,T_ARRAY);long count=RARRAY_LEN(nodes);
+    if(count>100000)return Qnil;
+    struct Key { long z,y,serial,index; };
+    VALUE storage=rb_str_new(nullptr,count*sizeof(Key));auto* keys=reinterpret_cast<Key*>(RSTRING_PTR(storage));
+    VALUE sprite=rb_path2class("Sprite"),layer=rb_path2class("Tilemap::Layer");
+    ID z_id=rb_intern("@z"),y_id=rb_intern("@y"),serial_id=rb_intern("@serial"),disposed_id=rb_intern("@disposed");
+    for(long i=0;i<count;++i){
+        VALUE node=rb_ary_entry(nodes,i),z,y=INT2FIX(0),serial;
+        if(rb_obj_is_kind_of(node,layer)){
+            z=rb_funcall(node,rb_intern("z"),0);serial=rb_funcall(node,rb_intern("serial"),0);
+        }else{
+            if(RTEST(rb_ivar_get(node,disposed_id)))rb_funcall(node,rb_intern("check_live"),0);
+            z=rb_ivar_get(node,z_id);serial=rb_ivar_get(node,serial_id);
+            if(rb_obj_is_kind_of(node,sprite))y=rb_ivar_get(node,y_id);
+        }
+        if(!RB_FIXNUM_P(z)||!RB_FIXNUM_P(y)||!RB_FIXNUM_P(serial))return Qnil;
+        keys[i]={FIX2LONG(z),FIX2LONG(y),FIX2LONG(serial),i};
+    }
+    std::sort(keys,keys+count,[](const Key& a,const Key& b){
+        if(a.z!=b.z)return a.z<b.z;if(a.y!=b.y)return a.y<b.y;
+        if(a.serial!=b.serial)return a.serial<b.serial;return a.index<b.index;
+    });
+    VALUE result=rb_ary_new_capa(count);
+    for(long i=0;i<count;++i)rb_ary_push(result,rb_ary_entry(nodes,keys[i].index));
+    RB_GC_GUARD(storage);RB_GC_GUARD(nodes);return result;
+}
 #ifdef RGSS_VXA
 VALUE tile_batches(VALUE){auto& r=renderer;auto& b=r.batches;return rb_ary_new_from_args(8,UINT2NUM(b.quads),UINT2NUM(b.tile_draws),UINT2NUM(b.regular_draws),UINT2NUM(b.constant_maps),UINT2NUM(b.instance_maps),UINT2NUM(r.tile_capacity*sizeof(Renderer::TileInstance)),DBL2NUM(b.scene_ms),DBL2NUM(b.present_ms));}
 VALUE reset_graphics(VALUE){graphics_reset();return Qnil;}
@@ -610,7 +644,6 @@ VALUE scene_pixel(VALUE,VALUE vx,VALUE vy){
     if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);
     return rb_ary_new_from_args(4,INT2NUM(bytes[0]),INT2NUM(bytes[1]),INT2NUM(bytes[2]),INT2NUM(bytes[3]));
 }
-#ifdef RGSS_VXA
 VALUE snapshot(VALUE) {
     VALUE args[]{INT2NUM(renderer.width),INT2NUM(renderer.height)};
     VALUE bitmap=rb_class_new_instance(2,args,rb_path2class("Bitmap"));
@@ -635,7 +668,6 @@ VALUE snapshot(VALUE) {
     if(*failure)rb_raise(rb_path2class("RGSSError"),"%s",failure);
     return bitmap;
 }
-#endif
 }
 
 void graphics_prepare(){
@@ -664,10 +696,13 @@ void graphics_attach(HWND window){
     }
     renderer.width=width;renderer.height=height;fit_window();input_attach(window);renderer.previous_proc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(window_proc)));if(!renderer.test_background)SetForegroundWindow(window);}
 void graphics_shutdown(){if(renderer.window&&IsWindow(renderer.window)&&renderer.previous_proc)SetWindowLongPtrW(renderer.window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(renderer.previous_proc));if(renderer.timer){CloseHandle(renderer.timer);renderer.timer=nullptr;}if(renderer.frame_latency){CloseHandle(renderer.frame_latency);renderer.frame_latency=nullptr;}renderer.context.Reset();
+    bitmap_text_cache_clear(false);
     using SetDpi=HANDLE(WINAPI*)(HANDLE);auto dpi=reinterpret_cast<SetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetThreadDpiAwarenessContext"));
     if(dpi&&renderer.previous_dpi)dpi(renderer.previous_dpi);
     renderer=Renderer{};}
 void graphics_reset(){
+    bitmap_text_cache_clear();
+    renderer.upload_rects=renderer.upload_bytes=renderer.texture_creations=0;
     auto& r=renderer;r.rate=r.refresh.high()?120:engine_rate;r.remainder=0;r.refresh.reset();r.frozen_valid=false;QueryPerformanceCounter(&r.deadline);
 #ifdef RGSS_VXA
     r.batches={};r.tile_active=false;
@@ -699,13 +734,16 @@ void init_graphics(){
     rb_define_singleton_method(graphics,"frame_reset",RUBY_METHOD_FUNC(reset_deadline),0);
     rb_define_singleton_method(graphics,"__timings",RUBY_METHOD_FUNC(stats),0);
     rb_define_singleton_method(graphics,"__render_parts",RUBY_METHOD_FUNC(render_parts),0);
+    rb_define_singleton_method(graphics,"__upload_stats",RUBY_METHOD_FUNC(upload_stats),0);
+    rb_define_singleton_method(rb_const_get(rb_cObject,rb_intern("RGSSXP")),"__plain_display_class",RUBY_METHOD_FUNC(plain_display_class),1);
+    rb_define_singleton_method(rb_const_get(rb_cObject,rb_intern("RGSSXP")),"__order_display",RUBY_METHOD_FUNC(order_display),1);
     rb_define_singleton_method(graphics,"__scene_pixel",RUBY_METHOD_FUNC(scene_pixel),2);
+    rb_define_singleton_method(graphics,"__snapshot",RUBY_METHOD_FUNC(snapshot),0);
 #ifdef RGSS_VXA
     init_vxa_tile_cache();
     rb_define_singleton_method(graphics,"__tile_batches",RUBY_METHOD_FUNC(tile_batches),0);
     rb_define_singleton_method(graphics,"__reset",RUBY_METHOD_FUNC(reset_graphics),0);
     rb_define_singleton_method(rb_define_module("RGSSXP"),"__tile_quads",RUBY_METHOD_FUNC(tile_quads),5);
-    rb_define_singleton_method(graphics,"__snapshot",RUBY_METHOD_FUNC(snapshot),0);
 #endif
 }
 

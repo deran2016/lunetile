@@ -103,6 +103,7 @@ end
 class RGSSXP::DisplayObject
   def viewport=(value)
     raise TypeError, 'Expected Viewport or nil' unless value.nil? || value.is_a?(Viewport)
+    RGSSXP.__viewport_changed unless @viewport.equal?(value)
     @viewport = value
   end
 end

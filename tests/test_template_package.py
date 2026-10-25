@@ -1,8 +1,8 @@
-import hashlib,json,shutil,sys,tempfile,unittest
+import hashlib,json,shutil,sys,tempfile,unittest,zipfile
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from package_template import package
+from package_template import package,runtime_patch_archive
 
 class TemplatePackageTests(unittest.TestCase):
  def setUp(self):
@@ -53,6 +53,13 @@ class TemplatePackageTests(unittest.TestCase):
   with self.assertRaises(ValueError):self.package()
   self.assertFalse(self.output.exists())
   self.assertFalse(self.diagnostics.exists())
+
+ def test_runtime_patch_contains_no_data_saves_or_config(self):
+  target=self.root/'patch.zip';runtime_patch_archive(self.runtime,target)
+  with zipfile.ZipFile(target) as zipped:
+   self.assertEqual(set(zipped.namelist()),{'Lunetile.dll','LICENSE','licenses/notice','README.txt'})
+   self.assertEqual(zipped.read('Lunetile.dll'),b'new runtime')
+   self.assertIn(hashlib.sha256(b'new runtime').hexdigest(),zipped.read('README.txt').decode('utf-8'))
 
  def test_conversion_failure_does_not_publish_partial_output(self):
   with patch('package_template.migrate',side_effect=ValueError('invalid template')):

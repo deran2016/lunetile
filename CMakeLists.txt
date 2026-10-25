@@ -3,7 +3,7 @@ project(RGSSXP VERSION 0.1.0 LANGUAGES C CXX RC)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   src/runtime/types.rb src/runtime/data.rb src/runtime/data_constructors.rb
   src/runtime/saves.rb src/runtime/timing.rb src/runtime/rpg_schema.json src/runtime/archive.rb src/runtime/graphics.rb src/runtime/rpg_graphics.rb
-  src/runtime/tilemap.rb src/runtime/autotile_quarters.json src/runtime/audio.rb src/runtime/integer_map.rb src/runtime/text.rb src/runtime/network.rb)
+  src/runtime/tilemap.rb src/runtime/autotile_quarters.json src/runtime/audio.rb src/runtime/integer_map.rb src/runtime/text.rb src/runtime/network.rb src/runtime/display_commands.rb)
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "RGSSXP requires MSVC and a Win32 (x86) target")
 endif()
@@ -99,6 +99,7 @@ file(READ "${CMAKE_SOURCE_DIR}/src/runtime/data_constructors.rb" data_constructo
 file(READ "${CMAKE_SOURCE_DIR}/src/runtime/saves.rb" save_support)
 file(READ "${CMAKE_SOURCE_DIR}/src/runtime/archive.rb" archive_support)
 file(READ "${CMAKE_SOURCE_DIR}/src/runtime/graphics.rb" graphics_support)
+file(READ "${CMAKE_SOURCE_DIR}/src/runtime/display_commands.rb" display_commands_support)
 file(READ "${CMAKE_SOURCE_DIR}/src/runtime/timing.rb" timing_support)
 file(READ "${CMAKE_SOURCE_DIR}/src/runtime/rpg_graphics.rb" rpg_graphics_support)
 file(READ "${CMAKE_SOURCE_DIR}/src/runtime/tilemap.rb" tilemap_support)

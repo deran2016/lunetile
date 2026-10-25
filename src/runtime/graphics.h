@@ -17,6 +17,8 @@ Canvas* canvas_optional(VALUE object);
 #endif
 void canvas_changed(Canvas* canvas, int left, int top, int right, int bottom);
 void init_bitmap();
+void bitmap_text_cache_invalidate();
+void bitmap_text_cache_clear(bool account=true);
 void init_graphics();
 void graphics_prepare();
 void graphics_attach(HWND window);

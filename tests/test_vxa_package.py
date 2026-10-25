@@ -49,6 +49,7 @@ class VXAPackageTests(unittest.TestCase):
    self.assertFalse((source/'Save01.rvdata2').exists());self.assertFalse((source/'RGSS301.dll').exists())
    shutil.copytree(source,target);shutil.copy2(dll,target/'LunetileVXA.dll')
    (target/'migration').mkdir();(target/'migration/manifest.json').write_text('{}')
+   (target/'migration/sources').mkdir();(target/'migration/sources/stock.rb').write_text('original stock source')
   output,diag=self.root/'out',self.root/'diag'
   performance=self.root/'performance.json'
   performance.write_text(json.dumps({'passed':True,'candidate_sha256':digest(self.runtime/'LunetileVXA.dll')}))
@@ -58,6 +59,8 @@ class VXAPackageTests(unittest.TestCase):
   self.assertNotIn('Save01.rvdata2',hashes);self.assertNotIn('RGSS301.dll',hashes)
   self.assertEqual(json.loads((diag/'SHA256SUMS.json').read_text()),hashes)
   self.assertEqual((diag/'render-performance.json').read_bytes(),performance.read_bytes())
+  self.assertEqual({p.relative_to(diag/'migration').as_posix() for p in (diag/'migration').rglob('*') if p.is_file()},{'manifest.json'})
+  self.assertFalse((output/'migration').exists())
   archive(output,self.root/'game.zip')
   with zipfile.ZipFile(self.root/'game.zip') as zipped:self.assertEqual(set(zipped.namelist()),set(hashes))
   with self.assertRaises(ValueError):archive(output,self.root/'game.zip')
