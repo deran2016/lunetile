@@ -67,6 +67,8 @@ jobs:
         run: python -X utf8 -B scripts/verify_ci.py build/ci-verification
       - name: Verify VX Ace runtime
         run: python -X utf8 -B scripts/test_runtime_vxa.py build/ci-verification/vxa
+      - name: Verify controls and save recovery in both engines
+        run: python -X utf8 -B scripts/test_runtime_comfort.py build/ci-verification/comfort
       - name: Package binaries and notices
         run: |
           python -X utf8 -B scripts/package_runtime.py build/ci-verification build/lunetile-windows-x86
@@ -116,6 +118,7 @@ jobs:
             build/ci-verification/network/logic*/network-results.json
             build/ci-verification/network/logic*/network-finalized.json
             build/ci-verification/vxa/**/*
+            build/ci-verification/comfort/**/summary.json
             build/runtime-native/bin/Release/verification-vxa.json
           if-no-files-found: ignore
 
@@ -148,41 +151,19 @@ jobs:
           cd dist
           sha256sum --check SHA256SUMS.txt
           cat > release-notes.md <<EOF
-          Experimental Windows x86 build of Lunetile.
+          Experimental Windows x86 build of Lunetile. Source commit: $SOURCE_COMMIT
 
-          XP and VX Ace share faster display-list generation, a bounded full-string GDI mask cache, and partial text texture uploads. Existing converted projects can replace only the engine DLL using lunetile-xp-speed-fix.zip or lunetile-vxa-speed-fix.zip. Game data, saves, MMO accounts/profiles and client scripts are excluded from these patches.
+          Adds keyboard/XInput remapping, device-aware button prompts, configurable rumble and a controller test in the title/in-game Controls and Saves menu for freshly converted reviewed XP and VX Ace stock projects.
+          Adds a separate autosave, three verified previous generations per manual/autosave file, and an explicit recovery menu. Autosaving waits for a safe map state after map setup or a non-loss battle result. Original import saves and existing manual slot formats remain separate.
 
-          Source commit: $SOURCE_COMMIT
+          Download lunetile-template-xp-windows-x86.zip or lunetile-template-vxa-windows-x86.zip and run Game.exe. Requires Windows 11 x64, Visual C++ x86 runtime and the matching engine RTP (not bundled).
+          Personal saves, backups, settings and original RGSS DLLs are excluded.
 
-          Fixes slow game logic under heavy rendering at 120Hz by skipping overdue output frames. Actual 120FPS rendering is not guaranteed.
-          Existing VX Ace projects: close the game and editor, back up your project, then replace only LunetileVXA.dll beside Game.exe using lunetile-vxa-speed-fix.zip. Data, Saves and Game.ini are not included in this patch.
-          Local stock VX Ace movement measured 11.25 tiles in approximately 3.02 seconds at each 40/60/120FPS setting after the fix; the previous 120FPS setting took 8.32 seconds. These local measurements are separate from CI results.
+          Existing projects: preserve your original and Saves. Reconvert the reviewed original into a new directory with the current converter to install all menus/save hooks. The DLL-only update ZIPs do not update the old embedded VX Ace save helper; do not overwrite a personal project with a full template.
+          Read docs/CONTROLS_SAVES.md and docs/releases/v0.1.0-alpha.16.md in the source repository for behavior, upgrade instructions and validation boundaries.
 
-          XP template naming now matches VX Ace: source template-xp/, game lunetile-template-xp-windows-x86.zip, diagnostics lunetile-template-xp-diagnostics.zip.
-          Download lunetile-template-xp-windows-x86.zip for the converted game project, Game.exe, the newly built Lunetile.dll, a short README and license notices.
-          Game.ini selects Library=Lunetile.dll. The original RGSS DLL is not included; RGSS exports and save paths remain compatible.
-          Extract this game ZIP and run Game.exe. No Python, manual migration or diagnostics ZIP is required.
-          The starting map is expanded to 40x23 tiles (1280x736 pixels), filling the 1280x720 canvas.
-          Optional lunetile-template-xp-diagnostics.zip contains verification, DLL information, migration/map changes, source/game file hashes, dependency locks and the Ruby port patch.
-          VX Ace: lunetile-template-vxa-windows-x86.zip contains the separate LunetileVXA.dll and converted template-vxa project. It requires RPG Maker VX Ace RTP, which is not bundled.
-          VX Ace diagnostics are in lunetile-template-vxa-diagnostics.zip; its verification-vxa.json records the actual checks for this DLL. XP test results do not certify VX Ace gameplay.
-          New VX Ace saves use Saves/LunetileVXA and imported saves use Saves/Import. The original RGSS301.dll, personal saves and logs are excluded.
-          Editor-save fix: the Main bootstrap restores Library=LunetileVXA.dll and relaunches once if the editor selects its original runtime. Both the INI reset and original DLL overwrite were reproduced with the installed editor.
-          Existing alpha.9 projects: download lunetile-vxa-editor-fix.zip and follow README.txt to insert the recovery script immediately above Main. Do not overwrite your Data or Saves with the full template.
-          SHA256SUMS.txt verifies all seven CI ZIPs. Development documents and historical records remain in the source repository. Hardware performance comparisons are local evidence, separate from CI accuracy checks.
-          Uses a 1280x720 widescreen canvas with adapted stock maps, menus, dialogue and battle UI.
-          Resize/maximize the window or use Alt+Enter for aspect-preserving full screen.
-          Runs stock game logic at 120Hz with default 60FPS output. Choose 40/60/120FPS in the in-game display settings.
-          Adds asynchronous Ruby REST/JSON and TCP/TLS clients in Lunetile.dll. No server is contacted until game scripts explicitly call the networking API.
-          See docs/NETWORKING.md in the source repository for the API and length-prefixed TCP example. No external Ruby, OpenSSL or networking DLL installation is required.
-          XP timing is adapted from reviewed 40Hz stock scripts; VX Ace timing is adapted from its 60Hz stock scripts. Save formats and directories are engine-specific.
-          Requires Windows 11 x64, the Microsoft Visual C++ x86 runtime, and the matching engine RTP: RPG Maker XP Standard RTP for XP, RPG Maker VX Ace RTP for VX Ace.
-
-          CI verifies Python tests, Ruby x86/GC/Marshal/Fiber checks, the DLL PE/ABI contract, original-launcher smoke checks, 640x480/1280x720 rendering and window geometry, FHD/QHD/4K fit calculations, 120Hz output scheduling, 40/120Hz timing comparisons, settings/save checks, and template conversion.
-          XP Korean project paths are checked only when supported by the system ANSI code page; skips are recorded in verification.json. VX Ace uses Unicode launcher paths and checks Korean paths independently.
-          Networking checks use local HTTP/TCP/TLS fixture servers, including trusted TLS success on this disposable CI runner, certificate rejection, cancellation, F12 cleanup, limits and gameplay updates during delayed responses.
-          Extract XP to an ASCII path on English Windows. VX Ace supports Unicode extraction paths. Full gameplay, rendering, audio, and endurance acceptance were not run for this CI build.
-          The supplied template uses Standard RTP, which is not bundled. Personal saves and the original RGSS DLL are excluded.
+          CI checks both launcher ABI contracts, existing regression coverage and actual XP/VXA controls/save/recovery/restart scenarios. SHA256SUMS.txt verifies the ZIPs.
+          Hardware gamepad feel/hot-plug, power-loss recovery, arbitrary plugins, complete campaigns and long-run endurance are not certified. Rumble request/deadline/focus-state checks are automated; no physical controller was connected for the local release validation.
           EOF
           gh release create "$RELEASE_TAG" lunetile-template-xp-windows-x86.zip lunetile-template-xp-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip lunetile-vxa-editor-fix.zip lunetile-vxa-speed-fix.zip lunetile-xp-speed-fix.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest=false

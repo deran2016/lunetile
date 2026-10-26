@@ -1,4 +1,11 @@
 #pragma once
+static const char controls_support[] = R"RGSSXP(# encoding: UTF-8
+@save_files_support@
+@controls_support@)RGSSXP";
+static const char comfort_support[] = R"RGSSXP(# encoding: UTF-8
+@comfort_support@)RGSSXP";
+static const char comfort_scene_support[] = R"RGSSXP(# encoding: UTF-8
+@comfort_scene_support@)RGSSXP";
 static const char network_support[] = R"RGSSXP(# encoding: UTF-8
 @network_support@)RGSSXP";
 static const char browser_support[] = R"RGSSXP(# encoding: UTF-8

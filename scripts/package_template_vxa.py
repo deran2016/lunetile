@@ -54,7 +54,7 @@ def package(source,runtime,output,diagnostics,*,performance=None):
   for name in ('abi_vxa.json','ruby.lock.json','dependencies.lock.json'):
    shutil.copy2(ROOT/'src/runtime'/name,diagnostic/name)
   shutil.copy2(ROOT/'LICENSE',converted/'LICENSE');shutil.copytree(ROOT/'licenses',converted/'licenses')
-  (converted/'README.txt').write_text('Lunetile VX Ace template\n\nGame.exe 실행. RPG Maker VX Ace RTP 및 Visual C++ x86 런타임 필요.\n1280x720, 120Hz 로직. 출력 40/60/120FPS.\n새 저장: Saves/LunetileVXA. RTP와 원본 RGSS301.dll은 포함하지 않습니다.\n기본 스크립트의 캐릭터 표시·이동, 32개 이상 이벤트의 좌표 조회, 저장 미리보기를 최적화했습니다.\n이벤트/이동 경로의 Script 실행 시 재시작 전까지 기존 처리로 돌아갑니다. 기존 게임용 패치가 아닙니다.\n편집기 저장으로 런타임 경로가 바뀌면 Main의 복구 코드가 LunetileVXA.dll을 선택하고 게임을 한 번 다시 시작합니다.\n전체 게임 및 사용자 스크립트 호환은 인증하지 않았습니다.\n',encoding='utf-8')
+  (converted/'README.txt').write_text('Lunetile VX Ace template\n\nGame.exe 실행. RPG Maker VX Ace RTP 및 Visual C++ x86 런타임 필요.\n1280x720, 120Hz 로직. 출력 40/60/120FPS.\n새 저장: Saves/LunetileVXA. RTP와 원본 RGSS301.dll은 포함하지 않습니다.\n타이틀/게임 메뉴의 조작·저장: 키/패드 재설정, 진동, 별도 자동 저장과 정상 백업 3개 복구.\n기본 스크립트의 캐릭터 표시·이동, 32개 이상 이벤트의 좌표 조회, 저장 미리보기를 최적화했습니다.\n이벤트/이동 경로의 Script 실행 시 재시작 전까지 기존 처리로 돌아갑니다. 기존 게임용 패치가 아닙니다.\n편집기 저장으로 런타임 경로가 바뀌면 Main의 복구 코드가 LunetileVXA.dll을 선택하고 게임을 한 번 다시 시작합니다.\n전체 게임 및 사용자 스크립트 호환은 인증하지 않았습니다.\n',encoding='utf-8')
   if before!={p.relative_to(source).as_posix():digest(p) for p in selected}:raise ValueError('Template inputs changed during packaging')
   hashes={p.relative_to(converted).as_posix():digest(p) for p in sorted(converted.rglob('*')) if p.is_file()}
   for name,value in (('template-source.json',before),('template-map.json',changes),('SHA256SUMS.json',hashes)):
@@ -83,6 +83,7 @@ def runtime_patch_archive(project,path):
   (directory/'README.txt').write_text(
    'Lunetile VX Ace rendering and 120Hz speed fix\n\n'
    '게임과 편집기를 종료하고 변환본을 백업하세요.\n'
+   '새 조작·저장 메뉴/자동 저장/백업 전체 설치는 최신 변환기로 원본을 별도 새 폴더에 변환해야 합니다. DLL만 교체하면 기존 VXA 저장 보조 코드는 갱신되지 않습니다.\n'
    'LunetileVXA.dll을 기존 Game.exe 옆에 복사하여 교체하세요.\n'
    'Data, Saves, Game.ini는 변경하지 않습니다. 전체 템플릿으로 기존 프로젝트를 덮어쓰지 마세요.\n'
    'alpha.10 이상 변환본에 적용할 수 있습니다. 이전 버전은 편집기 복구 스크립트도 적용하세요.\n'

@@ -20,7 +20,7 @@ def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout
  if high:ini+=f'TimingProfile=stock120\nRenderRate={rate}\n'
  if wide:ini+='Width=1280\nHeight=720\n'
  (output/'Game.ini').write_text(ini,encoding='utf-8')
- if rtp:shutil.copytree(data or ROOT/'template-vxa/Data',output/'Data')
+ if data or rtp:shutil.copytree(data or ROOT/'template-vxa/Data',output/'Data')
  if saves:shutil.copytree(saves,output/'Saves')
  environment=os.environ.copy();environment['LUNETILE_TEST_BACKGROUND']='1'
  process=subprocess.Popen([str(output/'Game.exe')],cwd=output,env=environment)

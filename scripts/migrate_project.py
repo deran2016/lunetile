@@ -99,6 +99,9 @@ def transform(entries,widescreen=False,high_refresh=False):
   if high_refresh:
    from high_refresh import adapt
    text,timing_edits=adapt(name,text.replace('\r\n','\n'));edits.extend(timing_edits)
+  if name=='Main':
+   text='Lunetile.install_stock\n'+text
+   edits.append({'line':1,'reason':'stock controls autosave and recovery menus'})
   converted=text.encode('utf-8') if edits else source
   if edits:replacements[index]=converted
   mapping.append({'index':index,'id':entry.id,'name':name,'encoding_before':'UTF-8','encoding_after':'UTF-8','source_sha256_before':sha(source),'source_sha256_after':sha(converted),'compressed_sha256_before':sha(entry.compressed),'changes':edits})

@@ -235,6 +235,8 @@ def verify(args):
    elif 'render' in selected['groups']:
     validator.case(engine+'.deterministic',lambda f,e=engine:deterministic(e,runtime,f),cacheable=True)
    validator.case(engine+'.logic',lambda f,e=engine:run(e,projects/e,f/'native',(ROOT/'tests/runtime_stock_script_speed.rb').read_bytes()))
+   from test_runtime_comfort import verify as comfort_verify
+   validator.case(engine+'.comfort',lambda f,e=engine:comfort_verify(e,runtime,projects/e,f))
    if args.mode!='quick':
     validator.case(engine+'.save-restart',lambda f,e=engine:save_restart(e,runtime,projects/e,f))
     validator.case(engine+'.lifecycle',lambda f,e=engine:lifecycle(e,runtime,f))

@@ -12,10 +12,12 @@ class ValidationPolicyTests(unittest.TestCase):
   self.temp=tempfile.TemporaryDirectory(dir=v.ROOT/'build');self.addCleanup(self.temp.cleanup)
   self.root=Path(self.temp.name);self.runtime=self.root/'runtime';self.runtime.mkdir()
   (self.root/'src/runtime').mkdir(parents=True);(self.root/'src/runtime/sample.cpp').write_text('one')
-  for name in list(v.DLLS.values())+['rgssxp-ruby.exe','display_geometry_test.exe','direction_input_test.exe','text_submit_test.exe']:(self.runtime/name).write_bytes(b'owned test binary')
+  for name in v.BUILD_ARTIFACTS:(self.runtime/name).write_bytes(b'owned test binary')
  def test_build_stamp_refuses_source_and_binary_changes(self):
   v.stamp(self.runtime,self.root);v.check_build(self.runtime,self.root)
   (self.root/'src/runtime/sample.cpp').write_text('two')
+  with self.assertRaisesRegex(ValueError,'rebuild'):v.check_build(self.runtime,self.root)
+  v.stamp(self.runtime,self.root);(self.runtime/'LunetileXInputProbe.dll').write_bytes(b'other test backend')
   with self.assertRaisesRegex(ValueError,'rebuild'):v.check_build(self.runtime,self.root)
   v.stamp(self.runtime,self.root);(self.runtime/'Lunetile.dll').write_bytes(b'other')
   with self.assertRaisesRegex(ValueError,'rebuild'):v.check_build(self.runtime,self.root)

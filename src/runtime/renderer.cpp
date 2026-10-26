@@ -722,7 +722,7 @@ void graphics_attach(HWND window){
         renderer.refresh.logic=renderer.rate=120;renderer.refresh.output=output;
     }
     renderer.width=width;renderer.height=height;fit_window();input_attach(window);renderer.previous_proc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(window_proc)));if(!renderer.test_background)SetForegroundWindow(window);}
-void graphics_shutdown(){if(renderer.window&&IsWindow(renderer.window)&&renderer.previous_proc)SetWindowLongPtrW(renderer.window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(renderer.previous_proc));if(renderer.timer){CloseHandle(renderer.timer);renderer.timer=nullptr;}if(renderer.frame_latency){CloseHandle(renderer.frame_latency);renderer.frame_latency=nullptr;}renderer.context.Reset();
+void graphics_shutdown(){input_reset();if(renderer.window&&IsWindow(renderer.window)&&renderer.previous_proc)SetWindowLongPtrW(renderer.window,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(renderer.previous_proc));if(renderer.timer){CloseHandle(renderer.timer);renderer.timer=nullptr;}if(renderer.frame_latency){CloseHandle(renderer.frame_latency);renderer.frame_latency=nullptr;}renderer.context.Reset();
     bitmap_text_cache_clear(false);
     using SetDpi=HANDLE(WINAPI*)(HANDLE);auto dpi=reinterpret_cast<SetDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetThreadDpiAwarenessContext"));
     if(dpi&&renderer.previous_dpi)dpi(renderer.previous_dpi);

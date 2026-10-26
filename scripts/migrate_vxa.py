@@ -35,7 +35,7 @@ def transform(entries,widescreen=False,high_refresh=False):
   edits=[]
   if known['name']=='Main':
    helper=(ROOT/'src/runtime/vxa_entry.rb').read_bytes()+b'\n'+(ROOT/'src/runtime/vxa_stock.rb').read_bytes()
-   replacements[index]=helper+b'\n'+source
+   replacements[index]=helper+b'\nLunetile.install_stock\n'+source
    edits=[{'line':1,'reason':'VX Ace stock compatibility bootstrap'}]
   mapping.append({'index':index,'id':entry.id,'name':known['name'],'source_sha256_before':sha(source),'source_sha256_after':sha(replacements.get(index,source)),'changes':edits})
  return replacements,mapping

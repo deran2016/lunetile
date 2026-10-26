@@ -28,7 +28,7 @@ XP 타일 표시 범위 캐시와 VXA 타일 해석 경량화의 구현·비교 
 
 게임 화면 안에 웹 URL·로컬 HTML을 표시하는 XP·VXA 공통 WebView2 패널: [브라우저 API·설치·사용법](docs/BROWSER.md). 스크립트에서 요청할 때만 생성하며 WebView2 Evergreen Runtime이 필요합니다.
 
-최신 브라우저 DLL·오프라인 예제·진단 ZIP 안내는 [v0.1.0-alpha.15 릴리스 설명](docs/releases/v0.1.0-alpha.15.md)에 있습니다. 기존 전체 템플릿·DLL 교체 ZIP은 [v0.1.0-alpha.14](docs/releases/v0.1.0-alpha.14.md)에 보존합니다.
+브라우저 전용 오프라인 예제·진단 ZIP 안내는 [v0.1.0-alpha.15 릴리스 설명](docs/releases/v0.1.0-alpha.15.md)에 있습니다. 기존 전체 템플릿·DLL 교체 ZIP은 [v0.1.0-alpha.14](docs/releases/v0.1.0-alpha.14.md)에 보존합니다.
 
 > **개발 단계:** 검토된 기본 스크립트 범위의 실험적 런타임입니다. 원본 게임의 백업을 보관하고 별도 복사본에서 사용하세요.
 
@@ -44,6 +44,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 - 키보드·XInput 입력, WAV/Ogg/MP3/WMA/MIDI 오디오
 - UTF-8·CP949·CP932 프로젝트 데이터 처리와 기존 세이브 가져오기
 - 원본 보존을 전제로 한 프로젝트 변환, ABI 검사 및 회귀 검증 도구
+- 새 기본 프로젝트의 키보드·패드 재설정/진동, 별도 자동 저장, 정상 백업 3개와 복구 메뉴: [조작·저장 안내](docs/CONTROLS_SAVES.md)
 
 저장소의 `template-xp/`에는 배포용으로 제공된 기본 게임 프로젝트가 있습니다. 원본 RGSS DLL과 개인 세이브는 포함하지 않습니다. 다른 게임을 변환하려면 사용 권한이 있는 원본 프로젝트를 별도로 준비해야 합니다. 기존 RGSSFramePacing 보조 DLL 구현과 실행기 시작 패치는 포함하지 않습니다.
 
@@ -71,7 +72,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 
 **VX Ace 렌더링 최적화:** [v0.1.0-alpha.13](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.13)에 로컬 검증을 통과한 DLL 교체 ZIP·전체 VXA 템플릿·진단 ZIP을 제공합니다. 기존 변환본은 백업 후 `lunetile-vxa-speed-fix.zip`의 `LunetileVXA.dll`만 `Game.exe` 옆에 교체하세요. 표시 범위 캐시와 D3D 인스턴싱을 적용했으며, 기본 맵의 타일 Draw는 3,936회에서 1회로 줄었습니다. 비교 기준·실측값·한계는 [검증 기록](docs/VALIDATION.md)과 [릴리스 설명](docs/releases/v0.1.0-alpha.13.md)에 있습니다.
 
-**게임 내부 브라우저:** [v0.1.0-alpha.15](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.15)의 `lunetile-browser-xp-demo.zip` 또는 `lunetile-browser-vxa-demo.zip`을 풀고 `Game.exe`를 실행하세요. 자체 HTML을 사용하므로 인터넷과 RTP가 필요하지 않습니다. Microsoft Visual C++ x86 및 WebView2 Evergreen Runtime은 필요합니다. 기존 변환본에는 해당 엔진 DLL만 교체하고 [Ruby API](docs/BROWSER.md)를 호출합니다. 기본 게임 템플릿을 받을 때는 아래 파일이 있는 [alpha.14](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.14)를 선택하세요.
+**게임 내부 브라우저:** [v0.1.0-alpha.15](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.15)의 `lunetile-browser-xp-demo.zip` 또는 `lunetile-browser-vxa-demo.zip`을 풀고 `Game.exe`를 실행하세요. 자체 HTML을 사용하므로 인터넷과 RTP가 필요하지 않습니다. Microsoft Visual C++ x86 및 WebView2 Evergreen Runtime은 필요합니다. 기존 변환본에는 해당 엔진 DLL만 교체하고 [Ruby API](docs/BROWSER.md)를 호출합니다. 조작 설정·자동 저장·백업 복구가 포함된 전체 게임 템플릿은 [alpha.16](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.16)을 선택하세요.
 
 [GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-template-xp-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP을 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 `Data`, `Game.ini`, 프로젝트 파일과 새 Lunetile DLL이 들어 있으므로 Python 설치나 수동 변환이 필요하지 않습니다.
 

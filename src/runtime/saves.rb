@@ -68,19 +68,21 @@ module RGSSXP::Saves
 
   def self.write(path)
     path = validate(path, write: true)
-    Dir.mkdir('Saves') unless Dir.exist?('Saves')
-    Dir.mkdir(ROOT) unless Dir.exist?(ROOT)
-    temporary = path + ".tmp-#{Process.pid}"
+    file = StringIO.new(''.b)
     begin
-      File.open(temporary, 'wbx') do |file|
-        file.write(RGSSXP::Timing.scale == 3 ? HIGH_MAGIC : MAGIC)
-        yield file
-        file.flush
-        file.fsync
+      file.write(RGSSXP::Timing.scale == 3 ? HIGH_MAGIC : MAGIC)
+      yield file
+      Lunetile::SaveFiles.write(path, file.string) do |bytes|
+        raise IOError, 'Invalid XP save header' unless [MAGIC,HIGH_MAGIC].include?(bytes.byteslice(0,MAGIC.bytesize))
+        if Lunetile::Comfort.installed?
+          parsed = Lunetile::Comfort.decode_xp(bytes)
+          parsed.close
+        else
+          Lunetile::SaveFiles.marshaled?(bytes, MAGIC.bytesize)
+        end
       end
-      File.rename(temporary, path)
     ensure
-      File.delete(temporary) if File.file?(temporary)
+      file.close
     end
     nil
   end

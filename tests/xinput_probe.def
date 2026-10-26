@@ -1,0 +1,6 @@
+LIBRARY LunetileXInputProbe
+EXPORTS
+ProbeInstall=_ProbeInstall@4
+ProbeConfigure=_ProbeConfigure@24
+ProbeMotor=_ProbeMotor@4
+ProbeReset=_ProbeReset@0

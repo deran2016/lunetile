@@ -119,6 +119,9 @@ VALUE evaluate_bootstrap(VALUE) {
     rb_eval_string(rpg_graphics_support);
     rb_eval_string(display_commands_support);
     init_input();
+    rb_eval_string(controls_support);
+    rb_eval_string(comfort_support);
+    rb_eval_string(comfort_scene_support);
     init_browser();
     rb_eval_string(browser_support);
     init_audio();

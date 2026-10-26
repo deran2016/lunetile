@@ -13,9 +13,12 @@ module LunetileVXA
   end
   def self.read(index)
     path = slot(index)
-    stream = StringIO.new(File.binread(path))
+    decode(Lunetile::SaveFiles.read(path), path.start_with?(SAVE_ROOT+'/'))
+  end
+  def self.decode(bytes, own = true)
+    stream = StringIO.new(bytes)
     rate = 60
-    if path.start_with?(SAVE_ROOT+'/')
+    if own
       raise ArgumentError, 'Invalid VX Ace save header' unless stream.read(SAVE_MAGIC.bytesize) == SAVE_MAGIC
       bytes = stream.read(4)
       raise ArgumentError, 'Truncated VX Ace save rate' unless bytes && bytes.bytesize == 4
@@ -46,19 +49,11 @@ module LunetileVXASaveManager
   end
   def save_game_without_rescue(index)
     path = LunetileVXA.slot(index,true)
-    Dir.mkdir('Saves') unless Dir.exist?('Saves')
-    Dir.mkdir(LunetileVXA::SAVE_ROOT) unless Dir.exist?(LunetileVXA::SAVE_ROOT)
-    temporary = path + ".tmp-#{Process.pid}"
     $game_system.on_before_save
     bytes = LunetileVXA::SAVE_MAGIC + [Graphics.frame_rate].pack('V') + Marshal.dump(make_save_header) + Marshal.dump(make_save_contents)
-    begin
-      File.open(temporary,'wbx') { |file| file.write(bytes); file.flush; file.fsync }
-      File.rename(temporary,path)
-      @last_savefile_index = index
-      true
-    ensure
-      File.delete(temporary) if File.file?(temporary)
-    end
+    Lunetile::SaveFiles.write(path,bytes) { |data| LunetileVXA.decode(data) }
+    @last_savefile_index = index
+    true
   end
   def load_game_without_rescue(index)
     _,contents,rate = LunetileVXA.read(index)

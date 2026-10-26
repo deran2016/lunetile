@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 SCHEMA=1
 DLLS={'xp':'Lunetile.dll','vxa':'LunetileVXA.dll'}
+BUILD_ARTIFACTS=list(DLLS.values())+['rgssxp-ruby.exe','display_geometry_test.exe','direction_input_test.exe','text_submit_test.exe','controls_state_test.exe','LunetileXInputProbe.dll']
 HASH_CALLS=0
 
 def digest(path):
@@ -22,12 +23,12 @@ def files_hash(root,paths):return {p.relative_to(root).as_posix():digest(p) for 
 def build_inputs(root=ROOT):
  paths=list((root/'src/runtime').rglob('*'))+[root/'CMakeLists.txt']
  paths+=list((root/'scripts').glob('*runtime*.ps1'))+[root/'scripts/patch_runtime_ruby.py']
- paths+=[p for p in (root/'tests').glob('*') if p.suffix in ('.c','.cpp','.h')]
+ paths+=[p for p in (root/'tests').glob('*') if p.suffix in ('.c','.cpp','.h','.def')]
  return files_hash(root,paths)
 
 def stamp(runtime,root=ROOT):
  runtime=Path(runtime).resolve()
- names=list(DLLS.values())+['rgssxp-ruby.exe','display_geometry_test.exe','direction_input_test.exe','text_submit_test.exe']
+ names=BUILD_ARTIFACTS
  if any(not (runtime/n).is_file() for n in names):raise ValueError('Incomplete build outputs')
  result=dict(schema=SCHEMA,inputs=build_inputs(root),artifacts={n:digest(runtime/n) for n in names})
  write_json(runtime/'build-stamp.json',result);return result
@@ -36,7 +37,7 @@ def check_build(runtime,root=ROOT):
  runtime=Path(runtime).resolve();path=runtime/'build-stamp.json'
  if not path.is_file():raise ValueError('Build stamp missing; run scripts/build_runtime.ps1 first')
  result=json.loads(path.read_text(encoding='utf-8'))
- if result.get('schema')!=SCHEMA or result.get('inputs')!=build_inputs(root):raise ValueError('Runtime sources changed; rebuild required')
+ if result.get('schema')!=SCHEMA or result.get('inputs')!=build_inputs(root) or set(result.get('artifacts',{}))!=set(BUILD_ARTIFACTS):raise ValueError('Runtime sources or required artifacts changed; rebuild required')
  if any(not (runtime/n).is_file() or digest(runtime/n)!=h for n,h in result['artifacts'].items()):raise ValueError('Build outputs changed; rebuild required')
  return result
 
@@ -145,7 +146,7 @@ def require_cases(report,required=None):
 def expected_cases(report,prepackage=False):
  selected=report['selection'];mode=report['mode'];cases=['python']
  for engine in selected['engines']:
-  cases += [engine+'.abi',engine+'.logic']
+  cases += [engine+'.abi',engine+'.logic',engine+'.comfort']
   if mode!='quick':cases += [engine+'.core',engine+'.save-restart',engine+'.lifecycle']
   elif 'render' in selected['groups']:cases.append(engine+'.deterministic')
  if 'network' in selected['groups']:cases.append('network')

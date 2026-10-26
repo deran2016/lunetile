@@ -22,13 +22,14 @@ def string(data):return b'"'+integer(len(data))[1:]+data
 def scripts(source):
  return b'\x04\x08['+integer(1)[1:]+b'['+integer(3)[1:]+integer(1)+string(b'Runtime smoke')+string(zlib.compress(source))
 
-def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None,timing_profile=None,render_rate=60,rtp=False,on_start=None):
+def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,archive=None,script_path=None,data_encoding=None,timeout=20,screen_size=None,timing_profile=None,render_rate=60,rtp=False,on_start=None,saves=None):
  if data_encoding not in (None,'UTF-8','CP949','CP932'):raise ValueError('Unsupported test data encoding')
  if data_encoding:source=("raise 'Configured project encoding was not read' unless RGSSXP::DATA_ENCODING == "+repr(data_encoding)+"\n").encode()+source
  out.mkdir(parents=True,exist_ok=False)
  shutil.copy2(exe,out/'Game.exe');shutil.copy2(dll,out/'Lunetile.dll')
  runtime_hash=sha(out/'Lunetile.dll')
  if data:shutil.copytree(data,out/'Data',ignore=shutil.ignore_patterns('Scripts.rxdata'))
+ if saves:shutil.copytree(saves,out/'Saves')
  if import_save:
   (out/'Saves/Import').mkdir(parents=True)
   shutil.copy2(import_save,out/'Saves/Import/Save1.rxdata')

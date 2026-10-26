@@ -65,6 +65,8 @@ def package(source,runtime,output,diagnostics):
    'Lunetile XP - converted template project\n\n'
    '실행: 이 폴더를 풀고 Game.exe를 실행하세요. Python이나 별도 변환은 필요하지 않습니다.\n'
    '엔진: Lunetile.dll (Game.ini의 Library 설정으로 선택). 원본 RGSS DLL은 포함하지 않습니다.\n'
+   '타이틀/게임 메뉴의 조작·저장: 키/패드 재설정, 진동, 자동 저장 켜기/끄기와 백업 복구.\n'
+   '자동 저장은 수동 슬롯과 분리되며 정상 백업 3개를 유지합니다. 개인 Saves는 배포에 포함하지 않습니다.\n'
    '필수: Windows 11 x64, Microsoft Visual C++ x86 런타임, RPG Maker XP Standard RTP.\n'
    '원본 template-xp는 RTP 리소스를 사용합니다. RTP는 이 ZIP에 포함하지 않습니다.\n'
    '영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지 밖의 경로를 지원하지 않습니다.\n'
@@ -105,6 +107,7 @@ def runtime_patch_archive(project,path):
    '이미 Lunetile로 변환한 프로젝트용입니다. 게임과 편집기를 종료한 뒤 Lunetile.dll만 Game.exe 옆에 교체하세요.\n'
    'Data, Saves, Game.ini, MMO 계정/프로필/스크립트/서버는 이 ZIP에 포함하지 않습니다.\n'
    '표시 객체 순회·문자 마스크 재사용·Bitmap 부분 업로드를 개선했습니다.\n'
+   '새 조작·저장 메뉴/자동 저장 전체 설치는 최신 변환기로 원본을 별도 새 폴더에 변환해야 합니다.\n'
    '모든 PC/플러그인의 120FPS를 보장하지 않습니다.\n'
    'DLL SHA256: '+digest(directory/'Lunetile.dll')+'\n',encoding='utf-8')
   archive(directory,path)
