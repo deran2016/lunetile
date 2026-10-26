@@ -32,7 +32,11 @@ def verify(bundle,output):
  def state(index):return json.loads((output/f'client-{index}/gui-live.json').read_text(encoding='utf-8'))
  def control(index,seq,kind,**args):
   folder=output/f'client-{index}';temporary=folder/'control.tmp'
-  temporary.write_text(json.dumps(dict(args,seq=seq,type=kind)),encoding='utf-8');temporary.replace(folder/'gui-control.json')
+  temporary.write_text(json.dumps(dict(args,seq=seq,type=kind)),encoding='utf-8')
+  def publish():
+   try:temporary.replace(folder/'gui-control.json');return True
+   except PermissionError:return False
+  wait(publish)
   wait(lambda:state(index)['command']==seq)
  def post(window,message,wparam=0,lparam=0):assert user.PostMessageW(window,message,wparam,lparam)
  def drive():
@@ -52,8 +56,8 @@ def verify(bundle,output):
     return True
    user.EnumWindows(found,0);assert len(windows)==2,'Owned MMO windows missing'
    for i,window in windows.items():
-    user.SetForegroundWindow(window)
-    wait(lambda:user.GetForegroundWindow()==window)
+    from test_runtime_browser import activate_owned
+    activate_owned(window)
     control(i,1,'chat',open=True)
     wait(lambda:state(i)['chat_open'] and state(i)['input_stats'][3])
     for character in '한글 입력 검사':post(window,0x102,ord(character))

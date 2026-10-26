@@ -87,9 +87,8 @@ def exercise(output,logical,report,errors):
  finally:
   if output.exists():(output/'done.txt').write_text('done')
 
-def main():
- parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('output',type=Path)
- args=parser.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=False)
+def verify(out,engine='vxa',dll=None):
+ out=out.resolve();out.mkdir(parents=True,exist_ok=False)
  ctypes.windll.user32.SetProcessDPIAware()
  source=b"""width, height = Graphics.width, Graphics.height
 bitmap = Bitmap.new(width,height)
@@ -108,14 +107,23 @@ end
 File.write('runtime-complete.txt','Window resizing retained logical geometry and visible content')
 """
  reports={}
- for name,logical,wide in [('default',[544,416],False),('wide',[1280,720],True)]:
+ for name,logical,wide in [('default',[640,480] if engine=='xp' else [544,416],False),('wide',[1280,720],True)]:
   output=out/name;observed={};errors=[]
   thread=threading.Thread(target=exercise,args=(output,logical,observed,errors));thread.start()
-  try:runtime=run(output,source,wide=wide,high=wide,timeout=60)
+  try:
+   if engine=='xp':
+    from test_runtime import run as xp_run,ROOT
+    runtime=xp_run(ROOT/'template-xp/Game.exe',dll or ROOT/'build/runtime-native/bin/Release/Lunetile.dll',output,'',source+b"\nFile.write('runtime-complete.txt','Window,false,false')",screen_size=(1280,720) if wide else None,timing_profile='stock120' if wide else None,timeout=60)
+   else:runtime=run(output,source,dll=dll,wide=wide,high=wide,timeout=60)
   finally:thread.join()
   assert not errors,errors
   reports[name]={'runtime':runtime,'window':observed}
  (out/'summary.json').write_text(json.dumps({'passed':True,'scope':'Owned HWND resize/maximize/restore/fullscreen messages and presented pixel sampling; not physical keyboard testing','runs':reports},indent=2))
  print('VX Ace default/wide resize, maximize and fullscreen with presented quadrant pixels: PASS')
+
+def main():
+ parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('output',type=Path)
+ parser.add_argument('--engine',choices=['xp','vxa'],default='vxa');parser.add_argument('--dll',type=Path)
+ args=parser.parse_args();verify(args.output,args.engine,args.dll)
 
 if __name__=='__main__':main()

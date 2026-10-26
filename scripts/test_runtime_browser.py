@@ -6,6 +6,7 @@ import psutil
 from test_runtime import scripts,run as xp_run
 from test_runtime_vxa import run as vxa_run
 from inspect_runtime import inspect
+from runtime_validation import record_process
 
 ROOT=Path(__file__).resolve().parents[1]
 user=ctypes.windll.user32;gdi=ctypes.windll.gdi32
@@ -97,6 +98,7 @@ class Game:
    if path.exists():path.unlink()
   env=os.environ.copy();env.pop('LUNETILE_TEST_BACKGROUND',None)
   self.process=subprocess.Popen([str(self.folder/'Game.exe')],cwd=self.folder,env=env)
+  record_process(self.folder,self.process.pid)
   def find():
    assert self.process.poll() is None,'Owned game exited during startup'
    return next((h for h,n,r in windows(self.process.pid) if user.IsWindowVisible(h) and r.right-r.left>300 and r.bottom-r.top>200),None)
@@ -194,6 +196,35 @@ class Site(http.server.BaseHTTPRequestHandler):
   Site.events.append(('submitted',urllib.parse.parse_qs(body.decode('utf-8')).get('text',[''])[0]))
   self.send_response(303);self.send_header('Location','/page');self.end_headers()
 
+def close_button(game):
+ chrome=next(h for h,n,_ in windows(game.process.pid) if n=='LunetileBrowserChrome')
+ button=next(r for _,n,r in windows(game.process.pid,chrome) if n=='Button')
+ def painted():
+  dc=user.GetDC(None)
+  try:
+   colors=[gdi.GetPixel(dc,x,y) for y in range(button.top+2,button.bottom-2) for x in range(button.left+2,button.right-2)]
+   return any(all((c>>shift)&255<170 for shift in (0,8,16)) for c in colors) and any(all((c>>shift)&255>180 for shift in (0,8,16)) for c in colors)
+  finally:user.ReleaseDC(None,dc)
+ wait(painted,'Native close X pixels missing over flip-model game output');return button
+
+def smoke(output,dlls,engines=('xp','vxa')):
+ output.mkdir(parents=True,exist_ok=False);results=[]
+ for engine in engines:
+  game=Game(output/engine,engine,dlls)
+  try:
+   game.start();game.command('new');game.command('file',value='Web/index.html');game.ready();game.command('focus')
+   start=game.live();game.key(0x27)
+   try:time.sleep(.25);after=game.live()
+   finally:game.key(0x27,False)
+   assert after['ticks']>start['ticks'] and after['actor_x']==start['actor_x'] and not after['ui_right']
+   close_button(game);game.tap(0x1b);wait(lambda:game.live().get('state')=='disposed','Browser Esc failed')
+   game.command('new');game.command('file',value='Web/index.html');game.ready();button=close_button(game)
+   game.click_screen((button.left+button.right)//2,(button.top+button.bottom)//2)
+   wait(lambda:game.live().get('state')=='disposed','Browser X failed')
+   results.append(dict(engine=engine,passed=True,scope='Offline visible X, focus/input isolation, continuing logic and Esc/X disposal'))
+  finally:game.stop(validate=sys.exc_info()[0] is None)
+ dump(output/'summary.json',dict(passed=True,results=results));return dict(passed=True,results=results)
+
 def gui(folder,engine,dlls,url):
  game=Game(folder,engine,dlls);rows=[]
  try:
@@ -262,15 +293,7 @@ def gui(folder,engine,dlls,url):
   game.command('focus');game.tap(0x1b);wait(lambda:game.live().get('state')=='disposed','Browser Esc did not close')
   assert not any(n=='LunetileBrowserChrome' for _,n,_ in windows(game.process.pid)),'Disposed close bar retained'
   game.command('new');game.command('file',value='Web/index.html');game.ready()
-  chrome=next(h for h,n,_ in windows(game.process.pid) if n=='LunetileBrowserChrome')
-  button=next(r for _,n,r in windows(game.process.pid,chrome) if n=='Button')
-  def painted_close():
-   dc=user.GetDC(None)
-   try:
-    colors=[gdi.GetPixel(dc,x,y) for y in range(button.top+2,button.bottom-2) for x in range(button.left+2,button.right-2)]
-    return any(all((c>>shift)&255<170 for shift in (0,8,16)) for c in colors) and any(all((c>>shift)&255>180 for shift in (0,8,16)) for c in colors)
-   finally:user.ReleaseDC(None,dc)
-  wait(painted_close,'Native close X pixels missing over flip-model game output')
+  button=close_button(game)
   rows.append('native close button has visible glyph and background over live D3D output')
   game.click_screen((button.left+button.right)//2,(button.top+button.bottom)//2);wait(lambda:game.live().get('state')=='disposed','Browser X did not close')
   rows.append('Esc and X dispose panel')

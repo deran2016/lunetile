@@ -21,6 +21,65 @@ def compare(rows):
    comparisons.append(dict(engine=engine,moving=moving,ratios=ratios,passed=all(v<=1.05 for v in ratios.values())))
  return comparisons
 
+def full_cases():
+ cases=[(120,moving,pair,label,False,30) for moving in (False,True) for pair in range(3) for label in (('baseline','candidate') if pair%2==0 else ('candidate','baseline'))]
+ cases += [(120,moving,0,'candidate',True,30) for moving in (False,True)]
+ return cases+[(rate,moving,0,'candidate',opened,10) for rate in (40,60) for moving in (False,True) for opened in (False,True)]
+
+def foreground_source():
+ return """limit=Process.clock_gettime(Process::CLOCK_MONOTONIC)+10
+until File.exist?('benchmark-foreground-ready')
+  Graphics.update
+  raise 'Owned foreground activation timeout' if Process.clock_gettime(Process::CLOCK_MONOTONIC)>limit
+end
+active=Win32API.new('user32','GetActiveWindow','','L').call
+raise 'Performance game not foreground' unless Win32API.new('user32','GetForegroundWindow','','L').call==active
+"""
+
+def local_source():
+ code='Dir.mkdir("Web") unless Dir.exist?("Web")\n'
+ for path in sorted((ROOT/'tests/fixtures/browser').iterdir()):code+=f'File.binwrite("Web/{path.name}",["{path.read_bytes().hex()}"].pack("H*"))\n'
+ return code+'''$browser=Lunetile::Browser.new(Rect.new(80,60,1120,600))
+$browser.load_file('Web/index.html')
+limit=Process.clock_gettime(Process::CLOCK_MONOTONIC)+20
+until [:ready,:failed].include?($browser.state)
+  scene.update
+  raise 'Browser initialization timeout' if Process.clock_gettime(Process::CLOCK_MONOTONIC)>limit
+end
+raise 'Browser initialization failed' unless $browser.state==:ready
+$browser.focus
+60.times { scene.update }
+'''
+
+def quick(candidate,projects,output,engines=('xp','vxa'),browser=True,only=None):
+ out=Path(output);out.mkdir(parents=True,exist_ok=False);rows=[];hashes={}
+ for engine in engines:
+  project=out/'projects'/engine;project.mkdir(parents=True)
+  shutil.copytree(Path(projects)/engine/'Data',project/'Data')
+  name='Lunetile.dll' if engine=='xp' else 'LunetileVXA.dll'
+  shutil.copy2(Path(candidate)/name,project/name);hashes[engine]=sha(project/name)
+  setup,probe=render_probe(engine)
+  ending="\nraise 'Performance game lost foreground' unless Win32API.new('user32','GetForegroundWindow','','L').call==active\n"
+  for opened in ([False,True] if browser else [False]):
+   for moving in (False,True):
+    folder=out/f'{engine}-120-{int(moving)}-{int(opened)}'
+    if only and folder.name!=only:continue
+    body=foreground_source()+setup+(local_source() if opened else '')+f'FPS_MOVING={str(moving).lower()};FPS_SECONDS=5\n'+probe+ending
+    run(engine,project,folder,body.encode(),120,on_start=foreground_ready)
+    row=json.loads((folder/'fps.json').read_text());rows.append(dict(row,engine=engine,build='candidate',browser_open=opened))
+    print(folder.name,f'{row["present_fps"]:.3f} FPS',flush=True)
+    if not render_accepted(row):raise AssertionError('Quick output gate failed: '+str(folder))
+  folder=out/(engine+'-cadence')
+  if only and folder.name!=only:continue
+  body=foreground_source()+setup+(ROOT/'tests/runtime_validation_cadence.rb').read_text()+ending
+  run(engine,project,folder,body.encode(),120,on_start=foreground_ready)
+  for row in json.loads((folder/'cadence.json').read_text()):
+   rows.append(dict(row,engine=engine,build='candidate',browser_open=False,moving=True))
+   if not render_accepted(row):raise AssertionError('Low-rate output gate failed: '+str(folder))
+ if not rows:raise ValueError('No output case matched --only')
+ report=dict(passed=True,mode='quick',formal=False,diagnostic=only is not None,comparative=False,results=rows,hashes={'candidate':hashes},sample_budget_seconds=6 if only and only.endswith('cadence') else 5 if only else len(engines)*(26 if browser else 16),scope='Candidate throughput smoke only; CPU mean/p95 are diagnostic, no improvement or long-term stability claim.')
+ (out/'summary.json').write_text(json.dumps(report,indent=2)+'\n');return report
+
 def main():
  ap=argparse.ArgumentParser(description=__doc__)
  for name in ('baseline','candidate','projects','output'):ap.add_argument(name,type=Path)
@@ -57,9 +116,7 @@ raise "Browser performance initialization failed #{$browser.error}" unless $brow
 $browser.focus
 60.times { scene.update }
 '''
-  cases=[(120,moving,pair,label,False,30) for moving in (False,True) for pair in range(3) for label in (('baseline','candidate') if pair%2==0 else ('candidate','baseline'))]
-  cases += [(120,moving,0,'candidate',True,30) for moving in (False,True)]
-  cases += [(rate,moving,0,'candidate',opened,10) for rate in (40,60) for moving in (False,True) for opened in (False,True)]
+  cases=full_cases()
   for rate,moving,pair,label,opened,seconds in cases:
    folder=out/f'{engine}-{label}-{rate}-{int(moving)}-{int(opened)}-{pair}'
    check="""

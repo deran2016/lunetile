@@ -19,6 +19,9 @@ def package(runtime,verification,output):
  for source in [runtime,ROOT/'template-xp',ROOT/'template-vxa']:
   if output.is_relative_to(source) or source.is_relative_to(output):raise ValueError('Separate output directory required')
  report=json.loads(verification.read_text(encoding='utf-8'))
+ if 'validation_schema' in report:
+  from runtime_validation import require_report
+  require_report(report,runtime,purpose='package')
  if report.get('passed') is not True or report.get('performance',{}).get('passed') is not True:raise ValueError('Passed runtime and performance verification required')
  artifacts={}
  for engine,name in [('xp','Lunetile.dll'),('vxa','LunetileVXA.dll')]:

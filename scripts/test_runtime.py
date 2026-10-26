@@ -2,6 +2,7 @@
 import argparse,ast,hashlib,json,shutil,subprocess,time,zlib
 from pathlib import Path
 import psutil
+from runtime_validation import record_process
 
 ROOT=Path(__file__).resolve().parents[1]
 ORIGINAL_EXE='0ed9b5139edb0ad0f0f4b5b88dd0265ddbf56d36d6f173d6a22f3b23e8212e22'
@@ -47,6 +48,7 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
  p=subprocess.Popen([str(out/'Game.exe')]+([mode] if mode else []),cwd=out,env=environment)
  if timeout>20:print(f'Foreground rendering case PID={p.pid} path={out}',flush=True)
  modules={};all_modules={}
+ hash_count=0
  try:
   if on_start:on_start(p,out)
   deadline=time.monotonic()+timeout
@@ -57,14 +59,15 @@ def run(exe,dll,out,mode,source,expect_error=False,data=None,import_save=None,ar
      path=Path(entry.path)
      if path.suffix.lower() in ('.dll','.exe') and path.is_file():
       signature=(str(path),path.stat().st_mtime_ns,path.stat().st_size)
-      if signature not in MODULE_HASHES:MODULE_HASHES[signature]=sha(path)
+      if signature not in MODULE_HASHES:MODULE_HASHES[signature]=sha(path);hash_count+=1
       all_modules[str(path)]=MODULE_HASHES[signature]
      if path.name.lower() in ('lunetile.dll','rgss104e.dll','rgssframepacing.dll'):
-      modules[str(path)]=sha(path)
+      modules[str(path)]=all_modules[str(path)]
    except psutil.NoSuchProcess:pass
    time.sleep(.05)
  finally:
   if p.poll() is None:p.terminate();p.wait()
+  record_process(out,p.pid,hash_count)
  result={'pid':p.pid,'exit_code':p.returncode,'modules':modules,'all_image_hashes':all_modules,'runtime_sha256':runtime_hash,'complete':(out/'runtime-complete.txt').read_text() if (out/'runtime-complete.txt').exists() else None,'log':(out/'rgssxp.log').read_text(encoding='utf-8',errors='replace') if (out/'rgssxp.log').exists() else ''}
  (out/'result.json').write_text(json.dumps(result,indent=2))
  assert sha(out/'Lunetile.dll')==runtime_hash

@@ -37,5 +37,7 @@ foreach ($name in @('ogg', 'vorbis', 'theora')) {
 if ($LASTEXITCODE -ne 0) { throw 'Runtime CMake configure failed' }
 & cmake.exe --build $native --config Release
 if ($LASTEXITCODE -ne 0) { throw 'Runtime DLL build failed' }
+& python -X utf8 -B (Join-Path $repo 'scripts/runtime_validation.py') stamp (Join-Path $native 'bin/Release')
+if ($LASTEXITCODE -ne 0) { throw 'Runtime build identity failed' }
 Write-Output "Runtime DLL: $native/bin/Release/Lunetile.dll"
 Write-Output "Ruby migration helper: $native/bin/Release/rgssxp-ruby.exe"

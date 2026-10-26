@@ -5,6 +5,7 @@ import psutil
 from inspect_runtime import inspect
 from test_runtime import scripts
 from rxdata import read
+from runtime_validation import record_process
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -33,9 +34,11 @@ def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout
    time.sleep(.02)
  finally:
   if process.poll() is None:process.terminate();process.wait()
+  record_process(output,process.pid)
  log=(output/'rgssxp.log').read_text(encoding='utf-8',errors='replace') if (output/'rgssxp.log').exists() else ''
  report={'exit_code':process.returncode,'runtime_sha256':artifact['sha256'],'modules':sorted(modules),'log':log,'completed':(output/'runtime-complete.txt').exists()}
  (output/'result.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+ assert hashlib.sha256((output/'LunetileVXA.dll').read_bytes()).hexdigest()==artifact['sha256'],'VXA DLL changed during execution'
  assert not any(Path(p).name.lower().startswith('rgss30') for p in modules),report
  assert str((output/'LunetileVXA.dll').resolve()) in modules,report
  assert report['completed'] and 'Ruby finalized' in log,report
@@ -43,40 +46,42 @@ def run(output,source,*,dll=None,high=False,rate=60,wide=False,rtp=False,timeout
 
 def main():
  parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('output',type=Path);parser.add_argument('--stock',action='store_true')
+ parser.add_argument('--dll',type=Path,default=ROOT/'build/runtime-native/bin/Release/LunetileVXA.dll')
  args=parser.parse_args();out=args.output.resolve()
+ def launch(*values,**options):return run(*values,dll=args.dll,**options)
  smoke=b"""raise 'size' unless [Graphics.width,Graphics.height]==[544,416]
 raise 'rate' unless Graphics.frame_rate==60
 raise 'symbols' unless Input.press?(:C)==false
 Graphics.update
 File.write('runtime-complete.txt','VXA ABI and renderer')
 """
- run(out/'basic',smoke)
+ launch(out/'basic',smoke)
  for rate in (40,60,120):
-  run(out/f'wide-{rate}',b"""raise 'size' unless [Graphics.width,Graphics.height]==[1280,720]
+  launch(out/f'wide-{rate}',b"""raise 'size' unless [Graphics.width,Graphics.height]==[1280,720]
 raise 'rate' unless Graphics.frame_rate==120
 raise 'scale' unless RGSSXP::Timing.scale==2
 120.times { Graphics.update }
 raise 'output scheduler' unless Graphics.__refresh_stats[0]==Graphics.render_rate
 File.write('runtime-complete.txt','VXA wide refresh')
 """,high=True,wide=True,rate=rate)
- run(out/'한글-경로',smoke)
- run(out/'features',(ROOT/'tests/runtime_vxa_features.rb').read_bytes())
- run(out/'tilemap',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_tilemap.rb').read_bytes(),timeout=180)
- run(out/'native-cache',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_cache.rb').read_bytes())
- run(out/'tile-d3d',(ROOT/'tests/runtime_vxa_d3d.rb').read_bytes(),timeout=180)
- run(out/'text-guard',(ROOT/'tests/runtime_vxa_text_guard.rb').read_bytes())
- run(out/'plane',(ROOT/'tests/runtime_plane_transparency.rb').read_bytes())
+ launch(out/'한글-경로',smoke)
+ launch(out/'features',(ROOT/'tests/runtime_vxa_features.rb').read_bytes())
+ launch(out/'tilemap',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_tilemap.rb').read_bytes(),timeout=180)
+ launch(out/'native-cache',(ROOT/'tests/fixtures/vxa_tilemap_reference.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_cache.rb').read_bytes())
+ launch(out/'tile-d3d',(ROOT/'tests/runtime_vxa_d3d.rb').read_bytes(),timeout=180)
+ launch(out/'text-guard',(ROOT/'tests/runtime_vxa_text_guard.rb').read_bytes())
+ launch(out/'plane',(ROOT/'tests/runtime_plane_transparency.rb').read_bytes())
  for name in ('display_commands','text_cache','tile_parser_gc'):
-  run(out/name.replace('_','-'),(ROOT/f'tests/runtime_{name}.rb').read_bytes(),timeout=180)
- run(out/'render-reset',(ROOT/'tests/runtime_vxa_render_reset.rb').read_bytes())
+  launch(out/name.replace('_','-'),(ROOT/f'tests/runtime_{name}.rb').read_bytes(),timeout=180)
+ launch(out/'render-reset',(ROOT/'tests/runtime_vxa_render_reset.rb').read_bytes())
  for rate in (40,60,120):
-  run(out/f'render-timing-{rate}',(ROOT/'tests/runtime_render_timing.rb').read_bytes(),high=True,wide=True,rate=rate)
+  launch(out/f'render-timing-{rate}',(ROOT/'tests/runtime_render_timing.rb').read_bytes(),high=True,wide=True,rate=rate)
  if args.stock:
   entries=read((ROOT/'template-vxa/Data/Scripts.rvdata2').read_bytes())
   definitions=b'\n'.join(e.source().replace(b'\r\r\n',b'\n') for e in entries if e.name!=b'Main')
   stock=definitions+b'\n'+(ROOT/'src/runtime/vxa_entry.rb').read_bytes()+b'\n'+(ROOT/'src/runtime/vxa_stock.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_stock.rb').read_bytes()
-  run(out/'stock-60',stock,rtp=True,timeout=180)
-  for rate in (40,60,120):run(out/f'stock-120-{rate}',stock,rtp=True,wide=True,high=True,rate=rate,timeout=180)
+  launch(out/'stock-60',stock,rtp=True,timeout=180)
+  for rate in (40,60,120):launch(out/f'stock-120-{rate}',stock,rtp=True,wide=True,high=True,rate=rate,timeout=180)
   reload=definitions+b'\n'+(ROOT/'src/runtime/vxa_stock.rb').read_bytes()+b"""
 DataManager.init
 raise 'restart load' unless DataManager.load_game(15)
@@ -85,11 +90,11 @@ $game_system.on_after_load
 Graphics.update
 File.write('runtime-complete.txt','save restored in new process')
 """
-  run(out/'restart-load',reload,rtp=True,wide=True,high=True,saves=out/'stock-120-60/Saves')
+  launch(out/'restart-load',reload,rtp=True,wide=True,high=True,saves=out/'stock-120-60/Saves')
   movement=definitions+b'\n'+(ROOT/'src/runtime/vxa_stock.rb').read_bytes()+b'\n'+(ROOT/'tests/runtime_vxa_movement.rb').read_bytes()
-  run(out/'movement-60',movement,rtp=True)
-  for rate in (40,60,120):run(out/f'movement-120-{rate}',movement,rtp=True,wide=True,high=True,rate=rate)
- artifact=inspect(ROOT/'build/runtime-native/bin/Release/LunetileVXA.dll',engine='vxa')
+  launch(out/'movement-60',movement,rtp=True)
+  for rate in (40,60,120):launch(out/f'movement-120-{rate}',movement,rtp=True,wide=True,high=True,rate=rate)
+ artifact=inspect(args.dll,engine='vxa')
  report={'passed':True,'runtime_sha256':artifact['sha256'],'scope':'Original Unicode launcher, independent DLL load, basic rendering, 544x416 and 1280x720, 120Hz logic and 40/60/120FPS output, archive and graphics API regression; no full campaign or pixel/audio parity certification','cases':['basic','wide-40','wide-60','wide-120','한글-경로','features','tilemap','plane','render-reset']}
  report['tilemap_parity']=json.loads((out/'tilemap/tilemap-result.json').read_text())
  report['native_cache']=json.loads((out/'native-cache/cache-result.json').read_text())

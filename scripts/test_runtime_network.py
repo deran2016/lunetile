@@ -97,7 +97,7 @@ def verify(output,dll,exe,profiles=('stock120',None)):
   if result.returncode:raise RuntimeError('Certificate fixture '+action+' failed: '+result.stderr)
  cert('Create')
  trusted=os.environ.get('GITHUB_ACTIONS')=='true'
- report={'passed':False,'trusted_tls_test':trusted,'scope':'Local fixture servers and actual Game.exe; no production server or endurance acceptance','runs':[]}
+ report={'passed':False,'trusted_tls_test':trusted,'profiles_requested':list(profiles),'scope':'Local fixture servers and actual Game.exe; no production server or endurance acceptance','runs':[]}
  try:
   if trusted:cert('Trust')
   with fixtures(certificates) as ports:
@@ -123,6 +123,7 @@ def verify(output,dll,exe,profiles=('stock120',None)):
 if __name__=='__main__':
  parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('output',type=Path)
  parser.add_argument('--dll',type=Path,default=ROOT/'build/runtime-native/bin/Release/Lunetile.dll')
+ parser.add_argument('--high-only',action='store_true',help='Quick stock120 protocol check; full default retains legacy logic')
  parser.add_argument('--exe',type=Path,default=ROOT/'template-xp/Game.exe')
- args=parser.parse_args();result=verify(args.output.resolve(),args.dll.resolve(),args.exe.resolve())
+ args=parser.parse_args();result=verify(args.output.resolve(),args.dll.resolve(),args.exe.resolve(),profiles=('stock120',) if args.high_only else ('stock120',None))
  print('REST/TCP/TLS actual-launcher fixture tests PASS; trusted TLS success tested='+str(result['trusted_tls_test']))
