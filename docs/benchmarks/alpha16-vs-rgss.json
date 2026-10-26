@@ -1,0 +1,602 @@
+{
+  "passed": true,
+  "measured_on": "2026-10-27",
+  "release": "v0.1.0-alpha.16",
+  "release_url": "https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.16",
+  "release_commit": "50680b53da80a3e42e155b93794612b84879ffd8",
+  "scope": "XP original RGSS104E.dll vs publicly released alpha.16 DLL, same stock-map benchmark and 640x480/40Hz. No high-refresh or additional template-script performance bootstrap. Not an original RGSS3/VX Ace comparison.",
+  "environment": {
+    "os": "Windows 11 build 26300",
+    "cpu": "AMD Ryzen 7 7700",
+    "video_controllers": [
+      {
+        "name": "NVIDIA GeForce RTX 3090",
+        "driver": "32.0.16.2101"
+      },
+      {
+        "name": "AMD Radeon(TM) Graphics",
+        "driver": "32.0.11024.2"
+      },
+      {
+        "name": "Parsec Virtual Display Adapter",
+        "driver": "0.45.0.0"
+      }
+    ],
+    "physical_scanout_measured": false
+  },
+  "procedure": {
+    "map_tiles": [
+      40,
+      30
+    ],
+    "canvas_pixels": [
+      640,
+      480
+    ],
+    "logic_and_render_rate": 40,
+    "warmup_frames_per_stage_per_run": 80,
+    "measured_frames_per_stage_per_run": 400,
+    "alternating_pairs": 3,
+    "frames_per_stage_per_engine": 1200,
+    "aggregation": "Median of the three per-run percentiles and mean process CPU values; long-frame counts are summed. Percent reduction = (original - replacement) / original * 100. Process CPU change uses the opposite sign: positive means increased CPU time.",
+    "foreground_checks_passed_for_every_frame": true,
+    "logical_state_equal_for_each_pair": true,
+    "original_launcher_dll_scripts_preserved": true
+  },
+  "hashes": {
+    "original_dll_sha256": "7b6acb5e2c245b8cfda77fced2cc0e94108384cd1b9ffc8510e7304fcb9feb6c",
+    "alpha16_dll_sha256": "d5ba97ab8249be1c9aa4baccdbec74cd60f5c2e4f6c10c6418da0763c4bd0da7",
+    "measurement_dll_sha256": "f3a7cb2cd8282b57d00abfabf79d52e5bbdda8a874557c3ea0537f6fb69db3d0",
+    "release_assets_sha256": {
+      "lunetile-xp-speed-fix.zip": "e3a93706ac3386e4d9da4dfc3beebd7c34ff27f20b6e9851b34bf37cb33a29d1",
+      "lunetile-template-xp-windows-x86.zip": "07b15afa40ef6187fce259dc3daca24e392f887cbbcd886b3357f1ee342466c6"
+    },
+    "comparison_tool_sources_lf_sha256": {
+      "scripts/benchmark_runtime.py": "19672e76203d79fa7159c8a7f53f749035f17bad0db52bdb166217a36c287518",
+      "scripts/migrate_project.py": "cb4ce8e3f24b525bbb4686e6fceec325cca07b6cdb44c0737cf58a0d257adbf1",
+      "tests/runtime_bench.rb": "11764b26596bdb3a456daa7a2ec9056dcad19d8834e31e07e6c1212a7eb2e718",
+      "tests/rgss_bench_fixture.rb": "b2294da61dd230cf40aae7e1df99a9f766e729bb9434f2a68d033135d4b037d9",
+      "tests/runtime_bench_metrics.c": "68909a857f2b5499fa2cb1e25e30ec767a3ec58ab50adabca7fc147c037644fa",
+      "tests/runtime_bench_metrics.def": "fa8691cfa0d0acf9c9bef2b1c77dbcacbe40ac5bbe33e9789eeb494d3d7a79fd"
+    }
+  },
+  "summary": [
+    {
+      "stage": "0 stationary",
+      "original": {
+        "p50_interval_ms": 24.9997,
+        "p95_interval_ms": 26.03716,
+        "p99_interval_ms": 26.500029,
+        "mean_process_cpu_ms_per_frame": 2.1875,
+        "frames_over_37_5ms": 0,
+        "frames_over_50ms": 0
+      },
+      "replacement": {
+        "p50_interval_ms": 25.015,
+        "p95_interval_ms": 25.234885,
+        "p99_interval_ms": 25.406215,
+        "mean_process_cpu_ms_per_frame": 3.3203125,
+        "frames_over_37_5ms": 0,
+        "frames_over_50ms": 0
+      },
+      "p95_reduction_percent": 3.0812692321282364,
+      "p99_reduction_percent": 4.127595483008728,
+      "process_cpu_change_percent": 51.78571428571428
+    },
+    {
+      "stage": "100 stationary / 10 parallel",
+      "original": {
+        "p50_interval_ms": 25.00475,
+        "p95_interval_ms": 26.024645,
+        "p99_interval_ms": 26.520352,
+        "mean_process_cpu_ms_per_frame": 2.8125,
+        "frames_over_37_5ms": 0,
+        "frames_over_50ms": 0
+      },
+      "replacement": {
+        "p50_interval_ms": 25.015349999999998,
+        "p95_interval_ms": 25.23845,
+        "p99_interval_ms": 25.399746999999998,
+        "mean_process_cpu_ms_per_frame": 1.7578125,
+        "frames_over_37_5ms": 0,
+        "frames_over_50ms": 0
+      },
+      "p95_reduction_percent": 3.0209633983479867,
+      "p99_reduction_percent": 4.225452965330179,
+      "process_cpu_change_percent": -37.5
+    },
+    {
+      "stage": "300 stationary / 30 parallel",
+      "original": {
+        "p50_interval_ms": 25.0035,
+        "p95_interval_ms": 26.060145,
+        "p99_interval_ms": 30.941533,
+        "mean_process_cpu_ms_per_frame": 5.546875,
+        "frames_over_37_5ms": 0,
+        "frames_over_50ms": 0
+      },
+      "replacement": {
+        "p50_interval_ms": 25.0169,
+        "p95_interval_ms": 25.2363,
+        "p99_interval_ms": 25.369642,
+        "mean_process_cpu_ms_per_frame": 7.1484375,
+        "frames_over_37_5ms": 0,
+        "frames_over_50ms": 0
+      },
+      "p95_reduction_percent": 3.161321627335534,
+      "p99_reduction_percent": 18.007805237057905,
+      "process_cpu_change_percent": 28.873239436619723
+    },
+    {
+      "stage": "300 route-moving / 30 parallel",
+      "original": {
+        "p50_interval_ms": 25.0049,
+        "p95_interval_ms": 29.998835,
+        "p99_interval_ms": 32.98921599999999,
+        "mean_process_cpu_ms_per_frame": 6.796875,
+        "frames_over_37_5ms": 6,
+        "frames_over_50ms": 0
+      },
+      "replacement": {
+        "p50_interval_ms": 25.0155,
+        "p95_interval_ms": 25.24855,
+        "p99_interval_ms": 25.380984,
+        "mean_process_cpu_ms_per_frame": 7.3046875,
+        "frames_over_37_5ms": 0,
+        "frames_over_50ms": 0
+      },
+      "p95_reduction_percent": 15.834898255215569,
+      "p99_reduction_percent": 23.0627851234779,
+      "process_cpu_change_percent": 7.471264367816088
+    }
+  ],
+  "pairs": [
+    {
+      "pair": 1,
+      "order": [
+        "original",
+        "replacement"
+      ],
+      "logical_state_equal": true,
+      "original": {
+        "instrumentation_triplet_us": 3.77066666666667,
+        "stages": [
+          {
+            "stage": 0,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0027,
+              "95": 26.035045,
+              "99": 26.407347
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 0.20774275,
+            "graphics_wall_mean_ms": 24.68822225,
+            "logic_cpu_mean_ms": 0.15625,
+            "graphics_cpu_mean_ms": 1.953125,
+            "process_cpu_mean_ms": 2.1875
+          },
+          {
+            "stage": 1,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.00475,
+              "95": 26.024645,
+              "99": 26.520352
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 1.3044295,
+            "graphics_wall_mean_ms": 23.61314075,
+            "logic_cpu_mean_ms": 0.4296875,
+            "graphics_cpu_mean_ms": 2.0703125,
+            "process_cpu_mean_ms": 2.65625
+          },
+          {
+            "stage": 2,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.004,
+              "95": 26.08129,
+              "99": 30.107197
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 3.208337,
+            "graphics_wall_mean_ms": 21.81002125,
+            "logic_cpu_mean_ms": 2.2265625,
+            "graphics_cpu_mean_ms": 2.6171875,
+            "process_cpu_mean_ms": 5.15625
+          },
+          {
+            "stage": 3,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.003749999999997,
+              "95": 30.036905,
+              "99": 32.98921599999999
+            },
+            "long_37_5ms": 2,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 4.733072,
+            "graphics_wall_mean_ms": 20.59623875,
+            "logic_cpu_mean_ms": 4.140625,
+            "graphics_cpu_mean_ms": 2.3828125,
+            "process_cpu_mean_ms": 6.7578125
+          }
+        ]
+      },
+      "replacement": {
+        "instrumentation_triplet_us": 3.066333333333333,
+        "stages": [
+          {
+            "stage": 0,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.01495,
+              "95": 25.233240000000002,
+              "99": 25.413139
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 0.28537575,
+            "graphics_wall_mean_ms": 24.585474,
+            "logic_cpu_mean_ms": 0.234375,
+            "graphics_cpu_mean_ms": 3.3203125,
+            "process_cpu_mean_ms": 4.0234375
+          },
+          {
+            "stage": 1,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0155,
+              "95": 25.229129999999998,
+              "99": 25.346662
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 1.20480125,
+            "graphics_wall_mean_ms": 23.67351825,
+            "logic_cpu_mean_ms": 0.0,
+            "graphics_cpu_mean_ms": 0.9765625,
+            "process_cpu_mean_ms": 1.7578125
+          },
+          {
+            "stage": 2,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0169,
+              "95": 25.266640000000002,
+              "99": 25.375356
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 2.92826125,
+            "graphics_wall_mean_ms": 21.939488,
+            "logic_cpu_mean_ms": 3.0078125,
+            "graphics_cpu_mean_ms": 3.6328125,
+            "process_cpu_mean_ms": 7.1484375
+          },
+          {
+            "stage": 3,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0186,
+              "95": 25.261685,
+              "99": 25.414621
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 3.517939,
+            "graphics_wall_mean_ms": 21.3478075,
+            "logic_cpu_mean_ms": 3.5546875,
+            "graphics_cpu_mean_ms": 3.90625,
+            "process_cpu_mean_ms": 7.8125
+          }
+        ]
+      }
+    },
+    {
+      "pair": 2,
+      "order": [
+        "replacement",
+        "original"
+      ],
+      "logical_state_equal": true,
+      "original": {
+        "instrumentation_triplet_us": 3.766,
+        "stages": [
+          {
+            "stage": 0,
+            "frames": 400,
+            "interval_ms": {
+              "50": 24.9997,
+              "95": 26.03716,
+              "99": 26.621089
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 0.20637475,
+            "graphics_wall_mean_ms": 24.69004725,
+            "logic_cpu_mean_ms": 0.1953125,
+            "graphics_cpu_mean_ms": 2.421875,
+            "process_cpu_mean_ms": 2.7734375
+          },
+          {
+            "stage": 1,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.006,
+              "95": 26.030665,
+              "99": 26.51905
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 1.279037,
+            "graphics_wall_mean_ms": 23.59909525,
+            "logic_cpu_mean_ms": 0.8984375,
+            "graphics_cpu_mean_ms": 1.796875,
+            "process_cpu_mean_ms": 2.8125
+          },
+          {
+            "stage": 2,
+            "frames": 400,
+            "interval_ms": {
+              "50": 24.998350000000002,
+              "95": 26.060145,
+              "99": 31.005619999999997
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 3.1414795,
+            "graphics_wall_mean_ms": 21.884401,
+            "logic_cpu_mean_ms": 2.4609375,
+            "graphics_cpu_mean_ms": 2.9296875,
+            "process_cpu_mean_ms": 5.5859375
+          },
+          {
+            "stage": 3,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.00515,
+              "95": 29.998835,
+              "99": 32.54205199999998
+            },
+            "long_37_5ms": 2,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 4.70704925,
+            "graphics_wall_mean_ms": 20.640479,
+            "logic_cpu_mean_ms": 4.2578125,
+            "graphics_cpu_mean_ms": 2.4609375,
+            "process_cpu_mean_ms": 6.796875
+          }
+        ]
+      },
+      "replacement": {
+        "instrumentation_triplet_us": 3.0303333333333335,
+        "stages": [
+          {
+            "stage": 0,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0172,
+              "95": 25.240805,
+              "99": 25.339247
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 0.27984675,
+            "graphics_wall_mean_ms": 24.59196675,
+            "logic_cpu_mean_ms": 0.6640625,
+            "graphics_cpu_mean_ms": 1.484375,
+            "process_cpu_mean_ms": 2.34375
+          },
+          {
+            "stage": 1,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.015349999999998,
+              "95": 25.23845,
+              "99": 25.399746999999998
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 1.1913555,
+            "graphics_wall_mean_ms": 23.686461,
+            "logic_cpu_mean_ms": 0.0,
+            "graphics_cpu_mean_ms": 0.7421875,
+            "process_cpu_mean_ms": 1.2890625
+          },
+          {
+            "stage": 2,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.015,
+              "95": 25.2363,
+              "99": 25.369642
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 2.952703,
+            "graphics_wall_mean_ms": 21.9103485,
+            "logic_cpu_mean_ms": 1.0546875,
+            "graphics_cpu_mean_ms": 2.8515625,
+            "process_cpu_mean_ms": 4.140625
+          },
+          {
+            "stage": 3,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.014,
+              "95": 25.238970000000002,
+              "99": 25.368387000000002
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 3.5143382499999998,
+            "graphics_wall_mean_ms": 21.35546225,
+            "logic_cpu_mean_ms": 3.671875,
+            "graphics_cpu_mean_ms": 3.515625,
+            "process_cpu_mean_ms": 7.3046875
+          }
+        ]
+      }
+    },
+    {
+      "pair": 3,
+      "order": [
+        "original",
+        "replacement"
+      ],
+      "logical_state_equal": true,
+      "original": {
+        "instrumentation_triplet_us": 3.80766666666667,
+        "stages": [
+          {
+            "stage": 0,
+            "frames": 400,
+            "interval_ms": {
+              "50": 24.99915,
+              "95": 26.053605,
+              "99": 26.500029
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 0.210032,
+            "graphics_wall_mean_ms": 24.68746425,
+            "logic_cpu_mean_ms": 0.0,
+            "graphics_cpu_mean_ms": 1.328125,
+            "process_cpu_mean_ms": 1.3671875
+          },
+          {
+            "stage": 1,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.002850000000002,
+              "95": 26.017409999999998,
+              "99": 26.521727
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 1.27988175,
+            "graphics_wall_mean_ms": 23.6208865,
+            "logic_cpu_mean_ms": 0.390625,
+            "graphics_cpu_mean_ms": 2.5390625,
+            "process_cpu_mean_ms": 3.125
+          },
+          {
+            "stage": 2,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0035,
+              "95": 26.042205000000003,
+              "99": 30.941533
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 3.1644955,
+            "graphics_wall_mean_ms": 21.85476625,
+            "logic_cpu_mean_ms": 2.34375,
+            "graphics_cpu_mean_ms": 2.8125,
+            "process_cpu_mean_ms": 5.546875
+          },
+          {
+            "stage": 3,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0049,
+              "95": 29.988395,
+              "99": 33.00984799999999
+            },
+            "long_37_5ms": 2,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 4.7365915,
+            "graphics_wall_mean_ms": 20.6191365,
+            "logic_cpu_mean_ms": 4.0625,
+            "graphics_cpu_mean_ms": 2.65625,
+            "process_cpu_mean_ms": 6.9140625
+          }
+        ]
+      },
+      "replacement": {
+        "instrumentation_triplet_us": 3.0073333333333334,
+        "stages": [
+          {
+            "stage": 0,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.015,
+              "95": 25.234885,
+              "99": 25.406215
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 0.2916055,
+            "graphics_wall_mean_ms": 24.57632275,
+            "logic_cpu_mean_ms": 0.546875,
+            "graphics_cpu_mean_ms": 2.421875,
+            "process_cpu_mean_ms": 3.3203125
+          },
+          {
+            "stage": 1,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.01475,
+              "95": 25.30341,
+              "99": 25.4085
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 1.251606,
+            "graphics_wall_mean_ms": 23.61083725,
+            "logic_cpu_mean_ms": 0.0,
+            "graphics_cpu_mean_ms": 1.1328125,
+            "process_cpu_mean_ms": 1.8359375
+          },
+          {
+            "stage": 2,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0182,
+              "95": 25.212435,
+              "99": 25.362649
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 2.92788475,
+            "graphics_wall_mean_ms": 21.9411285,
+            "logic_cpu_mean_ms": 3.046875,
+            "graphics_cpu_mean_ms": 2.8125,
+            "process_cpu_mean_ms": 7.1484375
+          },
+          {
+            "stage": 3,
+            "frames": 400,
+            "interval_ms": {
+              "50": 25.0155,
+              "95": 25.24855,
+              "99": 25.380984
+            },
+            "long_37_5ms": 0,
+            "long_50ms": 0,
+            "logic_wall_mean_ms": 3.5657745,
+            "graphics_wall_mean_ms": 21.29856825,
+            "logic_cpu_mean_ms": 1.640625,
+            "graphics_cpu_mean_ms": 2.890625,
+            "process_cpu_mean_ms": 4.8046875
+          }
+        ]
+      }
+    }
+  ],
+  "reproduce": "python -X utf8 -B scripts/benchmark_runtime.py template-xp template-xp/RGSS104E.dll PATH_TO_PUBLIC_ALPHA16_LUNETILE_DLL NEW_OUTPUT --frames 400 --pairs 3",
+  "limits": [
+    "One PC and generated stock-script scenes; no complete-game performance claim.",
+    "Frame intervals are Graphics.update completion intervals, not input latency or physical scanout.",
+    "No original GPU timing or RAM improvement claim.",
+    "Per-frame CPU counters are quantized; compare stage means only.",
+    "CPU time increased in idle and 300-event scenes.",
+    "Public game template performance-script gains are not added to this DLL comparison."
+  ]
+}

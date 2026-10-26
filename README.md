@@ -8,36 +8,58 @@
 
 **Lunetile**(루네타일)은 고전 타일 기반 RPG를 위한 독립 런타임 프로젝트입니다. 이름은 달을 뜻하는 *lune*과 *tile*을 합쳤습니다.
 
-[시작하기](#빌드) · [프로젝트 변환](#프로젝트-변환과-실행) · [검증 범위](#검증-기록과-한계) · [기여하기](#기여하기)
+[다운로드·실행](#게임-프로젝트-다운로드와-자동-릴리스) · [원본 RGSS 대비](#원본-rgss-대비-alpha16) · [프로젝트 변환](#프로젝트-변환과-실행) · [빌드](#빌드) · [문서](#저장소-구조와-문서)
 
 일상 검증은 `python -X utf8 -B scripts/verify_runtime.py NEW_OUTPUT`의 빠른 모드를 사용합니다. 일반 릴리스와 정밀 성능 비교, 결과 재사용 조건은 [검증 실행 안내](docs/VERIFICATION.md)를 참고하세요. 기존 네 인자 상세 검증 명령은 유지합니다.
 
-RPG Maker XP의 기존 32비트 실행기와 RGSS 인터페이스를 대상으로 합니다. Ruby 4.0.7, C++17, Direct3D 11 기반의 `Lunetile.dll`을 빌드하며, 기존 프로젝트는 기본 해상도 640×480을 유지하며, 배포 템플릿은 **1280×720 와이드 화면**을 사용합니다. 변환된 배포판은 게임 진행 시간을 유지하는 **120Hz 로직**과 기본 **60FPS 출력**을 사용하며, 게임 내에서 40/60/120FPS를 선택할 수 있습니다. 기존 프로젝트의 기본 갱신은 40Hz를 유지합니다.
+RPG Maker XP의 기존 32비트 실행기와 RGSS 인터페이스를 대상으로 합니다. Ruby 4.0.7, C++17, Direct3D 11 기반의 **`Lunetile.dll`**을 제공합니다. 배포 템플릿은 **1280×720 와이드 화면·120Hz 로직·기본 60FPS 출력**을 사용하며, 게임 내에서 40/60/120FPS를 선택할 수 있습니다. 이동·대기·타이머의 실제 진행 시간은 유지합니다. 옵션 없는 일반 변환은 기존 640×480·40Hz를 유지합니다.
 
 검증된 기본 XP 스크립트 게임을 대상으로 합니다. 모든 RPG Maker XP 게임이나 사용자 플러그인과의 호환성을 보장하지 않으며, 적용할 때는 제공된 변환기로 **원본과 분리된 프로젝트 복사본**을 만듭니다.
 
 **VX Ace:** 제공된 `template-vxa/`의 126개 기본 스크립트를 위한 별도 **`LunetileVXA.dll`**도 빌드합니다. 일반 변환은 544×416·60Hz를 유지하고, 배포 템플릿은 1280×720·120Hz 로직과 40/60/120FPS 출력을 사용합니다. VX Ace의 데이터·저장·ABI는 XP와 분리합니다. 변환과 배포 명령, 검증 범위는 [VX Ace 안내](docs/VXA.md)를 참고하세요.
 
-XP·VX Ace 공용 표시 객체 순회와 GDI 문자 마스크 캐시·부분 업로드의 구현, 비교 명령과 성능 판정 기준은 [클라이언트 성능 검증](docs/CLIENT_PERFORMANCE.md)에 있습니다.
-
-XP 타일 표시 범위 캐시와 VXA 타일 해석 경량화의 구현·비교 절차: [타일 성능 검증](docs/TILE_CLIENT_PERFORMANCE.md).
-
-후속 XP 타일 제출 배치와 XP·VXA 문자 합성 경량화: [구현·검증](docs/SUBMIT_TEXT_PERFORMANCE.md).
-
-배포 템플릿에만 적용하는 캐릭터 표시·이동, 이벤트 좌표 조회, VXA 저장 미리보기 최적화: [구현·실측·검증](docs/STOCK_SCRIPT_PERFORMANCE.md). 일반 프로젝트 변환과 기존 게임/MMO 스크립트에는 적용하지 않습니다.
-
-게임 화면 안에 웹 URL·로컬 HTML을 표시하는 XP·VXA 공통 WebView2 패널: [브라우저 API·설치·사용법](docs/BROWSER.md). 스크립트에서 요청할 때만 생성하며 WebView2 Evergreen Runtime이 필요합니다.
-
-브라우저 전용 오프라인 예제·진단 ZIP 안내는 [v0.1.0-alpha.15 릴리스 설명](docs/releases/v0.1.0-alpha.15.md)에 있습니다. 기존 전체 템플릿·DLL 교체 ZIP은 [v0.1.0-alpha.14](docs/releases/v0.1.0-alpha.14.md)에 보존합니다.
-
 > **개발 단계:** 검토된 기본 스크립트 범위의 실험적 런타임입니다. 원본 게임의 백업을 보관하고 별도 복사본에서 사용하세요.
 
 Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·권리자와 제휴하거나 승인을 받은 프로젝트가 아닙니다. 제품명은 호환 대상을 설명하기 위해 사용합니다. 자체 엔진 파일명은 **`Lunetile.dll`**이며 변환본의 `Game.ini`에서 `Library=Lunetile.dll`로 선택합니다. RGSS 함수 이름, 기존 코드명 `RGSSXP`, `rgssxp-ruby.exe`, `Saves/RGSSXP`는 인터페이스·도구·저장 형식의 호환성을 위해 유지합니다.
 
+## 원본 RGSS 대비 alpha.16
+
+비교 대상은 [최신 공개 v0.1.0-alpha.16](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.16)(2026-10-26)입니다. 이전 Lunetile 버전 간 최적화 수치와 과거 DLL의 원본 비교 수치는 포함하지 않습니다.
+
+### 화면과 갱신 주기
+
+원본 기본 설정과 alpha.16의 변환된 배포 템플릿을 비교합니다. 아래 증가는 **기능·설정 범위**이며 동일 장면의 처리 속도 개선율은 아닙니다.
+
+| 항목 | 원본 RGSS | Lunetile alpha.16 | 변화 |
+|---|---|---|---|
+| XP 내부 화면 | 640×480 · 307,200픽셀 | 1280×720 · 921,600픽셀 | 표시 면적 **3배 · 200% 증가** |
+| VX Ace 내부 화면 | 544×416 · 226,304픽셀 | 1280×720 · 921,600픽셀 | 표시 면적 **4.07배 · 307.2% 증가** |
+| XP 출력 설정 | 기본 40FPS | 기본 60FPS · 40/60/120 선택 | 기본 **50%**, 120 설정 **200% 증가** |
+| VX Ace 출력 설정 | 기본 60FPS | 기본 60FPS · 40/60/120 선택 | 120 설정 **100% 증가** |
+
+고주기 변환본의 로직 갱신은 XP 40→120Hz(**3배**), VX Ace 60→120Hz(**2배**)입니다. 게임 속도를 높이는 기능은 아닙니다. 실제 출력 FPS는 하드웨어와 부하에 따라 달라지며, Present 제출 횟수와 모니터의 물리 표시 횟수는 구분합니다. 근거: [와이드 화면](docs/WIDESCREEN.md), [고주기 변환](docs/HIGH_REFRESH.md), [VX Ace](docs/VXA.md).
+
+### 동일 조건의 실행 성능
+
+공개 alpha.16 XP DLL을 원본 `RGSS104E.dll`과 **같은 640×480·40Hz**로 직접 비교했습니다(2026-10-27). 자체 40×30 시험 맵에서 각 장면 80프레임 워밍업 후 400프레임씩, 실행 순서를 바꿔 **3쌍** 측정했습니다. 표는 각 실행의 p95를 구한 뒤 3회 중앙값을 비교한 결과입니다. p95는 프레임 간격 표본의 95번째 백분위이며 낮을수록 지연이 작습니다.
+
+| 시험 장면 | 원본 RGSS p95 | alpha.16 p95 | 프레임 간격 감소 |
+|---|---:|---:|---:|
+| 이벤트 0개 | 26.037ms | 25.235ms | **3.1%** |
+| 정지 이벤트 100개 · 병렬 10개 포함 | 26.025ms | 25.238ms | **3.0%** |
+| 정지 이벤트 300개 · 병렬 30개 포함 | 26.060ms | 25.236ms | **3.2%** |
+| 이동 이벤트 300개 · 병렬 30개 포함 | 29.999ms | 25.249ms | **15.8%** |
+
+이동 300개 장면의 p99는 **32.989→25.381ms(23.1% 감소)**, 37.5ms 초과는 엔진당 1,200표본에서 **6→0회**였습니다. 이는 관측된 지연 감소이며 40FPS 제한을 해제한 처리량이나 입력→표시 지연 측정은 아닙니다.
+
+**CPU 효율이 모든 장면에서 좋아진 것은 아닙니다.** 같은 장면의 프로세스 CPU 평균은 3회 중앙값 기준 6.797→7.305ms/프레임(**7.5% 증가**)였고, 이벤트 0/300개 정지 장면도 증가했습니다. GPU 개선율·RAM 감소·모든 게임의 성능 향상은 주장하지 않습니다. VX Ace 원본 RGSS3와 alpha.16의 직접 성능 비교는 이번 표에 포함하지 않았습니다.
+
+측정 환경은 Windows 11 빌드 26300·Ryzen 7 7700입니다. 게임 창의 전경 유지, 동일 논리 결과, 실제 로드 DLL 해시와 원본 파일 보존을 모두 확인했습니다. 공개 DLL SHA-256은 `d5ba97ab8249be1c9aa4baccdbec74cd60f5c2e4f6c10c6418da0763c4bd0da7`입니다. [측정 조건·3쌍 수치·해시](docs/benchmarks/alpha16-vs-rgss.json)에서 원본 값과 계산을 확인할 수 있습니다. 감소율은 `(원본−alpha.16)÷원본×100`이며 반올림 전 값으로 계산했습니다. 이 표는 DLL 비교이며 배포 템플릿의 추가 스크립트 최적화 효과는 합산하지 않았습니다.
+
 ## 주요 기능
 
-- 기존 `Game.exe`가 사용하는 필수 RGSS 함수 5개와 Ruby 스크립트 실행
-- RGSS 값 형식, RPG 데이터 클래스, Marshal 데이터 및 RGSSAD v1 읽기
+- 기존 `Game.exe`의 XP 필수 RGSS 함수 5개·VX Ace 필수 함수 6개와 Ruby 스크립트 실행
+- RGSS 값 형식, RPG 데이터 클래스, Marshal 데이터와 XP RGSSAD v1·VX Ace RGSS3A v3 읽기
 - Bitmap, Sprite, Window, Tilemap, 글꼴, 화면 전환 및 Direct3D 11 렌더링
 - 1280×720 와이드 맵·기본 UI, 창 크기 조절·최대화·Alt+Enter 전체 화면
 - 120Hz 로직과 독립된 40/60/120FPS 출력, 게임 내 화면 설정과 개인 설정 저장
@@ -45,6 +67,9 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 - UTF-8·CP949·CP932 프로젝트 데이터 처리와 기존 세이브 가져오기
 - 원본 보존을 전제로 한 프로젝트 변환, ABI 검사 및 회귀 검증 도구
 - 새 기본 프로젝트의 키보드·패드 재설정/진동, 별도 자동 저장, 정상 백업 3개와 복구 메뉴: [조작·저장 안내](docs/CONTROLS_SAVES.md)
+- DLL에 내장된 비동기 REST/JSON·TCP/TLS 클라이언트: [통신 API](docs/NETWORKING.md)
+- 요청한 때만 생성하는 WebView2 패널과 마우스·한글 입력: [브라우저](docs/BROWSER.md) · [UIInput](docs/UI_INPUT.md)
+- Windows Rust 서버·파일 DB·XP 온라인 클라이언트: [별도 예제](example/README.md)
 
 저장소의 `template-xp/`에는 배포용으로 제공된 기본 게임 프로젝트가 있습니다. 원본 RGSS DLL과 개인 세이브는 포함하지 않습니다. 다른 게임을 변환하려면 사용 권한이 있는 원본 프로젝트를 별도로 준비해야 합니다. 기존 RGSSFramePacing 보조 DLL 구현과 실행기 시작 패치는 포함하지 않습니다.
 
@@ -70,27 +95,22 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 | XP | `template-xp/` | `lunetile-template-xp-windows-x86.zip` | `lunetile-template-xp-diagnostics.zip` |
 | VX Ace | `template-vxa/` | `lunetile-template-vxa-windows-x86.zip` | `lunetile-template-vxa-diagnostics.zip` |
 
-**VX Ace 렌더링 최적화:** [v0.1.0-alpha.13](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.13)에 로컬 검증을 통과한 DLL 교체 ZIP·전체 VXA 템플릿·진단 ZIP을 제공합니다. 기존 변환본은 백업 후 `lunetile-vxa-speed-fix.zip`의 `LunetileVXA.dll`만 `Game.exe` 옆에 교체하세요. 표시 범위 캐시와 D3D 인스턴싱을 적용했으며, 기본 맵의 타일 Draw는 3,936회에서 1회로 줄었습니다. 비교 기준·실측값·한계는 [검증 기록](docs/VALIDATION.md)과 [릴리스 설명](docs/releases/v0.1.0-alpha.13.md)에 있습니다.
+[alpha.16 Release](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.16)에서 위 표의 엔진에 맞는 게임 ZIP과 `SHA256SUMS.txt`를 받습니다. 새 폴더에 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 프로젝트와 새 DLL이 들어 있으므로 Python·별도 Ruby 설치나 수동 변환이 필요하지 않습니다. 변경 내용은 [alpha.16 설명](docs/releases/v0.1.0-alpha.16.md)을 참고하세요.
 
-**게임 내부 브라우저:** [v0.1.0-alpha.15](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.15)의 `lunetile-browser-xp-demo.zip` 또는 `lunetile-browser-vxa-demo.zip`을 풀고 `Game.exe`를 실행하세요. 자체 HTML을 사용하므로 인터넷과 RTP가 필요하지 않습니다. Microsoft Visual C++ x86 및 WebView2 Evergreen Runtime은 필요합니다. 기존 변환본에는 해당 엔진 DLL만 교체하고 [Ruby API](docs/BROWSER.md)를 호출합니다. 조작 설정·자동 저장·백업 복구가 포함된 전체 게임 템플릿은 [alpha.16](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.16)을 선택하세요.
+기존 변환본의 런타임만 갱신하려면 백업 후 `lunetile-xp-speed-fix.zip` 또는 `lunetile-vxa-speed-fix.zip`의 해당 DLL을 교체합니다. **새 조작·자동 저장·복구 기능 전체는 DLL 교체만으로 설치되지 않습니다.** 최신 변환기로 원본을 새 폴더에 변환하고 같은 엔진의 저장을 별도 복사해 확인하세요. [업데이트 안내](docs/CONTROLS_SAVES.md#기존-변환본-업데이트)
 
-[GitHub Releases](https://github.com/deran2016/lunetile/releases)에서 `lunetile-template-xp-windows-x86.zip`과 `SHA256SUMS.txt`를 받습니다. ZIP을 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 `Data`, `Game.ini`, 프로젝트 파일과 새 Lunetile DLL이 들어 있으므로 Python 설치나 수동 변환이 필요하지 않습니다.
+브라우저만 시험하려면 [alpha.15 오프라인 예제](docs/releases/v0.1.0-alpha.15.md)를 사용할 수 있습니다. 자체 HTML을 사용해 인터넷·RTP 없이 실행되며, Microsoft Visual C++ x86·WebView2 Evergreen Runtime은 필요합니다. API는 [브라우저 안내](docs/BROWSER.md)를 참고하세요.
 
-**필수 설치:** Windows 11 x64, Microsoft Visual C++ x86 런타임, **RPG Maker XP Standard RTP**. 제공된 템플릿의 Graphics·Audio 폴더는 비어 있으며 `RTP1=Standard`를 사용합니다. RTP는 ZIP에 포함하지 않습니다. 영문 Windows에서는 영문 경로에 압축을 푸세요. 기존 실행기는 시스템 ANSI 코드페이지로 표현할 수 없는 경로를 읽지 못합니다.
+**필수 설치:** Windows 11 x64 확인 환경, Microsoft Visual C++ x86 런타임, **XP Standard RTP 또는 VX Ace RTP**. 템플릿의 Graphics·Audio 폴더는 비어 있으며 설치된 RTP를 사용합니다. RTP는 ZIP에 포함하지 않습니다. 영문 Windows의 XP 실행기는 영문 경로에 압축을 푸세요. 기존 ANSI 실행기는 시스템 코드페이지로 표현할 수 없는 경로를 읽지 못합니다.
 
 - 원본 `template-xp/`는 보존하고 별도 복사본만 변환합니다.
-- 개인 세이브·로그·원본 RGSS DLL은 배포하지 않습니다. 새 저장은 `Saves/RGSSXP/`에 생성됩니다.
+- 개인 세이브·로그·원본 RGSS DLL은 배포하지 않습니다. 새 저장은 XP `Saves/RGSSXP/`, VX Ace `Saves/LunetileVXA/`에 생성됩니다.
 - 게임 ZIP에는 프로젝트 파일·새 DLL·짧은 실행 안내·라이선스 고지만 포함합니다. 시작 맵은 원본의 지형과 시작 위치를 유지하며 **40×23칸(1280×736픽셀)**으로 확장됩니다.
 - 검증 결과·DLL 정보·변환 및 맵 확장 기록·파일별 해시·의존성 정보와 Ruby 패치는 별도 **`lunetile-template-xp-diagnostics.zip`**에 있습니다. 게임 실행에는 필요하지 않습니다. 개발 문서와 과거 기록은 이 저장소에서 제공합니다.
 - `SHA256SUMS.txt`에는 XP·VX Ace 실행/진단 ZIP 및 VX Ace 편집기 복구 ZIP의 해시가 있습니다. 템플릿 파일에 엔진의 MIT 라이선스가 새로 적용되는 것은 아닙니다.
 - `Get-FileHash lunetile-template-xp-windows-x86.zip -Algorithm SHA256`으로 다운로드 해시를 비교할 수 있습니다.
 
 [Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.
-
-```powershell
-git tag v0.1.0-alpha.9
-git push origin v0.1.0-alpha.9
-```
 
 이미 게시된 태그를 덮어쓰지 않습니다. 수동 실행은 릴리스를 게시하지 않습니다. 별도 PAT 없이 게시 작업에서만 자동 `GITHUB_TOKEN`의 `contents: write` 권한을 사용합니다.
 
@@ -110,6 +130,7 @@ powershell -NoProfile -File scripts/build_runtime.ps1 -BaseRuby "BOOTSTRAP_RUBY_
 | 출력 | 용도 |
 |---|---|
 | `build/runtime-native/bin/Release/Lunetile.dll` | 게임 실행용 자체 엔진 |
+| `build/runtime-native/bin/Release/LunetileVXA.dll` | VX Ace 전용 자체 엔진 |
 | `build/runtime-native/bin/Release/rgssxp-ruby.exe` | 변환 시 Ruby 구문 검사. 게임 실행에는 불필요 |
 | `build/runtime-deps/` | 의존 소스와 다운로드 캐시 |
 | `build/runtime-ruby-x86/` | Ruby 빌드 결과와 검사 기록 |
@@ -136,7 +157,7 @@ python -B scripts/migrate_project.py "LOCAL_ORIGINAL_PROJECT" "NEW_PROJECT"
 python -B scripts/migrate_project.py "LOCAL_ORIGINAL_PROJECT" "NEW_PROJECT" --data-encoding CP949 --ini-encoding CP949
 ```
 
-변환기는 확인된 원본 `Game.exe` 해시와 기본 XP 스크립트만 허용합니다. 검토되지 않은 사용자 스크립트나 이벤트 Ruby 코드가 있으면 위치를 보고하고 중단합니다. 스크립트 ID·이름·순서, 변경 내용과 파일 해시는 출력의 `migration/manifest.json`에 기록합니다.
+변환기는 확인된 원본 `Game.exe` 해시와 엔진별 검토된 기본 스크립트만 허용합니다. 검토되지 않은 사용자 스크립트나 이벤트 Ruby 코드가 있으면 위치를 보고하고 중단합니다. 스크립트 ID·이름·순서, 변경 내용과 파일 해시는 출력의 `migration/manifest.json`에 기록합니다.
 
 이전에 알려진 보조 DLL 연결은 `src/runtime/legacy_pacing.json`의 고정 인식 정보와 정확히 일치할 때만 제거합니다. 이 파일은 이전 연결 식별용이며 보조 DLL 구현은 포함하지 않습니다.
 
@@ -150,7 +171,7 @@ python -B scripts/migrate_project.py "LOCAL_ORIGINAL_PROJECT" "NEW_PROJECT" --da
 |---|---|
 | 원본 프로젝트의 슬롯 파일 | 원본 그대로 보존 |
 | 변환 복사본의 `Saves/Import/` | 원본 슬롯 파일을 가져와 읽기만 수행 |
-| 변환 복사본의 `Saves/RGSSXP/` | 버전 표식이 있는 새 형식으로 저장 |
+| XP `Saves/RGSSXP/` · VX Ace `Saves/LunetileVXA/` | 엔진별 버전 표식이 있는 새 형식으로 저장 |
 
 원본에 이미 `Saves/` 폴더가 있으면 형식 혼합을 막기 위해 변환을 중단합니다. 새 저장을 원본 엔진에서 읽는 역호환은 지원하지 않습니다. 원복하려면 보존한 원본 프로젝트를 실행하고, 변환 복사본의 새 저장은 별도로 보관하세요.
 
@@ -166,7 +187,7 @@ Release ZIP은 1280×720 맵·메뉴·메시지·전투 배치를 적용한 temp
 
 배포판에서는 메뉴 끝의 **화면 설정**에서 40/60/120FPS를 선택할 수 있습니다. 기본은 60FPS이며 게임 로직은 120Hz로 유지합니다. 이동·점프·이벤트 대기·타이머·전투 효과의 실제 진행 시간은 기존 40Hz 기준에 맞춥니다. 설정은 `Saves/Lunetile/display.ini`에 저장되어 재실행 후에도 적용됩니다.
 
-다른 기본 프로젝트에는 변환 옵션 `--high-refresh`를 사용하세요. 와이드 화면과 함께 적용하려면 `--widescreen --high-refresh`를 지정합니다. 옵션이 없는 프로젝트는 기존 타이밍을 유지합니다. 고주기 저장은 버전 2이며 기존 버전 1·원본 가져오기 저장을 읽을 수 있지만, 새 저장을 이전 런타임에서 읽을 수는 없습니다.
+다른 기본 프로젝트에는 변환 옵션 `--high-refresh`를 사용하세요. 와이드 화면과 함께 적용하려면 `--widescreen --high-refresh`를 지정합니다. 옵션이 없는 프로젝트는 기존 타이밍을 유지합니다. XP 고주기 저장은 버전 2이며 기존 버전 1·원본 가져오기 저장을 읽을 수 있지만, 새 저장을 이전 런타임에서 읽을 수는 없습니다. VX Ace는 [별도 저장 형식·경로](docs/VXA.md)를 사용합니다.
 
 `Graphics.logic_rate`는 120, `Graphics.frame_count`는 120Hz 갱신 횟수입니다. `Graphics.render_rate = 120`으로 출력만 변경할 수 있습니다. 고주기 프로필의 `Graphics.frame_rate`는 120으로 고정됩니다. [고주기 화면 안내](docs/HIGH_REFRESH.md)에 API·변환·저장·검증 범위가 정리되어 있습니다. 실제 출력 FPS는 모니터 주사율과 처리 성능에 따라 달라집니다.
 
@@ -201,13 +222,13 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 
 ### 검증 기록과 한계
 
-[2026-10-18 독립 저장소 검증 기록](docs/VALIDATION.md)에는 새 빌드의 Python 검사 40개, PE/ABI 검사, 실제 실행기 연결 13개 경로, 프로젝트 변환과 원본 보존 검사가 기록되어 있습니다.
+[검증 기록](docs/VALIDATION.md)과 [alpha.16 설명](docs/releases/v0.1.0-alpha.16.md)은 실제 실행기·ABI·데이터 보존, 타이틀/맵/메뉴/전투·저장 재시작, 창·F12, 출력 주기·통신·웹 패널과 조작·저장 검사의 범위를 설명합니다. 해당 Release 진단 ZIP에서 사용한 DLL 해시와 검사 결과를 확인하세요.
 
-분리 전 DLL의 기본 검증 게임 완주, 30분 내구성, 맵 왕복 100회 및 성능 측정은 별도 이력입니다. 해당 결과를 새 빌드에서 모두 재수행한 것은 아닙니다. 각 문서의 DLL SHA-256과 검증 범위를 확인하세요.
+분리 전 DLL의 기본 게임 완주·내구성·성능 측정은 별도 이력입니다. 이 README의 alpha.16 직접 비교 외에 과거 결과를 최신 DLL의 재검증으로 취급하지 않습니다. 각 문서의 DLL SHA-256과 검증 범위를 확인하세요.
 
-- 원본 DLL의 전체 66개 함수, 편집기, 임의 플러그인 및 구형 Ruby 네이티브 확장의 호환성은 보장하지 않습니다.
+- 원본 XP DLL의 전체 66개 함수, 편집기, 임의 플러그인 및 구형 Ruby 네이티브 확장의 호환성은 보장하지 않습니다.
 - 64비트 실행기와 사용자 정의 스크립트·플러그인의 고주기 시간 변환은 지원 범위에 포함하지 않습니다.
-- RGSSAD v2/v3는 지원하지 않습니다.
+- XP 아카이브는 RGSSAD v1, VX Ace는 RGSS3A v3를 지원하며 RGSS2는 대상이 아닙니다.
 - 물리 게임패드와 실제 고배율·여러 모니터 간 DPI 변경은 검증하지 않았습니다. 현재 모니터의 창 동작과 합성 DPI 메시지는 검사합니다.
 - 원본 GDI 경로의 프레임별 GPU 비용 비교는 미확정입니다. 일부 조건에서는 CPU 실행 시간이 증가했으므로 전반적인 성능 향상을 보장하지 않습니다.
 
@@ -221,7 +242,7 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 @connection = Lunetile::TCP.connect("game.example.com", 4433) # 비동기 TCP/TLS 연결
 ```
 
-요청 취소, HTTP 상태·헤더·본문, TCP 바이트 송수신과 길이 접두사 JSON 예제는 [통신 API 문서](docs/NETWORKING.md)를 참고하세요. 요청·연결 객체는 저장 파일에 넣지 않습니다. 변환된 XP 프로젝트에 연결하는 **Windows Rust 서버·파일 DB·온라인 클라이언트 예제**는 [example 안내](example/README.md)와 [MMORPG 기초 설계](example/DESIGN.md)를 참고하세요. 반투명 MMORPG GUI·한글 채팅·레벨 1~30·4계열 전직·퀘스트·장비·강화·상점·창고·거래·파티·길드를 제공하며 월드와 성장 정의를 JSON으로 관리합니다. 별도 DB 설치 없이 실행합니다. 마우스·IME API는 [UIInput 문서](docs/UI_INPUT.md)에 있습니다.
+통신 구현과 Ruby API 래퍼는 DLL에 내장되며 별도 통신 `.rb` 파일을 배포하지 않습니다. 요청 취소, HTTP 상태·헤더·본문, TCP 송수신과 길이 접두사 JSON 예제는 [통신 API](docs/NETWORKING.md)를 참고하세요. 요청·연결 객체는 저장 파일에 넣지 않습니다. Windows Rust 서버·파일 DB·온라인 XP 클라이언트의 기능·실행·검증은 [example 안내](example/README.md), [설계](example/DESIGN.md), [실행 기록](example/VALIDATION.md)에 정리합니다.
 
 ## 문제 해결
 
@@ -238,11 +259,13 @@ python -B scripts/verify_runtime.py "LOCAL_ORIGINAL_PROJECT" "LOCAL_ORIGINAL_DLL
 ## 저장소 구조와 문서
 
 ```text
-template-xp/      배포용 원본 게임 프로젝트 (변환 전)
+template-xp/   배포용 XP 원본 프로젝트 (변환 전)
 template-vxa/  배포용 VX Ace 원본 프로젝트 (변환 전)
 src/runtime/   C++·Ruby 엔진, ABI 정의, 의존성 lock 및 패치
+src/template_scripts/  배포 템플릿용 기본 스크립트 최적화
 scripts/       빌드·변환·검사·성능 측정 도구
 tests/         Python 테스트, Ruby 검증 시나리오, 네이티브 측정 도구
+example/       온라인 XP 클라이언트·Windows Rust 서버 예제
 tools/etw/     ETW 추출기
 docs/          현재 검증 결과와 외부 라이브러리 안내
 docs/history/  분리 전 구현·인수·항목별 검증 기록
@@ -259,15 +282,18 @@ licenses/      외부 라이브러리 라이선스 고지
 | [리셋](docs/history/RUNTIME_RESET.md) · [처리 순서](docs/history/RUNTIME_ORDER.md) | F12 및 정수 ID 테이블 호환 처리 |
 | [외부 구성 요소](docs/RUNTIME_THIRD_PARTY.md) | 고정 의존성, 라이선스와 배포 범위 |
 | [REST·TCP 통신](docs/NETWORKING.md) | 비동기 HTTP/JSON·TCP/TLS API와 서버 프로토콜 예제 |
+| [웹 패널](docs/BROWSER.md) · [UIInput](docs/UI_INPUT.md) | WebView2·마우스·텍스트·IME API |
+| [조작·저장](docs/CONTROLS_SAVES.md) · [검증 실행](docs/VERIFICATION.md) | 개인 설정·복구·개발용 검사 명령 |
+| [표시·문자](docs/CLIENT_PERFORMANCE.md) · [타일](docs/TILE_CLIENT_PERFORMANCE.md) · [제출·합성](docs/SUBMIT_TEXT_PERFORMANCE.md) · [기본 스크립트](docs/STOCK_SCRIPT_PERFORMANCE.md) | 구현 이력. 이전 Lunetile 대비 측정은 원본 RGSS 직접 비교와 구분 |
 
 ## 기여하기
 
 기여 절차와 코드 규칙은 [AGENTS.md](AGENTS.md)를 확인하세요. 버그 제보에는 실행 환경, 재현 순서, 사용한 DLL의 SHA-256과 오류 내용을 포함해 주세요. 렌더링 문제에는 권리상 공유 가능한 화면을 첨부하면 도움이 됩니다.
 
-PR에는 변경 이유, 영향 범위와 수행한 검사를 적어 주세요. 승인된 `template-xp/` 입력 외의 게임 원본·에셋·세이브·비밀 키는 첨부하거나 커밋하지 마세요. 호환성 변경에는 해당 동작을 검증하는 회귀 검사를 포함합니다.
+PR에는 변경 이유, 영향 범위와 수행한 검사를 적어 주세요. 승인된 `template-xp/`·`template-vxa/` 입력 외의 게임 원본·에셋·세이브·비밀 키는 첨부하거나 커밋하지 마세요. 원본 RGSS DLL과 개인 파일은 제외하며, 호환성 변경에는 해당 동작을 검증하는 회귀 검사를 포함합니다.
 
 ## 라이선스
 
-자체 코드는 [MIT 라이선스](LICENSE)입니다. Ruby 4.0.7과 내장 JSON 2.18.0, zlib 1.3.2, libogg 1.3.6, libvorbis 1.3.7은 각각의 라이선스를 따르며, 고지 원문은 `licenses/`에 있습니다. Windows API는 Windows SDK를 통해 사용합니다.
+자체 코드는 [MIT 라이선스](LICENSE)입니다. Ruby·내장 JSON·zlib·libogg·libvorbis·libtheora 등 외부 구성 요소는 각각의 라이선스를 따르며, 버전은 [의존성 안내](docs/RUNTIME_THIRD_PARTY.md), 고지 원문은 `licenses/`에서 확인하세요. Windows API는 Windows SDK를 통해 사용합니다.
 
-승인된 `template-xp/` 입력을 제외한 빌드 결과, 실행 파일, 게임 데이터·에셋·세이브, 원시 추적과 덤프는 `.gitignore`로 제외합니다. 게임 실행기와 리소스의 사용·배포 권한은 별도로 확인해야 합니다.
+승인된 두 템플릿 입력을 제외한 빌드 결과, 게임 데이터·에셋·세이브, 원시 추적과 덤프는 `.gitignore`로 제외합니다. 게임 실행기와 리소스의 사용·배포 권한은 별도이며 엔진의 MIT가 새로 적용되지 않습니다.
