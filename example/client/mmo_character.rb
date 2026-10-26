@@ -17,6 +17,8 @@ module LunetileMMO
       @cast=[LunetileMMO.now,event]
     end
     def update
+      # Attack poses override src_rect; let the stock cache restore it, including the final frame.
+      @lunetile_bitmap=nil if @cast
       super
       self.angle=0;self.zoom_x=self.zoom_y=1.0
       if @portal

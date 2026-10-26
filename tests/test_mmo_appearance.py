@@ -18,8 +18,13 @@ class Sprite
  def dispose;@disposed=true;end
 end
 class Sprite_Character < Sprite
- def initialize(viewport,character);super(viewport);@character=character;@cw,@ch=character.name=='Lunetile_Portal' ? [313,313] : [32,48];update;end
- def update;self.x=100;self.y=200;self.z=230;self.src_rect.set(@character.pattern*@cw,(@character.direction-2)/2*@ch,@cw,@ch);end
+ def initialize(viewport,character);super(viewport);self.bitmap=Object.new;@character=character;@cw,@ch=character.name=='Lunetile_Portal' ? [313,313] : [32,48];update;end
+ def update
+  self.x=100;self.y=200;self.z=230;key=[@character.pattern,@character.direction]
+  unless @lunetile_bitmap.equal?(bitmap)&&@lunetile_frame==key
+   self.src_rect.set(@character.pattern*@cw,(@character.direction-2)/2*@ch,@cw,@ch);@lunetile_bitmap=bitmap;@lunetile_frame=key
+  end
+ end
 end
 class Game_Character;end
 module RPG
@@ -78,4 +83,16 @@ frames=[];anchors=[]
 raise 'portal phases do not loop' unless frames==[0,313,626,939,0]
 raise 'portal anchor moved' unless anchors.uniq.size==1 && (portal.zoom_x*313-72).abs<0.001
 portal.dispose
+""")
+
+ def test_cached_stock_frame_returns_to_idle_after_a_stationary_attack(self):
+  self.ruby("""
+[2,4,6,8].each do |direction|
+ ['slash','magic'].each do |kind|
+  $clock=0;actor.direction=direction;sprite.update;rest=sprite.src_rect.to_a
+  sprite.attack_motion({'direction'=>direction,'motion'=>kind,'motion_ms'=>240})
+  $clock=0.04;sprite.update;raise 'attack pose missing' if sprite.src_rect.to_a==rest
+  $clock=0.25;sprite.update;raise 'cached attack pose stuck on idle character' unless sprite.src_rect.to_a==rest
+ end
+end
 """)

@@ -10,7 +10,24 @@ CLIENT_SCRIPTS=(('MMO_Network','mmo_network.rb'),('MMO_Character','mmo_character
 sys.path.insert(0,str(ROOT/'scripts'))
 from rxdata import Entry,integer,read,string,write
 from package_template import ASSETS
-from migrate_project import read_project_ini
+from migrate_project import read_project_ini,transform as stock_transform
+from optimize_template_scripts import generate as generate_performance
+
+PERFORMANCE_NAME=b'MMO_StockPerformance'
+
+def reviewed_performance(entries):
+ original=read((ROOT/'template-xp/Data/Scripts.rxdata').read_bytes())
+ expected,_=stock_transform(original,widescreen=True,high_refresh=True)
+ normal=lambda source:source.replace(b'\r\n',b'\n')
+ main=next(i for i,e in enumerate(original) if e.name==b'Main')
+ latest=normal(expected[main]);without_controls=latest.removeprefix(b'Lunetile.install_stock\n')
+ reviewed=len(entries)==len(original) and all(
+  (e.id,e.name)==(o.id,o.name) and (i==main or normal(e.source())==normal(expected.get(i,o.source())))
+  for i,(e,o) in enumerate(zip(entries,original)))
+ if not reviewed:return None,latest
+ helper=generate_performance(entries,'xp');tail=normal(original[main].source())
+ variants=(latest,without_controls,latest[:-len(tail)]+helper+b'\n'+tail,without_controls[:-len(tail)]+helper+b'\n'+tail)
+ return (helper if normal(entries[main].source()) in variants else None),latest
 
 def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -38,8 +55,13 @@ def prepare(project,output,server,ruby,runtime=None):
  stock_main=next(e.source() for e in read((ROOT/'template-xp/Data/Scripts.rxdata').read_bytes()) if e.name==b'Main').replace(b'\r\n',b'\n')
  original_main=entries[mains[0]].source().replace(b'\r\n',b'\n')
  if not original_main.endswith(stock_main):raise ValueError('Main must end with the reviewed stock XP Main; custom startup is not replaced')
+ performance,latest_main=reviewed_performance(entries)
  bootstrap=original_main[:-len(stock_main)]
- if any(e.name in {name.encode() for name,_ in CLIENT_SCRIPTS} for e in entries):
+ # The offline installer owns stock save/menu hooks; the MMO uses server persistence.
+ if performance:bootstrap=latest_main.removeprefix(b'Lunetile.install_stock\n')[:-len(stock_main)]
+ elif original_main==latest_main:bootstrap=bootstrap.removeprefix(b'Lunetile.install_stock\n')
+ elif b'Lunetile.install_stock' in bootstrap:raise ValueError('Offline stock installer in unreviewed startup; use a reviewed converted XP source for the MMO')
+ if any(e.name in {PERFORMANCE_NAME,*[name.encode() for name,_ in CLIENT_SCRIPTS]} for e in entries):
   raise ValueError('Online script names already exist; refusing to duplicate or overwrite them')
  added=[];used_ids={e.id for e in entries};ident=1
  for name,filename in CLIENT_SCRIPTS:
@@ -47,8 +69,13 @@ def prepare(project,output,server,ruby,runtime=None):
   compressed=zlib.compress((EXAMPLE/'client'/filename).read_bytes())
   raw=b'['+integer(3)+b'i'+integer(ident)+string(name.encode())+string(compressed)
   added.append(Entry(ident,name.encode(),compressed,raw));ident+=1
- combined=entries[:mains[0]]+added+entries[mains[0]:]
- scripts=write(combined,{mains[0]+len(added):bootstrap+MAIN_ENTRY})
+ helpers=[]
+ if performance:
+  while ident in used_ids:ident+=1
+  compressed=zlib.compress(performance);raw=b'['+integer(3)+b'i'+integer(ident)+string(PERFORMANCE_NAME)+string(compressed)
+  helpers.append(Entry(ident,PERFORMANCE_NAME,compressed,raw))
+ combined=entries[:mains[0]]+helpers+added+entries[mains[0]:]
+ scripts=write(combined,{mains[0]+len(helpers)+len(added):bootstrap+MAIN_ENTRY})
  exported=subprocess.run([str(ruby),'--disable-gems',str(EXAMPLE/'tools/export_world.rb'),str(project),str(ROOT/'src/runtime/rpg_schema.json')],capture_output=True,text=True,encoding='utf-8',timeout=20)
  if exported.returncode:raise ValueError('World export failed: '+exported.stderr)
  world=json.loads(exported.stdout)
@@ -66,6 +93,13 @@ def prepare(project,output,server,ruby,runtime=None):
   if (project/'licenses').is_dir():shutil.copytree(project/'licenses',client/'licenses')
   else:
    shutil.copy2(ROOT/'LICENSE',client/'LICENSE');shutil.copytree(ROOT/'licenses',client/'licenses')
+  # Older converted projects may predate native dependencies such as WebView2.
+  for notice in (ROOT/'licenses').rglob('*'):
+   if not notice.is_file():continue
+   target=client/'licenses'/notice.relative_to(ROOT/'licenses')
+   if target.exists() and target.read_bytes()!=notice.read_bytes():raise ValueError('Runtime license conflicts with project notice: '+str(target.relative_to(client)))
+   target.parent.mkdir(parents=True,exist_ok=True)
+   if not target.exists():shutil.copy2(notice,target)
   (client/'Data/Scripts.rxdata').write_bytes(scripts)
   shutil.copy2(runtime,client/'Lunetile.dll')
   ini['Game']['Title']='Lunetile XP Online Village'
@@ -99,7 +133,7 @@ def prepare(project,output,server,ruby,runtime=None):
   (staging/'Start Server.cmd').write_bytes(b'@echo off\r\ncd /d "%~dp0server"\r\nlunetile-mmo-server.exe\r\nif errorlevel 1 echo Read the error above. For storage errors, fix the cause then run Recover Server.cmd.\r\npause\r\n')
   (staging/'Recover Server.cmd').write_bytes(b'@echo off\r\ncd /d "%~dp0server"\r\nlunetile-mmo-server.exe --recover-only\r\npause\r\n')
   (staging/'Start Client.cmd').write_bytes(b'@echo off\r\ncd /d "%~dp0client"\r\nstart "" Game.exe\r\n')
-  (staging/'build-info.json').write_text(json.dumps({'source_sha256':before,'server_sha256':digest(server),'client_dll_sha256':digest(runtime),'changed_script':'Main','added_scripts':[name for name,_ in CLIENT_SCRIPTS],'protocol':11,'scope':'Converted XP starting map; Windows x64 Rust server and x86 client; requires XP Standard RTP'},indent=2)+'\n',encoding='utf-8')
+  (staging/'build-info.json').write_text(json.dumps({'source_sha256':before,'server_sha256':digest(server),'client_dll_sha256':digest(runtime),'changed_script':'Main','added_scripts':[e.name.decode() for e in helpers]+[name for name,_ in CLIENT_SCRIPTS],'script_performance':{'applied':bool(performance),'version':1 if performance else None,'helper_sha256':hashlib.sha256(performance).hexdigest() if performance else None,'reason':'reviewed-stock-xp' if performance else 'custom-or-unreviewed-scripts-preserved'},'offline_stock_installer':False,'protocol':11,'scope':'Converted XP starting map; Windows x64 Rust server and x86 client; requires XP Standard RTP'},indent=2)+'\n',encoding='utf-8')
   if before!={p.relative_to(project).as_posix():digest(p) for p in selected}:raise ValueError('Source project changed while preparing')
   hashes={p.relative_to(staging).as_posix():digest(p) for p in sorted(staging.rglob('*')) if p.is_file()}
   (staging/'SHA256SUMS.json').write_text(json.dumps(hashes,indent=2)+'\n',encoding='utf-8')

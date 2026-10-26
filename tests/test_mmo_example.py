@@ -6,7 +6,8 @@ from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'));sys.path.insert(0,str(ROOT/'example/tools'))
 from rxdata import integer,string,read,write
-from prepare_example import CLIENT_SCRIPTS,MAIN_ENTRY,prepare
+from prepare_example import CLIENT_SCRIPTS,MAIN_ENTRY,prepare,reviewed_performance
+from migrate_project import transform
 
 @unittest.skipUnless((ROOT/'example/server/data/server.json').is_file(),'Local MMO JSON database is excluded from Git')
 class MMOExampleTests(unittest.TestCase):
@@ -53,6 +54,7 @@ class MMOExampleTests(unittest.TestCase):
   self.assertTrue((self.output/'PARTICLES.md').is_file())
   self.assertTrue((self.output/'PERFORMANCE.md').is_file())
   self.assertTrue((self.output/'ACCOUNTS.md').is_file())
+  self.assertEqual((self.output/'client/licenses/webview2.txt').read_bytes(),(ROOT/'licenses/webview2.txt').read_bytes())
   self.assertIn(b'--recover-only',(self.output/'Recover Server.cmd').read_bytes())
   self.assertIn(b'if errorlevel 1 echo',(self.output/'Start Server.cmd').read_bytes())
   self.assertEqual(json.loads((self.output/'build-info.json').read_text())['protocol'],11)
@@ -63,6 +65,33 @@ class MMOExampleTests(unittest.TestCase):
   asset=self.source/'Graphics/Characters/Lunetile_Portal.png';asset.parent.mkdir(parents=True);asset.write_bytes(b'CUSTOM ORIGINAL')
   with self.assertRaisesRegex(ValueError,'Lunetile_Portal'):self.build()
   self.assertEqual(asset.read_bytes(),b'CUSTOM ORIGINAL');self.assertFalse(self.output.exists())
+
+ def test_reviewed_stock_gets_separate_optimization_and_no_offline_installer(self):
+  stock=read((ROOT/'template-xp/Data/Scripts.rxdata').read_bytes());changes,_=transform(stock,widescreen=True,high_refresh=True)
+  canonical=write(stock,changes);entries=read(canonical);helper,_=reviewed_performance(entries);mi=next(i for i,e in enumerate(entries) if e.name==b'Main');tail=stock[mi].source().replace(b'\r\n',b'\n')
+  source=write(entries,{mi:entries[mi].source()[:-len(tail)]+helper+b'\n'+tail});(self.source/'Data/Scripts.rxdata').write_bytes(source)
+  self.build();before=read(source);after=read((self.output/'client/Data/Scripts.rxdata').read_bytes())
+  main=next(i for i,e in enumerate(before) if e.name==b'Main')
+  self.assertEqual(len(after),103);self.assertEqual([e.raw for e in before[:main]],[e.raw for e in after[:main]])
+  self.assertEqual(after[main].name,b'MMO_StockPerformance')
+  self.assertEqual([e.name.decode() for e in after[main+1:-1]],[name for name,_ in CLIENT_SCRIPTS])
+  self.assertEqual(next(e.id for e in after if e.name==b'MMO_Network'),1)
+  self.assertEqual(next(e.id for e in after if e.name==b'MMO_UI'),4)
+  self.assertNotIn(b'Lunetile.install_stock',after[-1].source())
+  self.assertNotIn(b'StockScripts.install',after[-1].source())
+  self.assertEqual(after[-1].source(),entries[main].source().replace(b'\r\n',b'\n').removeprefix(b'Lunetile.install_stock\n')[:-len(tail)]+MAIN_ENTRY)
+  info=json.loads((self.output/'build-info.json').read_text());self.assertTrue(info['script_performance']['applied']);self.assertFalse(info['offline_stock_installer'])
+
+ def test_existing_project_notices_are_preserved_and_conflicts_reject_output(self):
+  notices=self.source/'licenses';notices.mkdir();(notices/'webview2.txt').write_bytes(b'CUSTOM PROJECT NOTICE')
+  with self.assertRaisesRegex(ValueError,'license conflicts'):self.build()
+  self.assertEqual((notices/'webview2.txt').read_bytes(),b'CUSTOM PROJECT NOTICE');self.assertFalse(self.output.exists())
+
+ def test_offline_installer_in_custom_startup_is_rejected_before_publication(self):
+  path=self.source/'Data/Scripts.rxdata';entries=read(path.read_bytes());path.write_bytes(write(entries,{1:b'Lunetile.install_stock\n'+entries[1].source()}))
+  before=path.read_bytes()
+  with self.assertRaisesRegex(ValueError,'Offline stock installer'):self.build()
+  self.assertFalse(self.output.exists());self.assertEqual(path.read_bytes(),before)
 
  def test_original_engine_and_existing_output_are_rejected(self):
   (self.source/'Game.ini').write_text('[Game]\nLibrary=RGSS104E.dll\n',encoding='utf-8')

@@ -2,6 +2,18 @@
 
 변환 완료한 XP 프로젝트를 별도로 복사한 Windows 예제입니다. Windows x64 Rust 서버, x86 Lunetile 클라이언트, UTF-8 JSON 파일 DB로 구성합니다. 1280×720 MMORPG HUD, 한글 채팅, 공동 사냥, 레벨 1~30 성장, 4계열 1·2차 전직, 퀘스트·장비·강화·상점·창고·거래·파티·길드를 실제 서버 상태에 연결했습니다. 원본 XP 프로젝트는 수정하지 않습니다.
 
+## 최신 DLL과 성능 스크립트
+
+최종 예제는 [v0.1.0-alpha.16](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.16)의 공식 XP용 x86 DLL과 검토된 기본 스크립트 최적화 v1을 사용합니다. DLL의 타일 캐시·배치 제출, 표시 객체·문자 캐시와 네이티브 API 개선이 포함됩니다. 게임 내 브라우저/조작 API는 DLL에서 제공하며, MMO의 서버 판정·저장은 기존 프로토콜 v11로 처리합니다.
+
+`MMO_StockPerformance`는 캐릭터 Rect·좌표/속성 갱신 캐시, 이동 시 임시 배열 제거와 기본 이벤트 조회 인덱스를 설치합니다. MMO는 XP 이벤트를 서버로 옮기므로 이벤트 인덱스의 서버 NPC 가속 효과를 주장하지 않습니다. 공격 자세가 종료되면 정지 캐릭터도 즉시 원래 프레임으로 복원합니다. Main에는 성능 구현을 넣지 않습니다.
+
+생성기는 원본 ID·이름·기본 메서드와 알려진 초기화 코드를 확인한 경우에만 성능 스크립트를 추가합니다. 사용자 수정 스크립트는 보존하고 최적화를 건너뛰며, 검토되지 않은 시작 코드에 오프라인 저장 설치 호출이 있으면 출력을 거부합니다. 최신 공식 템플릿의 Main에 포함된 알려진 성능 코드는 별도 MMO 엔트리로 옮기고 `Lunetile.install_stock` 호출은 제거합니다. 오프라인 자동 저장·복구·기본 게임 메뉴는 온라인 서버 상태를 대신 저장하지 않도록 설치하지 않습니다.
+
+기존 MMO 갱신에는 DLL과 Scripts.rxdata를 함께 교체합니다. 이번 배포는 기존 102개 엔트리의 ID·이름·상대 순서를 유지하고 `MMO_StockPerformance` 하나를 더한 103개입니다. 기존 엔트리는 `MMO_Character`의 공격 캐시 호환 처리만 변경하며 Main을 포함한 나머지 101개 원시 엔트리를 보존합니다. 계정·인벤토리·프로필·서버 DB·Game.ini·맵/자산은 유지하고 이전 파일은 `server/backups/pre-runtime-script-sync-20261026/`에 보관합니다.
+
+XP DLL SHA-256: `d5ba97ab8249be1c9aa4baccdbec74cd60f5c2e4f6c10c6418da0763c4bd0da7`. `build-info.json`에 공식 패치와 성능 스크립트의 해시·적용 여부를 기록합니다. 현재 검증은 [VALIDATION.md](VALIDATION.md)를 참고하세요.
+
 ## 바로 실행하기
 
 1. `Start Server.cmd`를 실행하고 서버 창을 열어 둡니다.
@@ -150,6 +162,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File example/build.ps1 `
 
 | Scripts.rxdata 엔트리 | 기능 |
 |---|---|
+| MMO_StockPerformance | 검토된 기본 스크립트의 표시 캐시·이동 할당·이벤트 조회 최적화 |
 | MMO_Network | 계정 인증·TCP·캐릭터별 프로필·v11 상태·이동 경로·순번 수신 |
 | MMO_Character | 맵·본인 이동 예측·승인 보정·다른 캐릭터 보간 |
 | MMO_Inventory | 격자 가방·설명·사용 |
@@ -163,7 +176,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File example/build.ps1 `
 | MMO_Entry | 회원가입·로그인·3칸 캐릭터 선택·외형·이전 프로필 연결 |
 | Main | 변환 초기화와 LunetileMMO.run 호출 |
 
-제공 템플릿은 기존 90개에 12개를 추가한 총 102개 엔트리입니다. 기존 MMO 엔트리 ID·상대 순서와 Main을 유지하고 Main 직전에 MMO_Entry를 추가합니다. 원본 XP 기능별 스크립트를 보존하며 외부 Ruby 파일을 로드하지 않습니다. 소스는 `example/client/*.rb`입니다.
+검토된 템플릿은 기존 90개에 MMO 기능별 스크립트 12개와 성능 스크립트 1개를 더한 총 103개입니다. 기존 MMO 엔트리 ID·상대 순서와 Main을 유지하며 MMO_StockPerformance는 MMO_Network 앞에서 설치합니다. 원본 XP 기능별 스크립트를 보존하며 외부 Ruby 파일을 로드하지 않습니다. 기능별 소스는 `example/client/*.rb`이며 성능 엔트리는 `scripts/optimize_template_scripts.py`와 `src/template_scripts/stock_performance.rb`에서 생성합니다.
 
 최종 실행 폴더는 `example/output/LunetileMMO-Windows/`, ZIP과 SHA-256 파일은 같은 상위 폴더입니다. 로컬 최종 폴더에는 기존 계정과 프로필을 보존하며 ZIP에는 개인 데이터를 넣지 않습니다. `SHA256SUMS.json`은 배포 파일 해시, `build-info.json`은 입력·DLL·서버 해시를 기록합니다.
 
