@@ -60,11 +60,22 @@ def read_project_ini(path,encoding=None):
  ini=configparser.ConfigParser(interpolation=None);ini.read_string(text)
  return ini,chosen
 
-def transform(entries,widescreen=False,high_refresh=False):
+def custom_block(entries,stock_count):
+ """Indexes of user scripts kept verbatim between the last stock script and Main."""
+ if len(entries)<stock_count:raise MigrationError(f'Custom scripts require all {stock_count} stock entries in order')
+ if entries[-1].name!=b'Main':raise MigrationError(f'Script {len(entries)-1}: custom scripts must stay above Main')
+ return range(stock_count-1,len(entries)-1)
+
+def transform(entries,widescreen=False,high_refresh=False,custom_scripts=False):
  baseline=json.loads((ROOT/'src/runtime/stock_scripts.json').read_text())
  legacy=json.loads((ROOT/'src/runtime/legacy_pacing.json').read_text())
- helper_index=len(entries)-2 if len(entries)==len(baseline['scripts'])+1 else None
- if len(entries)!=len(baseline['scripts']) and helper_index is None:raise MigrationError('Unreviewed script collection: expected 90 stock entries or the exact legacy bootstrap above Main')
+ custom=set()
+ if custom_scripts:
+  # Custom overrides bypass the stock-only geometry and timing source patches.
+  if widescreen or high_refresh:raise MigrationError('--custom-scripts cannot be combined with --widescreen or --high-refresh')
+  custom=set(custom_block(entries,len(baseline['scripts'])))
+ helper_index=len(entries)-2 if not custom_scripts and len(entries)==len(baseline['scripts'])+1 else None
+ if len(entries)-len(custom)!=len(baseline['scripts']) and helper_index is None:raise MigrationError('Unreviewed script collection: expected 90 stock entries or the exact legacy bootstrap above Main; use --custom-scripts to keep user scripts above Main')
  if helper_index is not None and entries[helper_index].source().replace(b'\r\n',b'\n') not in [body.encode() for body in legacy['bootstrap_sources']]:raise MigrationError(f'Script {helper_index}: unreviewed extra script; expected exact legacy pacing bootstrap above Main')
  replacements={};mapping=[]
  stock_index=0
@@ -74,6 +85,9 @@ def transform(entries,widescreen=False,high_refresh=False):
    name=entry.name.decode('utf-8');text=source.decode('utf-8')
   except UnicodeDecodeError as error:raise MigrationError(f'Script {index}: encoding is ambiguous at byte {error.start}; no automatic conversion') from error
   edits=[]
+  if index in custom:
+   mapping.append({'index':index,'id':entry.id,'name':name,'kind':'custom','encoding_before':'UTF-8','encoding_after':'UTF-8','source_sha256_before':sha(source),'source_sha256_after':sha(source),'compressed_sha256_before':sha(entry.compressed),'changes':[]})
+   continue
   if index==helper_index:
    converted=legacy['disabled_source']
    edits.append({'line':1,'before':text,'after':converted,'reason':'remove-exact-legacy-pacing-bootstrap'})
@@ -107,13 +121,26 @@ def transform(entries,widescreen=False,high_refresh=False):
   mapping.append({'index':index,'id':entry.id,'name':name,'encoding_before':'UTF-8','encoding_after':'UTF-8','source_sha256_before':sha(source),'source_sha256_after':sha(converted),'compressed_sha256_before':sha(entry.compressed),'changes':edits})
  return replacements,mapping
 
+CHECKER='''load ARGV.shift
+repaired = []
+ARGV.each do |path|
+  source = File.binread(path).force_encoding(Encoding::UTF_8)
+  next unless (error = RGSSXP::LegacySyntax.compile(source, path))
+  result = RGSSXP::LegacySyntax.repair(source, path, error)
+  raise error unless result
+  repaired << "#{File.basename(path)}: runtime repairs Ruby 1.8 call syntax on lines #{result[1].map { |edit| edit[:line] }.join(', ')}"
+end
+puts repaired
+puts "#{ARGV.size} scripts compile"
+'''
+
 def syntax_check(entries,replacements,ruby,directory):
  version=subprocess.run([str(ruby),'--disable-gems','-e','abort "Ruby 4.0.7 x86 required" unless RUBY_VERSION=="4.0.7" && [0].pack("J").bytesize==4'],capture_output=True,text=True)
  if version.returncode:raise MigrationError(version.stderr or 'Ruby syntax checker failed')
  source_dir=directory/'migration/sources';source_dir.mkdir(parents=True)
  for index,entry in enumerate(entries):
   (source_dir/f'{index:03d}.rb').write_bytes(replacements.get(index,entry.source()))
- result=subprocess.run([str(ruby),'--disable-gems','-e','ARGV.each { |path| RubyVM::InstructionSequence.compile_file(path) }; puts "#{ARGV.size} scripts compile"',*[str(path) for path in sorted(source_dir.glob('*.rb'))]],capture_output=True,text=True)
+ result=subprocess.run([str(ruby),'--disable-gems','-e',CHECKER,str(ROOT/'src/runtime/script_compat.rb'),*[str(path) for path in sorted(source_dir.glob('*.rb'))]],capture_output=True,text=True,encoding='utf-8',errors='replace')
  (directory/'migration/syntax-check.txt').write_text(result.stdout+result.stderr,encoding='utf-8')
  if result.returncode:raise MigrationError('Ruby 4 syntax check failed: '+result.stderr)
 
@@ -165,9 +192,10 @@ def detect_engine(source,engine='auto',ini_encoding=None):
   return signals.pop()
  return engine
 
-def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescreen=False,high_refresh=False,engine='auto'):
+def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescreen=False,high_refresh=False,engine='auto',custom_scripts=False):
  engine=detect_engine(source,engine,ini_encoding)
  if engine=='vxa':
+  if custom_scripts:raise MigrationError('--custom-scripts currently supports XP projects only')
   from migrate_vxa import migrate as migrate_vxa
   return migrate_vxa(source,output,dll,ruby,data_encoding,ini_encoding,widescreen,high_refresh)
  source,output,dll,ruby=[path.resolve() for path in (source,output,dll,ruby)]
@@ -184,11 +212,11 @@ def migrate(source,output,dll,ruby,data_encoding=None,ini_encoding=None,widescre
  if archive and ((source/script_path).exists() or archive.normalize(script_path) in archive.entries):raise MigrationError('Reserved converted script path already exists')
  raw=archive.read('Data/Scripts.rxdata') if archive else (source/'Data/Scripts.rxdata').read_bytes()
  entries=read(raw)
- replacements,mapping=transform(entries,widescreen,high_refresh)
+ replacements,mapping=transform(entries,widescreen,high_refresh,custom_scripts)
  converted=write(entries,replacements)
  for item in source.rglob('*'):
   if item.is_symlink() or item.is_junction():raise MigrationError(f'Project links require explicit review: {item.relative_to(source)}')
- manifest={'format':'RGSSXP migration 1','engine':'RGSSXP 0.1.0','ruby':'4.0.7','data_encoding':'UTF-8','data_encoding_explicit':data_encoding=='UTF-8','source_archive':bool(archive),'result_scripts_path':script_path,'source_scripts_sha256':sha(raw),'result_scripts_sha256':sha(converted),'original_launcher_sha256':ORIGINAL_EXE,'runtime_sha256':sha(dll.read_bytes()),'scripts':mapping,'files':[],'removed_engine_files':[],'imported_saves':[],'limitations':['Stock XP script sources only; unreviewed scripts are rejected','Reviewed stock-XP validation scope; arbitrary games/plugins and pixel-identical rendering/audio are not certified','Original GPU execution time and GPU speedup remain unconfirmed']}
+ manifest={'format':'RGSSXP migration 1','engine':'RGSSXP 0.1.0','ruby':'4.0.7','data_encoding':'UTF-8','data_encoding_explicit':data_encoding=='UTF-8','source_archive':bool(archive),'result_scripts_path':script_path,'source_scripts_sha256':sha(raw),'result_scripts_sha256':sha(converted),'original_launcher_sha256':ORIGINAL_EXE,'runtime_sha256':sha(dll.read_bytes()),'scripts':mapping,'files':[],'removed_engine_files':[],'imported_saves':[],'custom_scripts':custom_scripts,'limitations':['Stock XP script sources are verified; custom scripts above Main are copied unchanged and unreviewed' if custom_scripts else 'Stock XP script sources only; unreviewed scripts are rejected','Reviewed stock-XP validation scope; arbitrary games/plugins and pixel-identical rendering/audio are not certified','Original GPU execution time and GPU speedup remain unconfirmed']}
  with tempfile.TemporaryDirectory(prefix=output.name+'.migrate-',dir=output.parent) as staging:
   project=Path(staging)/'project';project.mkdir()
   for item in sorted(source.rglob('*')):
@@ -248,10 +276,11 @@ def main():
  ap.add_argument('--ini-encoding',choices=['UTF-8','CP949','CP932'],help='Explicit source Game.ini encoding when it contains non-ASCII text without a BOM')
  ap.add_argument('--widescreen',action='store_true',help='Adapt reviewed stock UI/camera to 1280x720')
  ap.add_argument('--high-refresh',action='store_true',help='Convert reviewed stock timing to 120 Hz logic and selectable 40/60/120 FPS output')
+ ap.add_argument('--custom-scripts',action='store_true',help='XP only: keep user scripts placed between the stock scripts and Main unchanged (not combinable with --widescreen/--high-refresh)')
  a=ap.parse_args()
  try:
   engine=detect_engine(a.source,a.engine,a.ini_encoding)
-  manifest=migrate(a.source,a.output,a.dll or RUNTIME_BIN/('LunetileVXA.dll' if engine=='vxa' else 'Lunetile.dll'),a.ruby,a.data_encoding,a.ini_encoding,a.widescreen,a.high_refresh,engine)
+  manifest=migrate(a.source,a.output,a.dll or RUNTIME_BIN/('LunetileVXA.dll' if engine=='vxa' else 'Lunetile.dll'),a.ruby,a.data_encoding,a.ini_encoding,a.widescreen,a.high_refresh,engine,a.custom_scripts)
  except (MigrationError,OSError,ValueError,configparser.Error) as error:ap.exit(1,f'Migration stopped: {error}\n')
  print(f"Project copy created: {a.output}\n{len(manifest['scripts'])} scripts validated; {sum(bool(x['changes']) for x in manifest['scripts'])} entries changed; original files preserved")
 

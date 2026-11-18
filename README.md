@@ -159,6 +159,14 @@ python -B scripts/migrate_project.py "LOCAL_ORIGINAL_PROJECT" "NEW_PROJECT" --da
 
 변환기는 확인된 원본 `Game.exe` 해시와 엔진별 검토된 기본 스크립트만 허용합니다. 검토되지 않은 사용자 스크립트나 이벤트 Ruby 코드가 있으면 위치를 보고하고 중단합니다. 스크립트 ID·이름·순서, 변경 내용과 파일 해시는 출력의 `migration/manifest.json`에 기록합니다.
 
+XP 프로젝트의 사용자 스크립트(메시지·이동·오버레이 등)는 `--custom-scripts`로 유지할 수 있습니다. 기본 스크립트는 그대로 해시 검사하며, 마지막 기본 스크립트와 `Main` 사이에 둔 사용자 스크립트만 바이트 그대로 복사합니다. 사용자 스크립트는 기본 메서드를 덮어써 1280×720·120Hz 보정을 우회하므로 `--widescreen`·`--high-refresh`와 함께 쓸 수 없습니다.
+
+```powershell
+python -B scripts/migrate_project.py "LOCAL_ORIGINAL_PROJECT" "NEW_PROJECT" --custom-scripts
+```
+
+런타임은 Ruby 1.8에서 허용되던 `$game_map.valid? (x, y)`처럼 괄호 앞에 공백이 있는 다중 인자 호출을 Ruby 4 구문 오류가 난 줄에서만 공백을 제거해 실행하고, 수정한 줄을 `rgssxp.log`에 남깁니다. 원본 `Scripts.rxdata`는 바꾸지 않습니다. 와이드 화면·120Hz 프로젝트에 나중에 사용자 스크립트를 추가하면, 보정되지 않은 기본 메서드 재정의와 3배 빠르게 흐르는 프레임 카운터 경고를 같은 로그에 기록합니다.
+
 이전에 알려진 보조 DLL 연결은 `src/runtime/legacy_pacing.json`의 고정 인식 정보와 정확히 일치할 때만 제거합니다. 이 파일은 이전 연결 식별용이며 보조 DLL 구현은 포함하지 않습니다.
 
 ### 2. 변환한 프로젝트 실행하기

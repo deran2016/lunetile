@@ -67,6 +67,11 @@ bool ruby_failed(int status) {
     failed = true;
     return true;
 }
+VALUE log_text(VALUE, VALUE text) {
+    StringValue(text);
+    log_line(std::string(RSTRING_PTR(text), RSTRING_LEN(text)));
+    return Qnil;
+}
 VALUE inflate_source(VALUE, VALUE input) {
     StringValue(input);
     const uLong length = static_cast<uLong>(RSTRING_LEN(input));
@@ -112,6 +117,7 @@ VALUE evaluate_bootstrap(VALUE) {
     rb_eval_string(value_types);
     rb_eval_string(data_types);
     rb_eval_string(text_support);
+    rb_eval_string(script_compat_support);
     rb_eval_string(integer_map_support);
     init_bitmap();
     init_graphics();
@@ -144,6 +150,8 @@ module RGSSXP
     entries = Marshal.load(RGSSXP.read_file(path))
     raise TypeError, 'Scripts must be an Array' unless entries.is_a?(Array)
     $RGSS_SCRIPTS = entries
+    audit = nil
+    custom = []
     entries.each_with_index do |entry, index|
       unless entry.is_a?(Array) && entry.size == 3 && entry[0].is_a?(Integer) && entry[1].is_a?(String) && entry[2].is_a?(String)
         raise TypeError, "Invalid script entry #{index}"
@@ -151,7 +159,24 @@ module RGSSXP
       source = inflate(entry[2])
       source.force_encoding(Encoding::UTF_8)
       raise EncodingError, "Script #{index} requires explicit encoding migration" unless source.valid_encoding?
-      eval(source, TOPLEVEL_BINDING, "#{index}:#{entry[1]}", 1)
+      name = entry[1].dup.force_encoding(Encoding::UTF_8).scrub
+      file = "#{index}:#{name}"
+      if index == entries.size - 1 && audit
+        ScriptAudit.report(audit, custom).each { |line| RGSSXP.log(line) }
+        audit = nil
+      end
+      if ScriptAudit.custom?(name) && !source.empty?
+        audit ||= ScriptAudit.snapshot
+        custom << file
+      end
+      begin
+        eval(source, TOPLEVEL_BINDING, file, 1)
+      rescue SyntaxError => error
+        # A parse failure of this entry runs none of its code, so one repaired retry is safe.
+        raise unless error.path == file && (repaired = LegacySyntax.repair(source, file, error))
+        repaired[1].each { |edit| RGSSXP.log("Lunetile: script #{file} line #{edit[:line]}: removed space before '(' (Ruby 1.8 call syntax)") }
+        eval(repaired[0], TOPLEVEL_BINDING, file, 1)
+      end
     end
   end
 end
@@ -300,6 +325,7 @@ extern "C" void __cdecl RGSSInitialize(HMODULE) {
     rb_define_const(module, "DATA_ENCODING", rb_obj_freeze(rb_utf8_str_new_cstr(data_encoding.c_str())));
     rb_define_singleton_method(module, "inflate", RUBY_METHOD_FUNC(inflate_source), 1);
     rb_define_singleton_method(module, "decode_archive", RUBY_METHOD_FUNC(decode_archive), 2);
+    rb_define_singleton_method(module, "log", RUBY_METHOD_FUNC(log_text), 1);
     VALUE rtp = rb_ary_new();
     for (const auto& path : rtp_paths) {
         std::string bytes = utf8(path);

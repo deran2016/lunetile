@@ -1,6 +1,7 @@
 module Lunetile
   module Comfort
     PATH = 'Saves/Lunetile/comfort.json'
+    TRAILING_SAVE_OBJECTS = 32
     class << self
       attr_reader :error
       def installed?; !!@installed; end
@@ -25,7 +26,16 @@ module Lunetile
                  Game_Screen,Game_Actors,Game_Party,Game_Troop,Game_Map,Game_Player]
         raise ArgumentError, 'Invalid XP save objects' unless types.zip(values).all? { |type,value| value.is_a?(type) }
         raise ArgumentError, 'Invalid XP save metadata' unless values[1] >= 0 && values[0].all? { |v| v.is_a?(Array) && v.size == 2 && v[0].is_a?(String) && v[1].is_a?(Numeric) }
-        raise ArgumentError, 'Trailing XP save data' unless stream.eof?
+        # Custom scripts (for example AMS) append their own Marshal objects after the stock twelve.
+        extra = 0
+        until stream.eof?
+          raise ArgumentError, 'Too many trailing XP save objects' if (extra += 1) > TRAILING_SAVE_OBJECTS
+          begin
+            Marshal.load(stream)
+          rescue TypeError, EOFError, ArgumentError, NameError => failure
+            raise ArgumentError, "Invalid trailing XP save data (#{failure.class})"
+          end
+        end
         values
       ensure
         stream.pos = position if position

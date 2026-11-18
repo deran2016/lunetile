@@ -126,5 +126,27 @@ comfort_assert_error(RuntimeError) { f.transaction { $game_variables = nil; Grap
 raise 'Apply rollback failed' unless $game_variables.equal?(old_variables) && Graphics.frame_count == old_frame
 f.load(f.auto_path+'.bak1')
 raise 'Autosave recovery state' unless $game_variables[1] == 910
+unless f.vxa?
+  # AMS-style scripts append their own Marshal object after the stock twelve.
+  # Later restart phases expect the stock save generations, so restore them afterwards.
+  kept = Dir.glob('Saves/**/*').select { |path| File.file?(path) }.to_h { |path| [path, File.binread(path)] }
+  kept_variable = $game_variables[1]
+  class ComfortTrailingData; attr_accessor :value; end
+  Scene_Save.prepend(Module.new { def write_save_data(file); super; extra = ComfortTrailingData.new; extra.value = $comfort_trailing; Marshal.dump(extra, file); end })
+  Scene_Load.prepend(Module.new { def read_save_data(file); super; $comfort_trailing = Marshal.load(file).value; end })
+  $comfort_trailing = 'ams'
+  $game_variables[1] = 912
+  RGSSXP::Saves.write(manual) { |file| Scene_Save.allocate.write_save_data(file) }
+  raise "Trailing-object autosave failed #{f.error}" unless f.save_auto
+  $comfort_trailing = nil
+  f.load(f.auto_path)
+  raise 'Trailing save object lost' unless $comfort_trailing == 'ams' && $game_variables[1] == 912
+  stock = File.binread(manual)
+  comfort_assert_error(ArgumentError) { f.validate(stock + 'garbage') }
+  comfort_assert_error(ArgumentError) { f.validate(stock + Marshal.dump(0) * (Lunetile::Comfort::TRAILING_SAVE_OBJECTS + 1)) }
+  Dir.glob('Saves/**/*').each { |path| File.delete(path) if File.file?(path) && !kept.key?(path) }
+  kept.each { |path, bytes| File.binwrite(path, bytes) }
+  $game_variables[1] = kept_variable
+end
 File.write('comfort-result.json',JSON.generate({passed:true,engine:f.vxa? ? 'vxa' : 'xp',physical_gamepad:false}))
 File.write('runtime-complete.txt','comfort PASS,false,false')
