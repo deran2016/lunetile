@@ -1,16 +1,17 @@
 class ReferencePlane < RGSSXP::DisplayObject
-  attr_accessor :bitmap
+  def bitmap; @__bitmap; end
+  def bitmap=(value); @__bitmap = value; end
   def emit(commands)
-    return unless @bitmap && !@bitmap.disposed? && @zoom_x > 0 && @zoom_y > 0
-    area = @viewport ? @viewport.rect : Rect.new(0, 0, Graphics.width, Graphics.height)
-    w, h = @bitmap.width * @zoom_x, @bitmap.height * @zoom_y
-    start_x, start_y = area.x - @ox % w, area.y - @oy % h
+    return unless @__bitmap && !@__bitmap.disposed? && @__zoom_x > 0 && @__zoom_y > 0
+    area = @__viewport ? @__viewport.rect : Rect.new(0, 0, Graphics.width, Graphics.height)
+    w, h = @__bitmap.width * @__zoom_x, @__bitmap.height * @__zoom_y
+    start_x, start_y = area.x - @__ox % w, area.y - @__oy % h
     y = start_y
     while y < area.y + area.height
       x = start_x
       while x < area.x + area.width
-        RGSSXP.quad(commands, @bitmap, x, y, @bitmap.rect, zoom_x: @zoom_x, zoom_y: @zoom_y,
-          opacity: @opacity, blend: @blend_type, color: @color, tone: @tone, clip: area)
+        RGSSXP.quad(commands, @__bitmap, x, y, @__bitmap.rect, zoom_x: @__zoom_x, zoom_y: @__zoom_y,
+          opacity: @__opacity, blend: @__blend_type, color: @__color, tone: @__tone, clip: area)
         x += w
       end
       y += h
