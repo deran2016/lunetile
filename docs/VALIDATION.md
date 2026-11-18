@@ -1,5 +1,18 @@
 # 독립 저장소 분리 검증
 
+## 2026-11-18 XP 편집기 저장 후 Library 자동 복원
+
+RPG Maker XP 편집기는 저장할 때 `Game.ini`를 `Library=RGSS104E.dll`로 바꾸고 원본 DLL을 복사합니다. VX Ace의 `vxa_entry.rb`와 같은 방식으로 XP 진입 코드 `src/runtime/xp_entry.rb`를 추가했습니다.
+
+- 변환기는 진입 코드를 첫 기본 스크립트 `Game_Temp` 앞에 넣습니다. `Game_Temp`는 어떤 변환 규칙도 받지 않아 원본 Ruby 1.8이 그대로 해석할 수 있고, 뒤의 변환된 스크립트보다 먼저 실행됩니다. 진입 코드는 Ruby 1.8 문법만 사용합니다.
+- 원본 엔진에서만(`RGSSXP` 미정의) `GetModuleFileNameW`로 실행 파일 경로를 얻어 같은 이름의 INI에 `WritePrivateProfileStringW`로 `Library=Lunetile.dll`을 쓰고, 다시 읽어 일치할 때만 `ShellExecuteW`로 `debug`·`btest` 인자를 유지해 재실행합니다. 불일치 시 재실행 반복 대신 오류를 냅니다.
+- 이전 변환본용 `lunetile-xp-editor-fix.zip`(진입 코드와 안내문)을 릴리스 자산에 추가했습니다. 맨 위에 수동 추가한 항목은 사용자 스크립트 감사 대상에서 제외합니다.
+- 검사: `tests/test_xp_editor_fix.py` 5개(Win32API 대역으로 일반·debug·btest·Lunetile 무동작·DLL 없음·쓰기 실패·재확인 불일치·실행 실패, Ruby 1.9 문법 금지, 변환 주입, 감사 제외, ZIP 구성). Python 단위 검사 224개 통과, `verify_runtime.py --mode quick --all` 통과(159.54초, 35개 프로세스).
+- 실제 원본 실행: template-xp 변환본에 로컬 `RGSS104E.dll`을 두고 `Library=RGSS104E.dll`로 바꾼 뒤 `Game.exe`, `Game.exe debug`, `Game.exe btest`를 실행했습니다. 세 경우 모두 `Game.ini`가 `Library=Lunetile.dll`로 복원되고, 원래 프로세스는 종료 코드 0으로 끝났으며, 같은 인자로 재실행된 프로세스가 `Lunetile.dll`을 로드했습니다. btest 재실행본은 템플릿에 전투 테스트 데이터가 없어 곧 종료되며, Lunetile로 직접 실행해도 같습니다.
+- XP DLL `6014a986f5a5…` (SHA-256 `6014A986F5A5605449443C7B090E129F8601D37267C81F24616B6DB3E679220B`).
+
+RPG Maker XP 편집기에서 직접 저장·테스트 플레이하는 과정은 자동화하지 않았습니다. 원본 DLL은 로컬 검사에만 사용했고 저장소·배포물에 포함하지 않습니다.
+
 ## 2026-11-18 XP 사용자 스크립트 호환 (alpha.16 제보)
 
 alpha.16에서 변환 후 사용자 스크립트를 다시 넣은 XP 프로젝트(1280×720·stock120)가 두 원인으로 멈췄습니다. 8방향 이동 스크립트의 Ruby 1.8 호출 `$game_map.valid? (x, y)`는 Ruby 4 구문 오류였고, AMS가 저장 끝에 붙이는 `$ams` Marshal 객체는 `Comfort.validate_xp`가 `Trailing XP save data`로 거부했습니다.

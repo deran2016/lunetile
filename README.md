@@ -95,7 +95,9 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 | XP | `template-xp/` | `lunetile-template-xp-windows-x86.zip` | `lunetile-template-xp-diagnostics.zip` |
 | VX Ace | `template-vxa/` | `lunetile-template-vxa-windows-x86.zip` | `lunetile-template-vxa-diagnostics.zip` |
 
-[alpha.17 Release](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.17)에서 위 표의 엔진에 맞는 게임 ZIP과 `SHA256SUMS.txt`를 받습니다. 새 폴더에 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 프로젝트와 새 DLL이 들어 있으므로 Python·별도 Ruby 설치나 수동 변환이 필요하지 않습니다. 변경 내용은 [alpha.17 설명](docs/releases/v0.1.0-alpha.17.md)(사용자 스크립트 호환)과 [alpha.16 설명](docs/releases/v0.1.0-alpha.16.md)(조작·자동 저장)을 참고하세요.
+[alpha.18 Release](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.18)에서 위 표의 엔진에 맞는 게임 ZIP과 `SHA256SUMS.txt`를 받습니다. 새 폴더에 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 프로젝트와 새 DLL이 들어 있으므로 Python·별도 Ruby 설치나 수동 변환이 필요하지 않습니다. 변경 내용은 [alpha.18 설명](docs/releases/v0.1.0-alpha.18.md)(XP 에디터 저장 후 자동 복원), [alpha.17 설명](docs/releases/v0.1.0-alpha.17.md)(사용자 스크립트 호환)과 [alpha.16 설명](docs/releases/v0.1.0-alpha.16.md)(조작·자동 저장)을 참고하세요.
+
+RPG Maker XP 편집기에서 변환본을 저장하면 `Game.ini`가 `Library=RGSS104E.dll`로 바뀝니다. 새 변환기로 변환한 XP 프로젝트는 첫 스크립트(`Game_Temp`) 앞의 진입 코드가 원본 엔진 실행을 감지해 `Library=Lunetile.dll`로 복원하고 같은 인자(`debug`·`btest`)로 `Game.exe`를 한 번 다시 실행합니다. 이전 변환본은 `lunetile-xp-editor-fix.zip`의 `LunetileEditorFix.rb`를 스크립트 편집기 맨 위 새 항목에 붙여 넣으세요.
 
 기존 변환본의 런타임만 갱신하려면 백업 후 `lunetile-xp-speed-fix.zip` 또는 `lunetile-vxa-speed-fix.zip`의 해당 DLL을 교체합니다. **새 조작·자동 저장·복구 기능 전체는 DLL 교체만으로 설치되지 않습니다.** 최신 변환기로 원본을 새 폴더에 변환하고 같은 엔진의 저장을 별도 복사해 확인하세요. [업데이트 안내](docs/CONTROLS_SAVES.md#기존-변환본-업데이트)
 
@@ -107,7 +109,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 - 개인 세이브·로그·원본 RGSS DLL은 배포하지 않습니다. 새 저장은 XP `Saves/RGSSXP/`, VX Ace `Saves/LunetileVXA/`에 생성됩니다.
 - 게임 ZIP에는 프로젝트 파일·새 DLL·짧은 실행 안내·라이선스 고지만 포함합니다. 시작 맵은 원본의 지형과 시작 위치를 유지하며 **40×23칸(1280×736픽셀)**으로 확장됩니다.
 - 검증 결과·DLL 정보·변환 및 맵 확장 기록·파일별 해시·의존성 정보와 Ruby 패치는 별도 **`lunetile-template-xp-diagnostics.zip`**에 있습니다. 게임 실행에는 필요하지 않습니다. 개발 문서와 과거 기록은 이 저장소에서 제공합니다.
-- `SHA256SUMS.txt`에는 XP·VX Ace 실행/진단 ZIP 및 VX Ace 편집기 복구 ZIP의 해시가 있습니다. 템플릿 파일에 엔진의 MIT 라이선스가 새로 적용되는 것은 아닙니다.
+- `SHA256SUMS.txt`에는 XP·VX Ace 실행/진단 ZIP 및 XP·VX Ace 편집기 복구 ZIP의 해시가 있습니다. 템플릿 파일에 엔진의 MIT 라이선스가 새로 적용되는 것은 아닙니다.
 - `Get-FileHash lunetile-template-xp-windows-x86.zip -Algorithm SHA256`으로 다운로드 해시를 비교할 수 있습니다.
 
 [Windows build and release](https://github.com/deran2016/lunetile/actions/workflows/release.yml)는 `main` 푸시 또는 수동 실행 시 빌드·검사·템플릿 변환 후 ZIP을 아티팩트로 보관합니다. **새 `v*` 태그 푸시 시 같은 결과를 GitHub 사전 릴리스로 자동 게시**합니다.

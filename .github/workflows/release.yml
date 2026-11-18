@@ -73,7 +73,7 @@ jobs:
         run: |
           python -X utf8 -B scripts/package_runtime.py build/ci-verification build/lunetile-windows-x86
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
-          python -X utf8 -B scripts/package_template.py template-xp build/lunetile-windows-x86 build/lunetile-template-xp-windows-x86 build/lunetile-template-xp-diagnostics --runtime-patch build/lunetile-xp-speed-fix.zip
+          python -X utf8 -B scripts/package_template.py template-xp build/lunetile-windows-x86 build/lunetile-template-xp-windows-x86 build/lunetile-template-xp-diagnostics --runtime-patch build/lunetile-xp-speed-fix.zip --editor-fix build/lunetile-xp-editor-fix.zip
           if ($LASTEXITCODE -ne 0) { throw 'Template packaging failed' }
           python -X utf8 -B scripts/package_template_vxa.py template-vxa build/runtime-native/bin/Release build/lunetile-template-vxa-windows-x86 build/lunetile-template-vxa-diagnostics --editor-fix build/lunetile-vxa-editor-fix.zip --runtime-patch build/lunetile-vxa-speed-fix.zip
           if ($LASTEXITCODE -ne 0) { throw 'VX Ace template packaging failed' }
@@ -82,8 +82,8 @@ jobs:
           Compress-Archive -Path build/lunetile-template-xp-diagnostics -DestinationPath dist/lunetile-template-xp-diagnostics.zip
           Compress-Archive -Path build/lunetile-template-vxa-windows-x86 -DestinationPath dist/lunetile-template-vxa-windows-x86.zip
           Compress-Archive -Path build/lunetile-template-vxa-diagnostics -DestinationPath dist/lunetile-template-vxa-diagnostics.zip
-          Copy-Item build/lunetile-vxa-editor-fix.zip,build/lunetile-vxa-speed-fix.zip,build/lunetile-xp-speed-fix.zip dist/
-          $checksums = foreach ($asset in @('lunetile-template-xp-windows-x86.zip','lunetile-template-xp-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip','lunetile-vxa-speed-fix.zip','lunetile-xp-speed-fix.zip')) {
+          Copy-Item build/lunetile-vxa-editor-fix.zip,build/lunetile-vxa-speed-fix.zip,build/lunetile-xp-speed-fix.zip,build/lunetile-xp-editor-fix.zip dist/
+          $checksums = foreach ($asset in @('lunetile-template-xp-windows-x86.zip','lunetile-template-xp-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip','lunetile-vxa-speed-fix.zip','lunetile-xp-speed-fix.zip','lunetile-xp-editor-fix.zip')) {
             $hash = (Get-FileHash (Join-Path dist $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $asset"
           }
@@ -153,16 +153,16 @@ jobs:
           cat > release-notes.md <<EOF
           Experimental Windows x86 build of Lunetile. Source commit: $SOURCE_COMMIT
 
-          Fixes XP user scripts added after conversion. Window, Sprite, Plane, Viewport and Tilemap no longer share @x/@y/@opacity-style state with script subclasses (XP and VX Ace), so message scripts such as AMS draw text and keep the window in place.
-          XP runtime repairs Ruby 1.8 calls like valid? (x, y) on lines that fail to parse and logs each edit. XP saves accept extra Marshal objects appended by scripts; manual saves, autosaves and recovery keep them.
-          XP converter adds --custom-scripts to keep user scripts above Main byte for byte. It cannot be combined with --widescreen or --high-refresh because those adaptations cover stock scripts only. Widescreen/120 Hz projects log custom overrides of adapted stock methods.
+          XP projects keep running on Lunetile after a save in the RPG Maker XP editor. The editor resets Game.ini to Library=RGSS104E.dll; converted projects now carry an entry block before Game_Temp that, under the original runtime only, restores Library=Lunetile.dll, verifies the write and restarts Game.exe once with the same debug/btest flag. Editor test play therefore runs on Lunetile.
+          New lunetile-xp-editor-fix.zip provides that block for projects converted with alpha.17 or earlier.
+          alpha.17 fixes remain: XP user scripts added after conversion (display state isolation, Ruby 1.8 call repair, extra save objects) and the --custom-scripts converter option.
 
           Download lunetile-template-xp-windows-x86.zip or lunetile-template-vxa-windows-x86.zip and run Game.exe. Requires Windows 11 x64, Visual C++ x86 runtime and the matching engine RTP (not bundled).
-          Existing converted XP projects: back up the project and Saves, then replace Lunetile.dll from lunetile-xp-speed-fix.zip. Saving in the RPG Maker editor resets Game.ini Library to RGSS104E.dll; restore Library=Lunetile.dll and test with Game.exe.
-          Read docs/releases/v0.1.0-alpha.17.md in the source repository for behavior, upgrade instructions and validation boundaries.
+          Existing converted XP projects: back up the project and Saves, then replace Lunetile.dll from lunetile-xp-speed-fix.zip. Saving in the RPG Maker XP editor resets Game.ini Library to RGSS104E.dll; newly converted projects restore Library=Lunetile.dll and restart Game.exe automatically. For older conversions, add LunetileEditorFix.rb from lunetile-xp-editor-fix.zip as the first script entry.
+          Read docs/releases/v0.1.0-alpha.18.md in the source repository for behavior, upgrade instructions and validation boundaries.
 
           CI checks both launcher ABI contracts, existing regression coverage and actual XP/VXA controls/save/recovery/restart scenarios. SHA256SUMS.txt verifies the ZIPs.
           Arbitrary user scripts, their 120 Hz pacing and 1280x720 layout, and complete campaigns are not certified.
           EOF
-          gh release create "$RELEASE_TAG" lunetile-template-xp-windows-x86.zip lunetile-template-xp-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip lunetile-vxa-editor-fix.zip lunetile-vxa-speed-fix.zip lunetile-xp-speed-fix.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" lunetile-template-xp-windows-x86.zip lunetile-template-xp-diagnostics.zip lunetile-template-vxa-windows-x86.zip lunetile-template-vxa-diagnostics.zip lunetile-vxa-editor-fix.zip lunetile-vxa-speed-fix.zip lunetile-xp-speed-fix.zip lunetile-xp-editor-fix.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lunetile $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest=false
