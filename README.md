@@ -95,7 +95,7 @@ Lunetile은 RPG Maker의 공식 제품이 아니며 해당 제품의 개발사·
 | XP | `template-xp/` | `lunetile-template-xp-windows-x86.zip` | `lunetile-template-xp-diagnostics.zip` |
 | VX Ace | `template-vxa/` | `lunetile-template-vxa-windows-x86.zip` | `lunetile-template-vxa-diagnostics.zip` |
 
-[alpha.16 Release](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.16)에서 위 표의 엔진에 맞는 게임 ZIP과 `SHA256SUMS.txt`를 받습니다. 새 폴더에 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 프로젝트와 새 DLL이 들어 있으므로 Python·별도 Ruby 설치나 수동 변환이 필요하지 않습니다. 변경 내용은 [alpha.16 설명](docs/releases/v0.1.0-alpha.16.md)을 참고하세요.
+[alpha.17 Release](https://github.com/deran2016/lunetile/releases/tag/v0.1.0-alpha.17)에서 위 표의 엔진에 맞는 게임 ZIP과 `SHA256SUMS.txt`를 받습니다. 새 폴더에 풀고 **`Game.exe`를 실행**하세요. 이미 변환된 프로젝트와 새 DLL이 들어 있으므로 Python·별도 Ruby 설치나 수동 변환이 필요하지 않습니다. 변경 내용은 [alpha.17 설명](docs/releases/v0.1.0-alpha.17.md)(사용자 스크립트 호환)과 [alpha.16 설명](docs/releases/v0.1.0-alpha.16.md)(조작·자동 저장)을 참고하세요.
 
 기존 변환본의 런타임만 갱신하려면 백업 후 `lunetile-xp-speed-fix.zip` 또는 `lunetile-vxa-speed-fix.zip`의 해당 DLL을 교체합니다. **새 조작·자동 저장·복구 기능 전체는 DLL 교체만으로 설치되지 않습니다.** 최신 변환기로 원본을 새 폴더에 변환하고 같은 엔진의 저장을 별도 복사해 확인하세요. [업데이트 안내](docs/CONTROLS_SAVES.md#기존-변환본-업데이트)
 
