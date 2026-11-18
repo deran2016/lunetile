@@ -165,7 +165,7 @@ module RGSSXP
         ScriptAudit.report(audit, custom).each { |line| RGSSXP.log(line) }
         audit = nil
       end
-      if ScriptAudit.custom?(name) && !source.empty?
+      if ScriptAudit.custom?(name) && !source.empty? && !ScriptAudit.editor_fix?(source)
         audit ||= ScriptAudit.snapshot
         custom << file
       end

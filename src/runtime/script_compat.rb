@@ -182,6 +182,13 @@ module RGSSXP
       !STOCK_NAMES.include?(name)
     end
 
+    # The manually installed editor fix (lunetile-xp-editor-fix.zip) sits above the stock scripts.
+    EDITOR_FIX = '# Lunetile XP editor fix:'
+
+    def self.editor_fix?(source)
+      source.start_with?(EDITOR_FIX)
+    end
+
     def self.profiles
       return [] if defined?(LunetileVXA)
       result = []

@@ -113,6 +113,10 @@ def transform(entries,widescreen=False,high_refresh=False,custom_scripts=False):
   if high_refresh:
    from high_refresh import adapt
    text,timing_edits=adapt(name,text.replace('\r\n','\n'));edits.extend(timing_edits)
+  if name=='Game_Temp':
+   # The first entry runs before any converted script that original RGSS 1.8 might fail to parse.
+   text=(ROOT/'src/runtime/xp_entry.rb').read_text(encoding='utf-8')+text.replace('\r\n','\n')
+   edits.append({'line':1,'reason':'restore Lunetile.dll after RPG Maker XP editor save'})
   if name=='Main':
    text='Lunetile.install_stock\n'+text
    edits.append({'line':1,'reason':'stock controls autosave and recovery menus'})
