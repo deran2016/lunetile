@@ -14,9 +14,8 @@ def source(project,engine):
  ext='rxdata' if engine=='xp' else 'rvdata2'
  entries=read((project/f'Data/Scripts.{ext}').read_bytes())
  stock=read((ROOT/f'template-{engine}/Data/Scripts.{ext}').read_bytes())
- original=next(e.source() for e in stock if e.name==b'Main')
- if engine=='xp':original=original.replace(b'\r\n',b'\n')
- main=next(e.source() for e in entries if e.name==b'Main')
+ original=next(e.source() for e in stock if e.name==b'Main').replace(b'\r\r\n',b'\n').replace(b'\r\n',b'\n')
+ main=next(e.source() for e in entries if e.name==b'Main').replace(b'\r\r\n',b'\n').replace(b'\r\n',b'\n')
  if not main.endswith(original):raise ValueError('Reviewed template Main suffix missing')
  definitions=b'\n'.join(e.source().replace(b'\r\r\n',b'\n') for e in entries if e.name!=b'Main')
  prefix=definitions+b'\n'+main[:-len(original)]
