@@ -10,7 +10,7 @@ bitmaps.each_with_index { |b,k| (b.height/16).times { |y| (b.width/16).times { |
 tile.map_data=map;tile.priorities=priorities;tile.flash_data=flash;tile.tileset=bitmaps[0];tile.autotiles.replace(bitmaps[1,7])
 sprite=Sprite.new(viewport);sprite.bitmap=bitmaps[0];sprite.src_rect.set(16,32,32,32);sprite.z=64;sprite.x=30;sprite.y=0;sprite.opacity=127
 normalize=lambda do |layers,node|
- layers.map { |layer| [layer.z,layer.commands.flat_map { |c| c[0]==4 ? RGSSXP.__expand_xp_tile_batch(c) : [c] }.map { |c| c.map { |v| v.is_a?(Color) ? [v.red,v.green,v.blue,v.alpha] : v.equal?(node.instance_variable_get(:@flash_bitmap)) ? :flash : v } }] }
+ layers.map { |layer| [layer.z,layer.commands.flat_map { |c| c[0]==4 ? RGSSXP.__expand_xp_tile_batch(c) : [c] }.map { |c| c.map { |v| v.is_a?(Color) ? [v.red,v.green,v.blue,v.alpha] : v.equal?(node.instance_variable_get(:@__flash_bitmap)) ? :flash : v } }] }
 end
 capture=lambda do |layers|
  out=[[1,viewport.rect]]
@@ -21,7 +21,7 @@ end
 comparisons=0
 compare=lambda do |pixels=true|
  reference.map_data=tile.map_data;reference.priorities=tile.priorities;reference.flash_data=tile.flash_data;reference.tileset=tile.tileset;reference.autotiles.replace(tile.autotiles)
- reference.ox=tile.ox;reference.oy=tile.oy;reference.instance_variable_set(:@updates,tile.instance_variable_get(:@updates));reference.instance_variable_set(:@serial,tile.serial)
+ reference.ox=tile.ox;reference.oy=tile.oy;reference.instance_variable_set(:@__updates,tile.instance_variable_get(:@__updates));reference.instance_variable_set(:@__serial,tile.serial)
  a,b=tile.layers,reference.layers
  check(normalize.call(a,tile)==normalize.call(b,reference),'XP command geometry/order mismatch')
  if pixels
@@ -31,7 +31,7 @@ end
 7.times do |slot|
  6.times { |y| 8.times { |x| map[x,y,0]=48*(slot+1)+y*8+x;map[x,y,1]=384+(x+y)%32;map[x,y,2]=0;flash[x,y]=(x==y ? 0xa3f : 0) } }
  3.times do |phase|
-  tile.instance_variable_set(:@updates,phase*16);tile.ox=phase*17-33;tile.oy=phase*9-65
+  tile.instance_variable_set(:@__updates,phase*16);tile.ox=phase*17-33;tile.oy=phase*9-65
   priorities[384]=1;priorities[385]=31;priorities[386]=2
   compare.call
  end
@@ -39,8 +39,8 @@ end
 # Single-row strips, changing bitmap dimensions, negative/loop scroll and repeated aliases.
 tile.autotiles[0]=Bitmap.new(96,32);tile.autotiles[0].fill_rect(0,0,96,32,Color.new(19,87,133,117))
 tile.map_data=map=Table.new(2,1,3);tile.flash_data=flash=Table.new(2,1);map[0,0,0]=48;map[1,0,0]=49;flash[0,0]=0xf25
-[0,16,32,48].each { |u| tile.instance_variable_set(:@updates,u);tile.ox=-65+u;compare.call }
-cache=tile.instance_variable_get(:@xp_tile_cache);check(cache,'XP cache absent')
+[0,16,32,48].each { |u| tile.instance_variable_set(:@__updates,u);tile.ox=-65+u;compare.call }
+cache=tile.instance_variable_get(:@__xp_tile_cache);check(cache,'XP cache absent')
 before=cache.stats;tile.layers;tile.layers;check(cache.stats[0]==before[0],'stationary map reread')
 tile.ox+=1;tile.layers;check(cache.stats[0]==before[0],'pixel scroll reread')
 # Use a larger map to prove one row/column and cell edits.
@@ -56,7 +56,7 @@ priorities[385]=4;compare.call
 map.send(:initialize_copy,map.clone);compare.call;map.resize(41,31,3);compare.call
 tile.map_data=Marshal.load(Marshal.dump(map));compare.call
 other=Tilemap.new(viewport);other.map_data=tile.map_data;other.priorities=priorities;other.tileset=bitmaps[0];other.layers
-c2=other.instance_variable_get(:@xp_tile_cache);a,b=cache.stats,c2.stats;tile.map_data[2,2,0]=399;tile.layers;other.layers
+c2=other.instance_variable_get(:@__xp_tile_cache);a,b=cache.stats,c2.stats;tile.map_data[2,2,0]=399;tile.layers;other.layers
 check(cache.stats[0]-a[0]==1&&c2.stats[0]-b[0]==1,'shared table journal');other.dispose
 bitmaps[0].set_pixel(0,0,Color.new(255,0,0,30));compare.call
 tile.autotiles[1].dispose;compare.call

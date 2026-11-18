@@ -65,7 +65,7 @@ frames.times do
   timing = Graphics.__timings
   if timing[8] != sequence
     native << timing[0]
-    cache_times << tilemaps.sum { |tile| tile.instance_variable_get(:@cache_prepare_ms).to_f }
+    cache_times << tilemaps.sum { |tile| tile.instance_variable_get(:@__cache_prepare_ms).to_f }
     if Graphics.respond_to?(:__render_parts)
       parsed = Graphics.__render_parts[0]
       parse << parsed
@@ -101,7 +101,7 @@ result = {seconds:elapsed,logic_fps:frames/elapsed,present_fps:stats[1]/elapsed,
   command_ms:summary.call($command_times),parse_ms:summary.call(parse),combined_ms:summary.call(combined),total_ms:summary.call(total),submit_ms:summary.call(native),gpu_ms:summary.call(gpu),gpu_samples:gpu.size,
   cache_prepare_ms:summary.call(cache_times),tile_reference_quads:tile_reference_quads,
   allocated_per_present:allocated.to_f/stats[1],gc_ms:gc_ms,
-  tile_caches:RGSSXP.instance_variable_get(:@nodes).keys.grep(Tilemap).filter_map { |tile| (tile.instance_variable_get(:@tile_cache)||tile.instance_variable_get(:@xp_tile_cache))&.stats },
+  tile_caches:RGSSXP.instance_variable_get(:@nodes).keys.grep(Tilemap).filter_map { |tile| (tile.instance_variable_get(:@__tile_cache)||tile.instance_variable_get(:@__xp_tile_cache))&.stats },
   parse_storage:parse_storage.empty? ? nil : {used_bytes:parse_storage.map { |v| v[0] }.max,reserved_bytes:parse_storage.map { |v| v[1] }.max,tile_used_bytes:parse_storage.map { |v| v[2] }.max,tile_reserved_bytes:parse_storage.map { |v| v[3] }.max,expanded:parse_storage.map { |v| v[4] }.max,scene_ms:summary.call(parse_storage.map { |v| v[5] }),present_ms:summary.call(parse_storage.map { |v| v[6] })},
   map_size:[$game_map.width,$game_map.height],moving:FPS_MOVING,render_rate:Graphics.render_rate}
 if batch_frames > 0

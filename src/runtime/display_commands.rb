@@ -32,7 +32,7 @@ module RGSSXP
         [node.z,0,node.serial]
       else
         node.check_live
-        [node.instance_variable_get(:@z),node.is_a?(Sprite) ? node.instance_variable_get(:@y) : 0,node.serial]
+        [node.instance_variable_get(:@__z),node.is_a?(Sprite) ? node.instance_variable_get(:@__y) : 0,node.serial]
       end
     end
   end

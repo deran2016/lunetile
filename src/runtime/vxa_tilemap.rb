@@ -1,7 +1,8 @@
 # RGSS3 tile IDs and quarter coordinates (32px cells, 16px quarters).
 class Tilemap
-  attr_accessor :flags
-  attr_reader :bitmaps
+  def flags; @__flags; end
+  def flags=(value); @__flags = value; end
+  def bitmaps; @__bitmaps; end
   FLOOR = [
     [[2,4],[1,4],[2,3],[1,3]],[[2,0],[1,4],[2,3],[1,3]],
     [[2,4],[3,0],[2,3],[1,3]],[[2,0],[3,0],[2,3],[1,3]],
@@ -40,10 +41,10 @@ class Tilemap
   alias vxa_initialize initialize
   def initialize(viewport = nil)
     vxa_initialize(viewport)
-    @bitmaps = Array.new(9)
-    @flags = nil
-    @tile_shapes = {}
-    @animated_shapes = {}
+    @__bitmaps = Array.new(9)
+    @__flags = nil
+    @__tile_shapes = {}
+    @__animated_shapes = {}
   end
   def tile_quad(commands,bitmap,x,y,sx,sy,w,h)
     return unless bitmap && !bitmap.disposed?
@@ -51,20 +52,20 @@ class Tilemap
   end
   def draw_tile(commands,id,x,y)
     return unless id && id > 0 && id < 8192
-    table_flag = id.between?(2816,4351) && @flags && (@flags[id].to_i & 0x80) != 0
+    table_flag = id.between?(2816,4351) && @__flags && (@__flags[id].to_i & 0x80) != 0
     key = id + (table_flag ? 8192 : 0)
     if id.between?(2048,2815)
-      phase = @updates/30
-      if @tile_phase != phase
-        @animated_shapes.clear
-        @tile_phase = phase
+      phase = @__updates/30
+      if @__tile_phase != phase
+        @__animated_shapes.clear
+        @__tile_phase = phase
       end
-      cache = @animated_shapes
+      cache = @__animated_shapes
     else
-      cache = @tile_shapes
+      cache = @__tile_shapes
     end
     sheet,parts = cache[key] ||= tile_shape(id,table_flag)
-    bitmap = @bitmaps[sheet]
+    bitmap = @__bitmaps[sheet]
     return unless bitmap && !bitmap.disposed?
     RGSSXP.__tile_quads(commands,bitmap,x,y,parts)
   end
@@ -81,7 +82,7 @@ class Tilemap
     table = FLOOR
     if id < 2816
       sheet = 0
-      water = [0,1,2,1][@updates/30%4]
+      water = [0,1,2,1][@__updates/30%4]
       if kind < 4
         bx = kind < 2 ? water*2 : 6
         by = kind%2*3
@@ -91,7 +92,7 @@ class Tilemap
           bx += water*2
         else
           bx += 6
-          by += @updates/30%3
+          by += @__updates/30%3
           table = WATERFALL
         end
       end
@@ -119,11 +120,11 @@ class Tilemap
     [sheet,parts]
   end
   def legacy_layers
-    map,flags = @map_data,@flags
+    map,flags = @__map_data,@__flags
     return [] unless map && map.xsize > 0 && map.ysize > 0 && visible
     rect = viewport ? viewport.rect : Rect.new(0,0,Graphics.width,Graphics.height)
     vx,vy = viewport ? [viewport.ox,viewport.oy] : [0,0]
-    ox,oy = @ox+vx,@oy+vy
+    ox,oy = @__ox+vx,@__oy+vy
     first_x,first_y = ox.div(32),oy.div(32)
     width,height,levels = map.xsize,map.ysize,[3,map.zsize].min
     left,top,columns,rows = rect.x,rect.y,(rect.width+31)/32+1,(rect.height+31)/32+1
@@ -151,18 +152,18 @@ class Tilemap
                 !(id.between?(2816,4351) && (flags[id].to_i & 0x80) != 0) && map[mx,my,0] < 4352
               kind,shape = (above-2048).divmod(48)
               FLOOR[shape][2,2].each_with_index do |(qx,qy),q|
-                tile_quad(lower,@bitmaps[1],x+q*16,y,(kind%8*4+qx)*16,((kind/8-2)*6+qy)*16+8,16,8)
+                tile_quad(lower,@__bitmaps[1],x+q*16,y,(kind%8*4+qx)*16,((kind/8-2)*6+qy)*16+8,16,8)
               end
             end
           end
           if level == 1 && shadows
             shadow = map[mx,my,3] & 15
             if shadow != 0
-              unless @vxa_shadow
-                @vxa_shadow = Bitmap.new(16,16)
-                @vxa_shadow.fill_rect(0,0,16,16,Color.new(0,0,0,128))
+              unless @__vxa_shadow
+                @__vxa_shadow = Bitmap.new(16,16)
+                @__vxa_shadow.fill_rect(0,0,16,16,Color.new(0,0,0,128))
               end
-              4.times { |q| tile_quad(lower,@vxa_shadow,x+q%2*16,y+q/2*16,0,0,16,16) if shadow & (1<<q) != 0 }
+              4.times { |q| tile_quad(lower,@__vxa_shadow,x+q%2*16,y+q/2*16,0,0,16,16) if shadow & (1<<q) != 0 }
             end
           end
           level += 1
@@ -175,10 +176,10 @@ class Tilemap
   end
   alias vxa_dispose dispose
   def dispose
-    @tile_cache.dispose if @tile_cache
-    @vxa_shadow.dispose if @vxa_shadow && !@vxa_shadow.disposed?
-    @tile_shapes.clear
-    @animated_shapes.clear
+    @__tile_cache.dispose if @__tile_cache
+    @__vxa_shadow.dispose if @__vxa_shadow && !@__vxa_shadow.disposed?
+    @__tile_shapes.clear
+    @__animated_shapes.clear
     vxa_dispose
   end
   CACHE_TABLE_READERS = %i[[] xsize ysize zsize].to_h { |name| [name,Table.instance_method(name)] }.freeze
@@ -188,29 +189,29 @@ class Tilemap
     value.instance_of?(Table) && CACHE_TABLE_READERS.all? { |name,original| value.method(name).unbind == original }
   end
   def layers
-    return legacy_layers unless native_table?(@map_data) && (@flags.nil? || native_table?(@flags)) &&
-      @bitmaps.instance_of?(Array) && @bitmaps.size == 9 && @bitmaps.all? { |bitmap| bitmap.nil? || bitmap.instance_of?(Bitmap) } &&
+    return legacy_layers unless native_table?(@__map_data) && (@__flags.nil? || native_table?(@__flags)) &&
+      @__bitmaps.instance_of?(Array) && @__bitmaps.size == 9 && @__bitmaps.all? { |bitmap| bitmap.nil? || bitmap.instance_of?(Bitmap) } &&
       method(:tile_shape).unbind == CACHE_SHAPE && method(:draw_tile).unbind == CACHE_DRAW
-    return [] unless @map_data.xsize > 0 && @map_data.ysize > 0 && visible
+    return [] unless @__map_data.xsize > 0 && @__map_data.ysize > 0 && visible
     rect = viewport ? viewport.rect : Rect.new(0,0,Graphics.width,Graphics.height)
-    ox,oy = @ox+(viewport ? viewport.ox : 0),@oy+(viewport ? viewport.oy : 0)
+    ox,oy = @__ox+(viewport ? viewport.ox : 0),@__oy+(viewport ? viewport.oy : 0)
     return legacy_layers if rect.width<0 || rect.height<0
-    @tile_cache ||= RGSSXP::TileCache.new
+    @__tile_cache ||= RGSSXP::TileCache.new
     cache_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    keys = @tile_cache.prepare(@map_data,@flags,ox.div(32),oy.div(32),(rect.width+31)/32+1,(rect.height+31)/32+1,@updates/30)
+    keys = @__tile_cache.prepare(@__map_data,@__flags,ox.div(32),oy.div(32),(rect.width+31)/32+1,(rect.height+31)/32+1,@__updates/30)
     return legacy_layers unless keys
     keys.each do |key|
       sheet,parts = tile_shape(key%8192,key>=8192)
-      @tile_cache.shape(key,sheet,parts)
+      @__tile_cache.shape(key,sheet,parts)
     end
-    @tile_cache.commit
-    @cache_prepare_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC)-cache_started)*1000
-    unless @vxa_shadow && !@vxa_shadow.disposed?
-      @vxa_shadow = Bitmap.new(16,16)
-      @vxa_shadow.fill_rect(0,0,16,16,Color.new(0,0,0,128))
+    @__tile_cache.commit
+    @__cache_prepare_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC)-cache_started)*1000
+    unless @__vxa_shadow && !@__vxa_shadow.disposed?
+      @__vxa_shadow = Bitmap.new(16,16)
+      @__vxa_shadow.fill_rect(0,0,16,16,Color.new(0,0,0,128))
     end
-    images = @bitmaps+[@vxa_shadow]
-    [Layer.new(self,0,[[3,@tile_cache,0,images,rect.x-ox,rect.y-oy]]),
-     Layer.new(self,200,[[3,@tile_cache,1,images,rect.x-ox,rect.y-oy]])]
+    images = @__bitmaps+[@__vxa_shadow]
+    [Layer.new(self,0,[[3,@__tile_cache,0,images,rect.x-ox,rect.y-oy]]),
+     Layer.new(self,200,[[3,@__tile_cache,1,images,rect.x-ox,rect.y-oy]])]
   end
 end

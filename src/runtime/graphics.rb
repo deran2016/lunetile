@@ -127,35 +127,38 @@ module RGSSXP
 end
 
 class RGSSXP::DisplayObject
-  attr_reader :serial, :viewport, :color, :tone
+  def serial; @__serial; end
+  def viewport; @__viewport; end
+  def color; @__color; end
+  def tone; @__tone; end
   def initialize(viewport = nil)
     raise TypeError, 'Expected Viewport or nil' unless viewport.nil? || viewport.is_a?(Viewport)
-    @viewport, @disposed = viewport, false
-    @serial = RGSSXP.register(self)
-    @x = @y = @z = @ox = @oy = @bush_depth = @blend_type = 0
-    @zoom_x = @zoom_y = 1.0
-    @angle = 0.0
-    @visible, @mirror, @opacity = true, false, 255
-    @color, @tone = Color.new(0, 0, 0, 0), Tone.new(0, 0, 0, 0)
-    @flash_left = @flash_total = 0
+    @__viewport, @__disposed = viewport, false
+    @__serial = RGSSXP.register(self)
+    @__x = @__y = @__z = @__ox = @__oy = @__bush_depth = @__blend_type = 0
+    @__zoom_x = @__zoom_y = 1.0
+    @__angle = 0.0
+    @__visible, @__mirror, @__opacity = true, false, 255
+    @__color, @__tone = Color.new(0, 0, 0, 0), Tone.new(0, 0, 0, 0)
+    @__flash_left = @__flash_total = 0
   end
   def dispose
-    @disposed = true
+    @__disposed = true
     nil
   end
   def disposed?
-    @disposed
+    @__disposed
   end
   def check_live
-    raise RGSSError, "disposed #{self.class}" if @disposed
+    raise RGSSError, "disposed #{self.class}" if @__disposed
   end
   %i[x y z ox oy bush_depth].each do |field|
-    variable = :"@#{field}"
+    variable = :"@__#{field}"
     define_method(field) { check_live; instance_variable_get(variable) }
     define_method("#{field}=") { |value| check_live; instance_variable_set(variable, value.to_int) }
   end
   %i[zoom_x zoom_y angle].each do |field|
-    variable = :"@#{field}"
+    variable = :"@__#{field}"
     define_method(field) { check_live; instance_variable_get(variable) }
     define_method("#{field}=") do |value|
       check_live
@@ -165,106 +168,108 @@ class RGSSXP::DisplayObject
     end
   end
   %i[visible mirror].each do |field|
-    variable = :"@#{field}"
+    variable = :"@__#{field}"
     define_method(field) { check_live; instance_variable_get(variable) }
     define_method("#{field}=") { |value| check_live; instance_variable_set(variable, !!value) }
   end
   def opacity
-    check_live; @opacity
+    check_live; @__opacity
   end
   def opacity=(value)
-    check_live; @opacity = [[value.to_int, 0].max, 255].min
+    check_live; @__opacity = [[value.to_int, 0].max, 255].min
   end
   def blend_type
-    check_live; @blend_type
+    check_live; @__blend_type
   end
   def blend_type=(value)
     check_live
     raise ArgumentError, 'Blend type must be 0, 1 or 2' unless (0..2).include?(value)
-    @blend_type = value
+    @__blend_type = value
   end
   def color=(value)
-    check_live; @color.set(value.red, value.green, value.blue, value.alpha)
+    check_live; @__color.set(value.red, value.green, value.blue, value.alpha)
   end
   def tone=(value)
-    check_live; @tone.set(value.red, value.green, value.blue, value.gray)
+    check_live; @__tone.set(value.red, value.green, value.blue, value.gray)
   end
   def flash(color, duration)
     check_live
-    @flash_color, @flash_left, @flash_total = color && color.clone, RGSSXP::Timing.frames(duration.to_int), RGSSXP::Timing.frames(duration.to_int)
+    @__flash_color, @__flash_left, @__flash_total = color && color.clone, RGSSXP::Timing.frames(duration.to_int), RGSSXP::Timing.frames(duration.to_int)
     nil
   end
   def update
     check_live
-    @flash_left -= 1 if @flash_left > 0
+    @__flash_left -= 1 if @__flash_left > 0
     nil
   end
   def flash_hidden?
-    @flash_left > 0 && @flash_color.nil?
+    @__flash_left > 0 && @__flash_color.nil?
   end
   def effective_color
-    @flash_left > 0 && @flash_color ? Color.new(@flash_color.red, @flash_color.green, @flash_color.blue, @flash_color.alpha * @flash_left / @flash_total) : @color
+    @__flash_left > 0 && @__flash_color ? Color.new(@__flash_color.red, @__flash_color.green, @__flash_color.blue, @__flash_color.alpha * @__flash_left / @__flash_total) : @__color
   end
   def screen_offset
-    @viewport ? [@viewport.rect.x - @viewport.ox, @viewport.rect.y - @viewport.oy] : [0, 0]
+    @__viewport ? [@__viewport.rect.x - @__viewport.ox, @__viewport.rect.y - @__viewport.oy] : [0, 0]
   end
 end
 
 class Viewport < RGSSXP::DisplayObject
-  attr_reader :rect
+  def rect; @__rect; end
   def initialize(*args)
     super(nil)
     args = [args[0].x, args[0].y, args[0].width, args[0].height] if args.size == 1 && args[0].is_a?(Rect)
-    @rect = Rect.new(*args)
+    @__rect = Rect.new(*args)
   end
   def rect=(value)
-    check_live; @rect.set(value.x, value.y, value.width, value.height)
+    check_live; @__rect.set(value.x, value.y, value.width, value.height)
   end
 end
 
 class Sprite < RGSSXP::DisplayObject
-  attr_reader :bitmap, :src_rect
+  def bitmap; @__bitmap; end
+  def src_rect; @__src_rect; end
   def initialize(viewport = nil)
     super(viewport)
-    @bitmap, @src_rect = nil, Rect.new(0, 0, 0, 0)
+    @__bitmap, @__src_rect = nil, Rect.new(0, 0, 0, 0)
   end
   def bitmap=(value)
     check_live
     raise TypeError, 'Expected Bitmap or nil' unless value.nil? || value.is_a?(Bitmap)
-    @bitmap = value
-    @src_rect.set(0, 0, value ? value.width : 0, value ? value.height : 0)
+    @__bitmap = value
+    @__src_rect.set(0, 0, value ? value.width : 0, value ? value.height : 0)
   end
   def src_rect=(value)
-    check_live; @src_rect.set(value.x, value.y, value.width, value.height)
+    check_live; @__src_rect.set(value.x, value.y, value.width, value.height)
   end
   def emit(commands)
     if RGSSXP.__fast_sprite_emit?
-      dx = @viewport ? @viewport.rect.x - @viewport.ox : 0
-      dy = @viewport ? @viewport.rect.y - @viewport.oy : 0
-      return RGSSXP.__sprite_quad(commands,@bitmap,@x+dx,@y+dy,@src_rect,@zoom_x,@zoom_y,@angle,@ox,@oy,@opacity,@blend_type,effective_color,@tone,@bush_depth,@mirror)
+      dx = @__viewport ? @__viewport.rect.x - @__viewport.ox : 0
+      dy = @__viewport ? @__viewport.rect.y - @__viewport.oy : 0
+      return RGSSXP.__sprite_quad(commands,@__bitmap,@__x+dx,@__y+dy,@__src_rect,@__zoom_x,@__zoom_y,@__angle,@__ox,@__oy,@__opacity,@__blend_type,effective_color,@__tone,@__bush_depth,@__mirror)
     end
     dx, dy = screen_offset
-    RGSSXP.quad(commands, @bitmap, @x + dx, @y + dy, @src_rect,
-      zoom_x: @zoom_x, zoom_y: @zoom_y, angle: @angle, ox: @ox, oy: @oy, opacity: @opacity,
-      blend: @blend_type, color: effective_color, tone: @tone, bush: @bush_depth, mirror: @mirror)
+    RGSSXP.quad(commands, @__bitmap, @__x + dx, @__y + dy, @__src_rect,
+      zoom_x: @__zoom_x, zoom_y: @__zoom_y, angle: @__angle, ox: @__ox, oy: @__oy, opacity: @__opacity,
+      blend: @__blend_type, color: effective_color, tone: @__tone, bush: @__bush_depth, mirror: @__mirror)
   end
 end
 
 class Plane < RGSSXP::DisplayObject
-  attr_accessor :bitmap
+  def bitmap; @__bitmap; end
+  def bitmap=(value); @__bitmap = value; end
   def emit(commands)
-    return unless @bitmap && !@bitmap.disposed? && @zoom_x > 0 && @zoom_y > 0
-    return if @bitmap.__transparent?
-    area = @viewport ? @viewport.rect : Rect.new(0, 0, Graphics.width, Graphics.height)
-    source = @bitmap.rect
-    w, h = @bitmap.width * @zoom_x, @bitmap.height * @zoom_y
-    start_x, start_y = area.x - @ox % w, area.y - @oy % h
+    return unless @__bitmap && !@__bitmap.disposed? && @__zoom_x > 0 && @__zoom_y > 0
+    return if @__bitmap.__transparent?
+    area = @__viewport ? @__viewport.rect : Rect.new(0, 0, Graphics.width, Graphics.height)
+    source = @__bitmap.rect
+    w, h = @__bitmap.width * @__zoom_x, @__bitmap.height * @__zoom_y
+    start_x, start_y = area.x - @__ox % w, area.y - @__oy % h
     y = start_y
     while y < area.y + area.height
       x = start_x
       while x < area.x + area.width
-        RGSSXP.quad(commands, @bitmap, x, y, source, zoom_x: @zoom_x, zoom_y: @zoom_y,
-          opacity: @opacity, blend: @blend_type, color: @color, tone: @tone, clip: area)
+        RGSSXP.quad(commands, @__bitmap, x, y, source, zoom_x: @__zoom_x, zoom_y: @__zoom_y,
+          opacity: @__opacity, blend: @__blend_type, color: @__color, tone: @__tone, clip: area)
         x += w
       end
       y += h
@@ -273,85 +278,98 @@ class Plane < RGSSXP::DisplayObject
 end
 
 class Window < RGSSXP::DisplayObject
-  attr_accessor :windowskin, :contents, :stretch, :active, :pause
-  attr_reader :cursor_rect, :width, :height, :back_opacity, :contents_opacity
+  def windowskin; @__windowskin; end
+  def windowskin=(value); @__windowskin = value; end
+  def contents; @__contents; end
+  def contents=(value); @__contents = value; end
+  def stretch; @__stretch; end
+  def stretch=(value); @__stretch = value; end
+  def active; @__active; end
+  def active=(value); @__active = value; end
+  def pause; @__pause; end
+  def pause=(value); @__pause = value; end
+  def cursor_rect; @__cursor_rect; end
+  def width; @__width; end
+  def height; @__height; end
+  def back_opacity; @__back_opacity; end
+  def contents_opacity; @__contents_opacity; end
   def initialize
     super(nil)
-    @width = @height = 0
-    @windowskin = @contents = nil
-    @stretch = @active = true
-    @pause = false
-    @cursor_rect = Rect.new(0, 0, 0, 0)
-    @back_opacity = @contents_opacity = 255
-    @updates = 0
+    @__width = @__height = 0
+    @__windowskin = @__contents = nil
+    @__stretch = @__active = true
+    @__pause = false
+    @__cursor_rect = Rect.new(0, 0, 0, 0)
+    @__back_opacity = @__contents_opacity = 255
+    @__updates = 0
   end
   %i[width height].each do |field|
-    variable = :"@#{field}"
+    variable = :"@__#{field}"
     define_method("#{field}=") { |value| check_live; instance_variable_set(variable, [value.to_int, 0].max) }
   end
   %i[back_opacity contents_opacity].each do |field|
-    variable = :"@#{field}"
+    variable = :"@__#{field}"
     define_method("#{field}=") { |value| check_live; instance_variable_set(variable, [[value.to_int, 0].max, 255].min) }
   end
   def cursor_rect=(value)
-    @cursor_rect.set(value.x, value.y, value.width, value.height)
+    @__cursor_rect.set(value.x, value.y, value.width, value.height)
   end
   def update
     super
-    @updates += 1 if RGSSXP::Timing.legacy_tick?
+    @__updates += 1 if RGSSXP::Timing.legacy_tick?
   end
   def skin_quad(commands, sx, sy, sw, sh, x, y, w, h, opacity)
     return if w <= 0 || h <= 0
-    RGSSXP.quad(commands, @windowskin, x, y, Rect.new(sx, sy, sw, sh), zoom_x: w.to_f / sw, zoom_y: h.to_f / sh, opacity: opacity)
+    RGSSXP.quad(commands, @__windowskin, x, y, Rect.new(sx, sy, sw, sh), zoom_x: w.to_f / sw, zoom_y: h.to_f / sh, opacity: opacity)
   end
   def emit(commands)
-    return if @width <= 0 || @height <= 0
-    x, y, w, h = @x, @y, @width, @height
-    if @windowskin && !@windowskin.disposed?
-      if @stretch
-        skin_quad(commands, 0, 0, 128, 128, x+2, y+2, w-4, h-4, @opacity*@back_opacity/255)
+    return if @__width <= 0 || @__height <= 0
+    x, y, w, h = @__x, @__y, @__width, @__height
+    if @__windowskin && !@__windowskin.disposed?
+      if @__stretch
+        skin_quad(commands, 0, 0, 128, 128, x+2, y+2, w-4, h-4, @__opacity*@__back_opacity/255)
       else
         (0...h-4).step(128) do |j|
           (0...w-4).step(128) do |i|
             pw, ph = [128,w-4-i].min, [128,h-4-j].min
-            skin_quad(commands,0,0,pw,ph,x+2+i,y+2+j,pw,ph,@opacity*@back_opacity/255)
+            skin_quad(commands,0,0,pw,ph,x+2+i,y+2+j,pw,ph,@__opacity*@__back_opacity/255)
           end
         end
       end
       [[128,0,x,y],[176,0,x+w-16,y],[128,48,x,y+h-16],[176,48,x+w-16,y+h-16]].each do |sx,sy,dx,dy|
-        skin_quad(commands,sx,sy,16,16,dx,dy,16,16,@opacity)
+        skin_quad(commands,sx,sy,16,16,dx,dy,16,16,@__opacity)
       end
       [[144,0,32,16,x+16,y,w-32,16],[144,48,32,16,x+16,y+h-16,w-32,16],
        [128,16,16,32,x,y+16,16,h-32],[176,16,16,32,x+w-16,y+16,16,h-32]].each do |sx,sy,sw,sh,dx,dy,dw,dh|
-        skin_quad(commands,sx,sy,sw,sh,dx,dy,dw,dh,@opacity)
+        skin_quad(commands,sx,sy,sw,sh,dx,dy,dw,dh,@__opacity)
       end
-      unless @cursor_rect.width <= 0 || @cursor_rect.height <= 0
-        pulse = @active ? 128 + ((@updates % 32 - 16).abs * 8) : 128
-        cw, ch = @cursor_rect.width, @cursor_rect.height
-        opacity = @opacity*[pulse,255].min/255
+      unless @__cursor_rect.width <= 0 || @__cursor_rect.height <= 0
+        pulse = @__active ? 128 + ((@__updates % 32 - 16).abs * 8) : 128
+        cw, ch = @__cursor_rect.width, @__cursor_rect.height
+        opacity = @__opacity*[pulse,255].min/255
         edge_x, edge_y = [2,cw/2].min, [2,ch/2].min
         source_x, source_y = [128,130,158], [64,66,94]
         target_x, target_y = [0,edge_x,cw-edge_x], [0,edge_y,ch-edge_y]
         [edge_y,ch-edge_y*2,edge_y].each_with_index do |height,row|
           [edge_x,cw-edge_x*2,edge_x].each_with_index do |width,col|
             skin_quad(commands,source_x[col],source_y[row],col==1 ? 28 : 2,row==1 ? 28 : 2,
-              x+16+@cursor_rect.x+target_x[col],y+16+@cursor_rect.y+target_y[row],width,height,opacity)
+              x+16+@__cursor_rect.x+target_x[col],y+16+@__cursor_rect.y+target_y[row],width,height,opacity)
           end
         end
       end
-      if @contents && !@contents.disposed?
-        skin_quad(commands,144,24,8,16,x+4,y+h/2-8,8,16,@opacity) if @ox > 0
-        skin_quad(commands,168,24,8,16,x+w-12,y+h/2-8,8,16,@opacity) if @contents.width-@ox > w-32
-        skin_quad(commands,152,16,16,8,x+w/2-8,y+4,16,8,@opacity) if @oy > 0
-        skin_quad(commands,152,40,16,8,x+w/2-8,y+h-12,16,8,@opacity) if @contents.height-@oy > h-32
+      if @__contents && !@__contents.disposed?
+        skin_quad(commands,144,24,8,16,x+4,y+h/2-8,8,16,@__opacity) if @__ox > 0
+        skin_quad(commands,168,24,8,16,x+w-12,y+h/2-8,8,16,@__opacity) if @__contents.width-@__ox > w-32
+        skin_quad(commands,152,16,16,8,x+w/2-8,y+4,16,8,@__opacity) if @__oy > 0
+        skin_quad(commands,152,40,16,8,x+w/2-8,y+h-12,16,8,@__opacity) if @__contents.height-@__oy > h-32
       end
-      if @pause
-        skin_quad(commands,160+(@updates/8%2)*16,64+(@updates/16%2)*16,16,16,x+w/2-8,y+h-16,16,16,@opacity)
+      if @__pause
+        skin_quad(commands,160+(@__updates/8%2)*16,64+(@__updates/16%2)*16,16,16,x+w/2-8,y+h-16,16,16,@__opacity)
       end
     end
-    if @contents && !@contents.disposed?
+    if @__contents && !@__contents.disposed?
       area = Rect.new(x+16,y+16,[w-32,0].max,[h-32,0].max)
-      RGSSXP.quad(commands,@contents,x+16-@ox,y+16-@oy,@contents.rect,opacity:@contents_opacity,clip:area)
+      RGSSXP.quad(commands,@__contents,x+16-@__ox,y+16-@__oy,@__contents.rect,opacity:@__contents_opacity,clip:area)
     end
   end
 end

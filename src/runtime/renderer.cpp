@@ -625,7 +625,7 @@ VALUE order_display(VALUE,VALUE nodes){
     struct Key { long z,y,serial,index; };
     VALUE storage=rb_str_new(nullptr,count*sizeof(Key));auto* keys=reinterpret_cast<Key*>(RSTRING_PTR(storage));
     VALUE sprite=rb_path2class("Sprite"),layer=rb_path2class("Tilemap::Layer");
-    ID z_id=rb_intern("@z"),y_id=rb_intern("@y"),serial_id=rb_intern("@serial"),disposed_id=rb_intern("@disposed");
+    ID z_id=rb_intern("@__z"),y_id=rb_intern("@__y"),serial_id=rb_intern("@__serial"),disposed_id=rb_intern("@__disposed");
     for(long i=0;i<count;++i){
         VALUE node=rb_ary_entry(nodes,i),z,y=INT2FIX(0),serial;
         if(rb_obj_is_kind_of(node,layer)){

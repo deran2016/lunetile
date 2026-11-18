@@ -83,6 +83,27 @@ end
 sprites[5].dispose;viewports[2].dispose
 compare_display
 sprites.each(&:dispose);viewports.each(&:dispose);bitmap.dispose
+# Original RGSS keeps display state native; subclasses (for example AMS) reuse @x/@y/@opacity freely.
+class IvarWindow < Window
+  def initialize
+    super()
+    self.x, self.y, self.width, self.height, self.opacity = 40, 560, 320, 160, 200
+    @x = @y = @opacity = @width = @height = @contents = @visible = 0
+  end
+end
+class IvarSprite < Sprite
+  def initialize
+    super
+    self.x, self.y, self.opacity = 7, 9, 99
+    @x = @y = @opacity = @bitmap = @viewport = 0
+  end
+end
+window = IvarWindow.new
+check([window.x,window.y,window.width,window.height,window.opacity,window.visible,window.contents]==[40,560,320,160,200,true,window.contents] && !window.contents.is_a?(Integer),'Window state shared subclass instance variables')
+sprite = IvarSprite.new
+check([sprite.x,sprite.y,sprite.opacity,sprite.bitmap,sprite.viewport]==[7,9,99,nil,nil],'Sprite state shared subclass instance variables')
+compare_display
+window.dispose;sprite.dispose
 Graphics.update
 File.write('display-result.json',JSON.generate({passed:true,ordering:true,pixel_comparisons:3,immediate_inputs:true,quad_hook:true,singleton_hook:true,gc:true,retained_commands:true,viewport_mutation:defined?(RGSS_VERSION) ? true : nil}))
 File.write('runtime-complete.txt','display commands,false,false')

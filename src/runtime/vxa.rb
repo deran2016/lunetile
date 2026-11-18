@@ -103,70 +103,84 @@ end
 class RGSSXP::DisplayObject
   def viewport=(value)
     raise TypeError, 'Expected Viewport or nil' unless value.nil? || value.is_a?(Viewport)
-    RGSSXP.__viewport_changed unless @viewport.equal?(value)
-    @viewport = value
+    RGSSXP.__viewport_changed unless @__viewport.equal?(value)
+    @__viewport = value
   end
 end
 class Sprite
-  attr_accessor :wave_amp, :wave_length, :wave_speed, :wave_phase, :bush_opacity
+  def wave_amp; @__wave_amp; end
+  def wave_amp=(value); @__wave_amp = value; end
+  def wave_length; @__wave_length; end
+  def wave_length=(value); @__wave_length = value; end
+  def wave_speed; @__wave_speed; end
+  def wave_speed=(value); @__wave_speed = value; end
+  def wave_phase; @__wave_phase; end
+  def wave_phase=(value); @__wave_phase = value; end
+  def bush_opacity; @__bush_opacity; end
+  def bush_opacity=(value); @__bush_opacity = value; end
   alias vxa_initialize initialize
   def initialize(viewport = nil)
     vxa_initialize(viewport)
-    @wave_amp, @wave_length, @wave_speed, @wave_phase, @bush_opacity = 0, 180, 360, 0.0, 128
+    @__wave_amp, @__wave_length, @__wave_speed, @__wave_phase, @__bush_opacity = 0, 180, 360, 0.0, 128
   end
   alias vxa_update update
   def update
     vxa_update
-    @wave_phase = (@wave_phase + @wave_speed.to_f / Graphics.frame_rate) % 360
+    @__wave_phase = (@__wave_phase + @__wave_speed.to_f / Graphics.frame_rate) % 360
   end
 end
 class Window
-  attr_accessor :padding, :padding_bottom, :arrows_visible
-  attr_reader :openness
+  def padding; @__padding; end
+  def padding=(value); @__padding = value; end
+  def padding_bottom; @__padding_bottom; end
+  def padding_bottom=(value); @__padding_bottom = value; end
+  def arrows_visible; @__arrows_visible; end
+  def arrows_visible=(value); @__arrows_visible = value; end
+  def openness; @__openness; end
   alias vxa_initialize initialize
   def initialize(x = 0, y = 0, width = 0, height = 0)
     vxa_initialize
-    @x, @y, @width, @height = x, y, width, height
-    @padding = @padding_bottom = 12
-    @openness, @arrows_visible, @back_opacity = 255, true, 192
-    @contents = Bitmap.new(1,1)
-    @tone = Tone.new(0,0,0)
-    @z = 100
+    @__x, @__y, @__width, @__height = x, y, width, height
+    @__padding = @__padding_bottom = 12
+    @__openness, @__arrows_visible, @__back_opacity = 255, true, 192
+    @__contents = Bitmap.new(1,1)
+    @__tone = Tone.new(0,0,0)
+    @__z = 100
   end
-  def openness=(value); @openness = [[value.to_int,0].max,255].min; end
-  def open?; @openness == 255; end
-  def close?; @openness == 0; end
-  def move(x,y,width,height); @x,@y,@width,@height=x,y,width,height; self; end
+  def openness=(value); @__openness = [[value.to_int,0].max,255].min; end
+  def open?; @__openness == 255; end
+  def close?; @__openness == 0; end
+  def move(x,y,width,height); @__x,@__y,@__width,@__height=x,y,width,height; self; end
   def emit(commands)
-    return if @width <= 0 || @height <= 0 || @openness == 0
+    return if @__width <= 0 || @__height <= 0 || @__openness == 0
     dx,dy = screen_offset
-    x,y,w,h = @x+dx,@y+dy,@width,@height*@openness/255.0
-    y += (@height-h)/2
-    if @windowskin && !@windowskin.disposed?
-      skin_quad(commands,0,0,64,64,x+2,y+2,w-4,h-4,@opacity*@back_opacity/255)
+    x,y,w,h = @__x+dx,@__y+dy,@__width,@__height*@__openness/255.0
+    y += (@__height-h)/2
+    if @__windowskin && !@__windowskin.disposed?
+      skin_quad(commands,0,0,64,64,x+2,y+2,w-4,h-4,@__opacity*@__back_opacity/255)
       [[64,0,x,y],[112,0,x+w-16,y],[64,48,x,y+h-16],[112,48,x+w-16,y+h-16]].each do |sx,sy,tx,ty|
-        skin_quad(commands,sx,sy,16,16,tx,ty,16,16,@opacity)
+        skin_quad(commands,sx,sy,16,16,tx,ty,16,16,@__opacity)
       end
       [[80,0,32,16,x+16,y,w-32,16],[80,48,32,16,x+16,y+h-16,w-32,16],
        [64,16,16,32,x,y+16,16,h-32],[112,16,16,32,x+w-16,y+16,16,h-32]].each do |sx,sy,sw,sh,tx,ty,tw,th|
-        skin_quad(commands,sx,sy,sw,sh,tx,ty,tw,th,@opacity)
+        skin_quad(commands,sx,sy,sw,sh,tx,ty,tw,th,@__opacity)
       end
     end
     return unless open?
-    area = Rect.new(x+@padding,y+@padding,[w-@padding*2,0].max,[@height-@padding-@padding_bottom,0].max)
-    if @windowskin && @cursor_rect.width > 0 && @cursor_rect.height > 0
-      pulse = @active ? 128 + ((@updates % 32 - 16).abs * 8) : 128
-      RGSSXP.quad(commands,@windowskin,x+@padding+@cursor_rect.x-@ox,y+@padding+@cursor_rect.y-@oy,
-        Rect.new(64,64,32,32),zoom_x:@cursor_rect.width/32.0,zoom_y:@cursor_rect.height/32.0,opacity:pulse*@opacity/255,clip:area)
+    area = Rect.new(x+@__padding,y+@__padding,[w-@__padding*2,0].max,[@__height-@__padding-@__padding_bottom,0].max)
+    if @__windowskin && @__cursor_rect.width > 0 && @__cursor_rect.height > 0
+      pulse = @__active ? 128 + ((@__updates % 32 - 16).abs * 8) : 128
+      RGSSXP.quad(commands,@__windowskin,x+@__padding+@__cursor_rect.x-@__ox,y+@__padding+@__cursor_rect.y-@__oy,
+        Rect.new(64,64,32,32),zoom_x:@__cursor_rect.width/32.0,zoom_y:@__cursor_rect.height/32.0,opacity:pulse*@__opacity/255,clip:area)
     end
-    if @contents && !@contents.disposed?
-      RGSSXP.quad(commands,@contents,x+@padding-@ox,y+@padding-@oy,@contents.rect,opacity:@contents_opacity,clip:area)
-      if @windowskin && @arrows_visible
-        skin_quad(commands,88,16,16,8,x+w/2-8,y+4,16,8,@opacity) if @oy > 0
-        skin_quad(commands,88,40,16,8,x+w/2-8,y+h-12,16,8,@opacity) if @contents.height-@oy > area.height
+    if @__contents && !@__contents.disposed?
+      RGSSXP.quad(commands,@__contents,x+@__padding-@__ox,y+@__padding-@__oy,@__contents.rect,opacity:@__contents_opacity,clip:area)
+      if @__windowskin && @__arrows_visible
+        skin_quad(commands,88,16,16,8,x+w/2-8,y+4,16,8,@__opacity) if @__oy > 0
+        skin_quad(commands,88,40,16,8,x+w/2-8,y+h-12,16,8,@__opacity) if @__contents.height-@__oy > area.height
       end
     end
-    skin_quad(commands,96+(@updates/8%2)*16,64+(@updates/16%2)*16,16,16,x+w/2-8,y+h-16,16,16,@opacity) if @pause && @windowskin
+    skin_quad(commands,96+(@__updates/8%2)*16,64+(@__updates/16%2)*16,16,16,x+w/2-8,y+h-16,16,16,@__opacity) if @__pause && @__windowskin
   end
 end
 module Graphics
@@ -212,8 +226,8 @@ module RGSSXP
   end
 end
 class Sprite
-  def width; @src_rect.width; end
-  def height; @src_rect.height; end
+  def width; @__src_rect.width; end
+  def height; @__src_rect.height; end
 end
 class Bitmap
   def blur; __blur; end
@@ -276,21 +290,21 @@ end
 class Sprite
   alias vxa_emit emit
   def emit(commands)
-    return vxa_emit(commands) if @wave_amp == 0 || !@bitmap || @bitmap.disposed?
+    return vxa_emit(commands) if @__wave_amp == 0 || !@__bitmap || @__bitmap.disposed?
     dx,dy = screen_offset
-    length = [@wave_length.to_f,1.0].max
-    (0...@src_rect.height).step(8) do |row|
-      offset = @wave_amp * Math.sin((@wave_phase + row*360.0/length)*Math::PI/180)
-      source = Rect.new(@src_rect.x,@src_rect.y+row,@src_rect.width,[8,@src_rect.height-row].min)
-      RGSSXP.quad(commands,@bitmap,@x+dx+offset,@y+dy+row*@zoom_y,source,
-        zoom_x:@zoom_x,zoom_y:@zoom_y,angle:@angle,ox:@ox,oy:@oy,opacity:@opacity,
-        blend:@blend_type,color:effective_color,tone:@tone,bush:@bush_depth,mirror:@mirror)
+    length = [@__wave_length.to_f,1.0].max
+    (0...@__src_rect.height).step(8) do |row|
+      offset = @__wave_amp * Math.sin((@__wave_phase + row*360.0/length)*Math::PI/180)
+      source = Rect.new(@__src_rect.x,@__src_rect.y+row,@__src_rect.width,[8,@__src_rect.height-row].min)
+      RGSSXP.quad(commands,@__bitmap,@__x+dx+offset,@__y+dy+row*@__zoom_y,source,
+        zoom_x:@__zoom_x,zoom_y:@__zoom_y,angle:@__angle,ox:@__ox,oy:@__oy,opacity:@__opacity,
+        blend:@__blend_type,color:effective_color,tone:@__tone,bush:@__bush_depth,mirror:@__mirror)
     end
   end
 end
 class Window
   def skin_quad(commands,sx,sy,sw,sh,x,y,w,h,opacity)
     return if w <= 0 || h <= 0
-    RGSSXP.quad(commands,@windowskin,x,y,Rect.new(sx,sy,sw,sh),zoom_x:w.to_f/sw,zoom_y:h.to_f/sh,opacity:opacity,tone:@tone)
+    RGSSXP.quad(commands,@__windowskin,x,y,Rect.new(sx,sy,sw,sh),zoom_x:w.to_f/sw,zoom_y:h.to_f/sh,opacity:opacity,tone:@__tone)
   end
 end

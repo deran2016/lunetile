@@ -28,12 +28,12 @@ static const char script_compat_support[] = R"RGSSXP(# encoding: UTF-8
 @script_compat_support@)RGSSXP";
 static const char graphics_support[] = R"RGSSXP(# encoding: UTF-8
 @timing_support@
-@graphics_support@)RGSSXP";
+)RGSSXP" R"RGSSXP(@graphics_support@)RGSSXP";
 static const char rpg_graphics_support[] = R"RGSSXP(# encoding: UTF-8
 @rpg_graphics_support@
 module RGSSXP
 AUTOTILE_QUARTERS = @autotile_quarters@
 end
-@tilemap_support@)RGSSXP";
+)RGSSXP" R"RGSSXP(@tilemap_support@)RGSSXP";
 static const char display_commands_support[] = R"RGSSXP(# encoding: UTF-8
 @display_commands_support@)RGSSXP";

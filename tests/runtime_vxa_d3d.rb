@@ -35,7 +35,7 @@ comparisons=0
  3.times do |phase|
   sprites.each { |sprite| sprite.blend_type=blend;sprite.mirror=phase.odd? }
   viewports.each { |viewport| viewport.ox=phase*3;viewport.oy=phase;viewport.tone=Tone.new(phase*9,-7,5,23);viewport.color=Color.new(22,44,99,phase*37) }
-  tiles.each { |tile| tile.ox=phase*17-25;tile.oy=phase*7;tile.instance_variable_set(:@updates,phase*30) }
+  tiles.each { |tile| tile.ox=phase*17-25;tile.oy=phase*7;tile.instance_variable_set(:@__updates,phase*30) }
   map[phase,1,0]=ids[(phase+blend)%ids.size]
   alternate.set_pixel(phase,phase,Color.new(10,200,30,140))
   commands=RGSSXP.scene_commands

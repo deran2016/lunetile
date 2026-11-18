@@ -9,6 +9,8 @@ alpha.16에서 변환 후 사용자 스크립트를 다시 넣은 XP 프로젝�
 - XP DLL `a44e065f5c644c4a…` (SHA-256 `A44E065F5C644C4ABC7011148146F2C952ABFC85C3149344780178A06316948B`). Python 3.13 단위 검사 219개(새 `tests/test_custom_scripts.py` 7개 포함) 통과, `scripts/test_runtime_comfort.py` XP/VXA 통과(AMS형 추가 객체 저장·자동 저장·복구 포함).
 - 제보 프로젝트 3(변환 후 스크립트 추가) 복사본에 새 DLL을 넣고 Main 앞 자동 탐침으로 확인: 부팅, 8방향 `passable?`, AMS 메시지 창, 수동 저장·불러오기, 자동 저장·복구 시 `$ams` 유지. 제보 프로젝트 1은 기본 `Spriteset_Map`(파노라마 `/4`)이 수정되어 변환기가 거부하며, 해당 항목만 기본으로 되돌린 복사본은 `--custom-scripts` 변환·부팅에 성공했습니다.
 
+후속 수정: AMS 메시지가 보이지 않고 창이 오른쪽으로 밀렸습니다. Ruby로 구현한 `Window`·`Sprite`·`Plane`·`Viewport`·`Tilemap`이 `@x`·`@y`·`@opacity` 등을 내부 상태로 써서, 같은 이름을 쓰는 사용자 하위 클래스와 충돌했기 때문입니다. 원본 RGSS는 이 상태를 네이티브에 둡니다. 내부 변수를 `@__` 접두사로 옮기고(XP·VXA), `tests/runtime_display_commands.rb`에 하위 클래스 회귀 검사를 추가했습니다. XP DLL `b51563c06b8b…`, `verify_runtime.py --mode quick --all` 통과(161.72초, 35개 프로세스), Python 219개 통과. 변환본 실행 추적에서 창 x가 0으로 유지되고 `테스트` 문자가 그려지는 것을 확인했습니다.
+
 실제 키 입력 플레이, 화면 배치, 사용자 스크립트의 120Hz 진행 속도는 확인하지 않았습니다. AMS의 `\Z[n]`·`\Color[n]`·`\T[...]`는 자기 문자열을 `gsub` 블록 안에서 바꿔 원본 RGSS에서도 `string modified` 오류가 나므로 변경하지 않았습니다.
 
 ## 2026-10-26 XP·VXA 검증 시간 단축

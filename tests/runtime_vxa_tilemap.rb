@@ -19,8 +19,8 @@ comparisons = 0
   end
 end
 12.times do |phase|
-  left.instance_variable_set(:@updates,phase*30)
-  right.instance_variable_set(:@updates,phase*30)
+  left.instance_variable_set(:@__updates,phase*30)
+  right.instance_variable_set(:@__updates,phase*30)
   (2048...2816).each do |id|
     a,b = [],[]
     left.draw_tile(a,id,0,0); right.draw_tile(b,id,0,0)
@@ -53,7 +53,7 @@ flags[512] = 16
 left.map_data = right.map_data = map
 # Compare layers after normalizing only independently allocated shadow bitmaps.
 canonical = lambda { |tile|
-  tile.layers.map { |layer| [layer.z,layer.commands.flat_map { |c| c[0]==3 ? RGSSXP.__expand_tile_batch(c) : [c] }.map { |c| c.map { |v| v.is_a?(Bitmap) && v.equal?(tile.instance_variable_get(:@vxa_shadow)) ? :shadow : v } }] }
+  tile.layers.map { |layer| [layer.z,layer.commands.flat_map { |c| c[0]==3 ? RGSSXP.__expand_tile_batch(c) : [c] }.map { |c| c.map { |v| v.is_a?(Bitmap) && v.equal?(tile.instance_variable_get(:@__vxa_shadow)) ? :shadow : v } }] }
 }
 pixels = lambda { |tile|
   commands = [[1,viewport.rect]]
@@ -66,7 +66,7 @@ pixels = lambda { |tile|
   result
 }
 12.times do |phase|
-  [left,right].each { |tile| tile.ox=phase*17-60; tile.oy=phase*9-30; tile.instance_variable_set(:@updates,phase*30) }
+  [left,right].each { |tile| tile.ox=phase*17-60; tile.oy=phase*9-30; tile.instance_variable_set(:@__updates,phase*30) }
   viewport.ox,viewport.oy = phase%3,phase%5
   map[phase%5,phase%4,0] = ids[phase%ids.size]
   flags[2816] = phase.odd? ? 128 : 0
@@ -85,8 +85,8 @@ Graphics.resize_screen(192,128)
 viewport.rect.set(0,0,192,128)
 check(canonical.call(left) == canonical.call(right),'viewport resize')
 check(pixels.call(left) == pixels.call(right),'resized pixels')
-check(left.instance_variable_get(:@animated_shapes).size <= 768,'animated cache bounded')
-check(left.instance_variable_get(:@tile_shapes).values.flatten.none? { |v| v.is_a?(Bitmap) },'geometry cache retains bitmap')
+check(left.instance_variable_get(:@__animated_shapes).size <= 768,'animated cache bounded')
+check(left.instance_variable_get(:@__tile_shapes).values.flatten.none? { |v| v.is_a?(Bitmap) },'geometry cache retains bitmap')
 replacement = Bitmap.new(512,1024)
 64.times { |y| 32.times { |x| replacement.fill_rect(x*16,y*16,16,16,Color.new((x+y)*17%256,x*19%256,y*23%256)) } }
 left.bitmaps[0] = right.bitmaps[0] = replacement
@@ -96,7 +96,7 @@ mosaic=Table.new(16,8,4);left.map_data=right.map_data=mosaic
 native_comparisons=0;native_pixels=0
 compare_mosaic=lambda do |ids,phase|
   128.times { |i| mosaic[i%16,i/16,0]=ids[i] || 0 }
-  [left,right].each { |tile| tile.instance_variable_set(:@updates,phase*30) }
+  [left,right].each { |tile| tile.instance_variable_set(:@__updates,phase*30) }
   check(canonical.call(left)==canonical.call(right),'exhaustive native batch geometry')
   check(pixels.call(left)==pixels.call(right),'exhaustive native batch pixels')
   native_comparisons+=ids.size;native_pixels+=1

@@ -17,7 +17,7 @@ rgss_main do
   plane = Plane.new
   plane.bitmap = Bitmap.new(32,32)
   Graphics.update
-  raise 'no geometry cached' unless tile.instance_variable_get(:@tile_cache).stats[1] > 0
+  raise 'no geometry cached' unless tile.instance_variable_get(:@__tile_cache).stats[1] > 0
   if entries == 1
     previous = [tile,bitmap,plane,plane.bitmap]
     active = Win32API.new('user32','GetActiveWindow','','L')

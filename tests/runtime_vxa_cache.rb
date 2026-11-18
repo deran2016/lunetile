@@ -12,11 +12,11 @@ reference=ReferenceTilemap.new(viewport)
 def compare_cache(tile,reference)
   reference.map_data=tile.map_data;reference.flags=tile.flags
   reference.bitmaps.replace(tile.bitmaps);reference.ox=tile.ox;reference.oy=tile.oy
-  reference.instance_variable_set(:@updates,tile.instance_variable_get(:@updates))
+  reference.instance_variable_set(:@__updates,tile.instance_variable_get(:@__updates))
   normalize=lambda do |node|
     node.layers.map do |layer|
       [layer.z,layer.commands.flat_map { |c| c[0]==3 ? RGSSXP.__expand_tile_batch(c) : [c] }.map { |c|
-        c.map { |v| v.is_a?(Bitmap) && v.equal?(node.instance_variable_get(:@vxa_shadow)) ? :shadow : v }
+        c.map { |v| v.is_a?(Bitmap) && v.equal?(node.instance_variable_get(:@__vxa_shadow)) ? :shadow : v }
       }]
     end
   end
@@ -25,7 +25,7 @@ end
 atlas=Bitmap.new(512,1024);atlas.fill_rect(atlas.rect,Color.new(41,63,87))
 tile.bitmaps.fill(atlas)
 tile.layers
-cache=tile.instance_variable_get(:@tile_cache)
+cache=tile.instance_variable_get(:@__tile_cache)
 check(cache,'native cache not used')
 initial=cache.stats
 10.times { tile.layers }
@@ -52,7 +52,7 @@ before=cache.stats;flags[1536]=16;tile.layers
 check(cache.stats[0]-before[0]==20,'flags change did not refresh')
 compare_cache(tile,reference)
 other=Tilemap.new(viewport);other.map_data=map;other.flags=flags;other.bitmaps.fill(atlas);other.ox=tile.ox;other.oy=tile.oy;other.layers
-second=other.instance_variable_get(:@tile_cache)
+second=other.instance_variable_get(:@__tile_cache)
 a,b=cache.stats,second.stats;map[3,3,0]=1666;tile.layers;other.layers
 check(cache.stats[0]-a[0]==1 && second.stats[0]-b[0]==1,'shared Table consumer lost change')
 compare_cache(tile,reference)
@@ -68,7 +68,7 @@ before=cache.stats;tile.map_data=Marshal.load(Marshal.dump(map));tile.layers
 check(cache.stats[0]-before[0]==20,'loaded Table identity reused')
 compare_cache(tile,reference)
 map=tile.map_data;map[2,2,0]=2048;tile.layers
-before=cache.stats;tile.instance_variable_set(:@updates,30);tile.layers
+before=cache.stats;tile.instance_variable_set(:@__updates,30);tile.layers
 check(cache.stats[0]==before[0] && cache.stats[1]>before[1],'animation reread map or did not update')
 compare_cache(tile,reference)
 check(cache.stats[2]<=32*1024*1024,'cache memory exceeded limit')
