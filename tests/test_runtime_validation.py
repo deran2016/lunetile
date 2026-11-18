@@ -119,7 +119,7 @@ class CIReuseTests(unittest.TestCase):
   inner=io.BytesIO()
   with zipfile.ZipFile(inner,'w') as z:z.writestr('owned.txt','fixture')
   names={'lunetile-template-'+e+'-'+s+'.zip' for e in ['xp','vxa'] for s in ['windows-x86','diagnostics']}
-  names.update(['lunetile-vxa-editor-fix.zip','lunetile-vxa-speed-fix.zip','lunetile-xp-speed-fix.zip'])
+  names.update(['lunetile-vxa-editor-fix.zip','lunetile-vxa-speed-fix.zip','lunetile-xp-speed-fix.zip','lunetile-xp-editor-fix.zip'])
   sums={n:hashlib.sha256(inner.getvalue()).hexdigest() for n in names}
   out=io.BytesIO()
   with zipfile.ZipFile(out,'w') as z:

@@ -17,7 +17,7 @@ def verify_archive(data,sha):
   if proof.get('schema')!=1 or proof.get('source_commit')!=sha or proof.get('passed') is not True or proof.get('workflow')!=WORKFLOW:raise ValueError('Artifact provenance mismatch')
   lines=z.read('SHA256SUMS.txt').decode('ascii').splitlines()
   sums={line.split('  ',1)[1]:line.split('  ',1)[0] for line in lines if line}
-  expected={'lunetile-template-xp-windows-x86.zip','lunetile-template-xp-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip','lunetile-vxa-speed-fix.zip','lunetile-xp-speed-fix.zip'}
+  expected={'lunetile-template-xp-windows-x86.zip','lunetile-template-xp-diagnostics.zip','lunetile-template-vxa-windows-x86.zip','lunetile-template-vxa-diagnostics.zip','lunetile-vxa-editor-fix.zip','lunetile-vxa-speed-fix.zip','lunetile-xp-speed-fix.zip','lunetile-xp-editor-fix.zip'}
   if set(sums)!=expected or sums!=proof.get('assets'):raise ValueError('Required artifact files missing')
   for name,h in sums.items():
    content=z.read(name)

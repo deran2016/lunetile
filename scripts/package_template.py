@@ -112,11 +112,33 @@ def runtime_patch_archive(project,path):
    'DLL SHA256: '+digest(directory/'Lunetile.dll')+'\n',encoding='utf-8')
   archive(directory,path)
 
+def editor_fix_archive(path):
+ from package_template_vxa import archive
+ with tempfile.TemporaryDirectory(prefix='xp-editor-fix-',dir=path.parent) as tmp:
+  directory=Path(tmp)
+  shutil.copy2(ROOT/'src/runtime/xp_entry.rb',directory/'LunetileEditorFix.rb')
+  (directory/'README.txt').write_text(
+   'Lunetile XP editor-save fix (alpha.17 이하 변환본)\n\n'
+   'RPG Maker XP 편집기는 저장할 때 Game.ini의 Library를 RGSS104E.dll로 바꿉니다.\n'
+   '이 스크립트는 원본 엔진으로 실행된 것을 감지하면 Library=Lunetile.dll로 복원하고 Game.exe를 한 번 다시 실행합니다.\n'
+   '테스트 플레이(debug)와 전투 테스트(btest) 상태도 유지됩니다.\n\n'
+   '1. 프로젝트를 먼저 백업하세요.\n'
+   '2. 스크립트 편집기(F11)에서 맨 위 항목(Game_Temp) 위에 새 항목을 삽입하세요.\n'
+   '3. LunetileEditorFix.rb 내용을 그대로 붙여 넣고 저장하세요. 첫 줄 주석을 지우지 마세요.\n'
+   '4. Game.exe 옆의 Lunetile.dll은 유지하세요.\n\n'
+   '반드시 맨 위에 두어야 합니다. 다른 위치에서는 원본 엔진이 앞의 스크립트에서 먼저 오류를 낼 수 있습니다.\n'
+   '새 변환기로 변환한 프로젝트에는 이미 포함되어 있어 설치할 필요가 없습니다.\n'
+   '이 ZIP은 자동 설치되지 않으며 Data, Saves, Game.ini를 포함하지 않습니다.\n',
+   encoding='utf-8')
+  archive(directory,path)
+
 if __name__=='__main__':
  parser=argparse.ArgumentParser(description=__doc__)
  parser.add_argument('source',type=Path);parser.add_argument('runtime',type=Path);parser.add_argument('output',type=Path);parser.add_argument('diagnostics',type=Path)
  parser.add_argument('--runtime-patch',type=Path)
+ parser.add_argument('--editor-fix',type=Path)
  args=parser.parse_args()
  hashes=package(args.source,args.runtime,args.output,args.diagnostics)
  if args.runtime_patch:runtime_patch_archive(args.output,args.runtime_patch)
+ if args.editor_fix:editor_fix_archive(args.editor_fix)
  print(f'Converted template package: {args.output} ({len(hashes)} verified files; Standard RTP required)')
